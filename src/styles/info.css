@@ -1,0 +1,53 @@
+.info-page {
+    padding: 2rem;
+    max-width: 600px;
+    margin: auto;
+    text-align: left;
+    color: var(--text-color-main);
+    font-size: 1.1rem;
+    line-height: 1.6;
+}
+
+.info-content p {
+    margin-bottom: 1.4rem;
+}
+
+.buy-coffee {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-top: 2rem;
+    background: var(--bg-button);
+    padding: 0.6rem 1.2rem;
+    border-radius: 8px;
+    color: var(--text-color-main);
+    text-decoration: none;
+    font-weight: 600;
+    box-shadow: var(--box-shadow-soft);
+    transition: background 0.2s ease;
+}
+
+.buy-coffee:hover {
+    background: var(--bg-hover);
+    box-shadow: var(--box-shadow-glow);
+    color: var(--text-color-main);
+}
+
+.coffee-icon {
+    font-size: 1.3rem;
+}
+
+.link {
+    color: var(--text-color-header);
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.link:hover {
+    color: var(--text-color-main);
+    text-decoration: underline;
+}
+
+.link:visited {
+    color: var(--text-color-header);
+}

@@ -7,7 +7,7 @@ export default function SettingsPage() {
                 <title>Settings - 960 Dojo</title>
             </Head>
             <main>
-                {/* Blank content */}
+                <p>Not supported yet.</p>
             </main>
         </>
     );
