@@ -16,6 +16,7 @@ export default function Header() {
                     height={60}
                     priority
                 />
+                <h1 className="logo-text">960<br></br>Dojo</h1>
             </Link>
             <input type="text" placeholder="Player Search..." className="search" />
             <Dropdown isAuthenticated={!!session} />
