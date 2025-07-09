@@ -1,0 +1,84 @@
+.openings-page {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: var(--text-color-main);
+    font-family: var(--font-main);
+    padding: 2rem;
+}
+
+.position-selectors select {
+    width: 10rem;
+    height: 3rem;
+    margin: 0.5rem;
+    padding: 0.5rem;
+    background: var(--bg-dropdown);
+    border: var(--border-soft);
+    color: var(--text-color-main);
+    border-radius: 5px;
+}
+
+.chessboard-wrapper {
+    width: 40rem;
+    margin: 2rem 0;
+    border: var(--border-strong);
+    box-shadow: var(--box-shadow-soft);
+    background: var(--bg-board);
+}
+
+.toggle-buttons,
+.color-buttons {
+    width: 10rem;
+    height: 3rem;
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.toggle-buttons button,
+.color-buttons button {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 5px;
+    background: var(--bg-button);
+    color: var(--text-color-main);
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.toggle-buttons button.active,
+.color-buttons button.active {
+    background: var(--bg-active);
+}
+
+.toggle-buttons button:not(.active):hover,
+.color-buttons button:not(.active):hover {
+    background: var(--bg-hover);
+}
+
+.start-button {
+    padding: 0.75rem 2rem;
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: white;
+    background: var(--bg-hover);
+    border-radius: 10px;
+    border: none;
+    box-shadow: var(--box-shadow-strong);
+    margin: 1rem 0;
+}
+
+.rating-selector {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    font-size: 1.1rem;
+}
+
+.rating-selector .label {
+    font-weight: bold;
+    background: var(--bg-dropdown);
+    padding: 0.3rem 0.6rem;
+    border-radius: 5px;
+}
