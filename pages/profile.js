@@ -25,7 +25,7 @@ export default function ProfilePage() {
         const { data, error } = await supabase
             .from('User')
             .select('*')
-            .eq('id', session.user.id)
+            .eq('email', session.user.email)
             .single();
 
         console.log("Fetched User:", data, "Error:", error);
