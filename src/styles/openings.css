@@ -7,19 +7,61 @@
     padding: 2rem;
 }
 
+.position-selectors select,
+.toggle-buttons button,
+.color-buttons button,
+.start-button {
+    font-size: 1.1rem;
+}
+
+.main-content {
+    display: flex;
+    align-items: center;
+    min-height: 30rem;
+}
+
+.side-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    width: 30rem;
+    gap: 1rem;
+}
+
+.separator {
+    width: 100%;
+    height: 1px;
+    border: none;
+    margin: 0.5rem 0;
+    background: linear-gradient(to right, transparent, var(--text-color-main) 40%, var(--text-color-main) 60%, transparent);
+    opacity: 0.4;
+}
+
+
 .position-selectors select {
     width: 10rem;
     height: 3rem;
-    margin: 0.5rem;
+    margin-right: 1rem;
     padding: 0.5rem;
     background: var(--bg-dropdown);
     border: var(--border-soft);
     color: var(--text-color-main);
     border-radius: 5px;
+    text-align: center;
+}
+
+.position-selectors .small-selector {
+    width: 4rem;
+}
+
+.position-selectors select:hover {
+    background: var(--bg-hover);
 }
 
 .chessboard-wrapper {
-    width: 40rem;
+    width: 100%;
+    max-width: 40rem;
     margin: 2rem 0;
     border: var(--border-strong);
     box-shadow: var(--box-shadow-soft);
@@ -32,7 +74,7 @@
     height: 3rem;
     display: flex;
     gap: 1rem;
-    margin-bottom: 1rem;
+    justify-content: center;
 }
 
 .toggle-buttons button,
@@ -71,7 +113,7 @@
 .rating-selector {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 1rem;
     margin-top: 1rem;
     font-size: 1.1rem;
 }
@@ -81,4 +123,23 @@
     background: var(--bg-dropdown);
     padding: 0.3rem 0.6rem;
     border-radius: 5px;
+}
+
+.rating-label {
+    font-weight: bold;
+    color: var(--text-color-main);
+    text-align: center;
+    font-size: 1.5rem;
+}
+
+.arrow-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    background: var(--bg-button);
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background 0.2s;
 }
