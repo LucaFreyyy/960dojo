@@ -1,17 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Chessboard } from 'react-chessboard';
 import '../src/styles/openings.css';
+import { freestyleNumberToFEN } from '../lib/chesslogic';
 
 export default function OpeningsPage() {
     const [positionIndex, setPositionIndex] = useState(0);
     const [isTraining, setIsTraining] = useState(true);
     const [color, setColor] = useState('random');
     const [rating, setRating] = useState(1500);
+    const [fen, setFen] = useState(freestyleNumberToFEN(0));
 
     // State for mode and fixed pieces
     const [mode, setMode] = useState('random');
     const [fixedPiece, setFixedPiece] = useState('knight');
     const [fixedFiles, setFixedFiles] = useState(['a', '-']);
+
+    useEffect(() => {
+        try {
+            const newFen = freestyleNumberToFEN(positionIndex);
+            setFen(newFen);
+        } catch (err) {
+            console.error('Invalid position index:', positionIndex);
+        }
+    }, [positionIndex, color]);
 
     // Dummy function for fixed pieces positions
     function getPosWithFixedPieces() {
@@ -117,7 +128,7 @@ export default function OpeningsPage() {
         <div className="openings-page">
             <div className="main-content">
                 <div className="chessboard-wrapper">
-                    <Chessboard position={generateFEN(positionIndex)} />
+                    <Chessboard position={fen} />
                 </div>
                 <div className="side-controls">
                     <div className="position-selectors">
@@ -232,8 +243,4 @@ export default function OpeningsPage() {
             </div>
         </div >
     );
-}
-
-function generateFEN() {
-    return 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR'; // replace with real 960 FEN gen
 }
