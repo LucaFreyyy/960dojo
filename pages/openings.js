@@ -18,7 +18,10 @@ export default function OpeningsPage() {
     useEffect(() => {
         try {
             const newFen = freestyleNumberToFEN(positionIndex);
+            console.log('Setting FEN:', newFen);
             setFen(newFen);
+            setFen('8/8/8/8/4k3/8/8/8 w - - 0 1');
+
         } catch (err) {
             console.error('Invalid position index:', positionIndex);
         }

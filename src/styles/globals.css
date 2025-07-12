@@ -10,6 +10,7 @@
 
     --bg-main: #222222;
     --bg-button: linear-gradient(135deg, #333333 0%, #444444 100%);
+    --bg-small-button: linear-gradient(135deg, #333333 0%, #555555 100%);
     --bg-hover: linear-gradient(135deg, #2ea4ff 0%, #333333 100%);
     --bg-active: linear-gradient(135deg, #38ef7dcc 0%, #11998ecc 100%);
     --bg-inactive: linear-gradient(135deg, #f0f0f0 0%, #888888 100%);
@@ -35,11 +36,6 @@
 
     --white-square: #f0d9b5;
     --black-square: #b58863;
-
-    --bg-bullet: linear-gradient(135deg, #a3a519cc 0%, #cbe053cc 100%);
-    --bg-blitz: linear-gradient(135deg, #e0515dcc 0%, #e2ac60cc 100%);
-    --bg-rapid: linear-gradient(135deg, #11998ecc 0%, #38ef7dcc 100%);
-    --bg-classical: linear-gradient(135deg, #8720a7cc 0%, #b14dd3cc 100%);
 }
 
 * {
@@ -254,20 +250,8 @@ header {
     background: var(--bg-hover);
 }
 
-.time-box.bullet {
-    background: var(--bg-bullet);
-}
-
-.time-box.blitz {
-    background: var(--bg-blitz);
-}
-
-.time-box.rapid {
-    background: var(--bg-rapid);
-}
-
-.time-box.classical {
-    background: var(--bg-classical);
+.time-box {
+    background: var(--bg-small-button);
 }
 
 /* Optional: consistent hover style */

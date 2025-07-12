@@ -54,7 +54,7 @@ export default function HomePage() {
                             <Link
                                 key={time}
                                 href={`/play?time=${encodeURIComponent(time)}`}
-                                className={`time-box ${label.toLowerCase()}`}
+                                className={`time-box`}
                             >
                                 {time}
                                 <small>{label}</small>
