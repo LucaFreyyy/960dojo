@@ -205,18 +205,6 @@ export default function LegacyPage({ session }) {
                 <div id="loginMessage" style={{ color: 'red', display: 'none', marginTop: '10px' }}>
                     Log in to play rated
                 </div>
-
-                <div style={{ position: 'fixed', bottom: '20px', right: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 2000 }}>
-                    <span style={{ padding: '6px 12px', borderRadius: '8px', fontSize: '15px', marginBottom: '2px', textAlign: 'center' }}>
-                        For more <br />Chess960 insights:
-                    </span>
-                    <a href="https://www.youtube.com/@ChessOnFire" target="_blank" style={{ display: 'inline-block' }}>
-                        <img src="https://yt3.ggpht.com/nDs9k-H4vf7DppYxhRYzfYJ9xLBUiLd4cEAPv_OWm90OYZ3Sr0AMLWUuoj4B7yPTpPyHDXWT1A=s68-c-k-c0x00ffffff-no-rj" alt="YouTube" style={{ width: '60px', height: '60px', borderRadius: '50%' }} />
-                    </a>
-                    <span style={{ padding: '6px 12px', borderRadius: '8px', fontSize: '15px', marginTop: '-10px', textAlign: 'center' }}>
-                        <strong>ChessOnFire</strong>
-                    </span>
-                </div>
             </main>
         </>
     );
