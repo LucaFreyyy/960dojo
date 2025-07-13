@@ -1,0 +1,160 @@
+.chessboard-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 40px;
+}
+
+.chessboard {
+    display: inline-block;
+    background-color: var(--bg-board);
+    /* #2ea4ff5d */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    margin-top: 100px;
+    border-radius: 4px;
+    border: var(--border-soft);
+    /* 1.5px solid #2ea4ff10 */
+}
+
+.row {
+    display: flex;
+}
+
+.square {
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.square img {
+    outline: none;
+    user-select: none;
+    -webkit-user-drag: none;
+    z-index: 2;
+}
+
+.square:hover {
+    opacity: 0.8;
+}
+
+.square.highlight {
+    position: relative;
+}
+
+.square.highlight::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--bg-highlight);
+    pointer-events: none;
+    z-index: 1;
+}
+
+.square.last-move-highlight {
+    position: relative;
+}
+
+.square.last-move-highlight::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--bg-last-move);
+    pointer-events: none;
+    z-index: 1;
+}
+
+.square.right-highlight {
+    position: relative;
+}
+
+.square.right-highlight::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--bg-right1);
+    pointer-events: none;
+    z-index: 1;
+}
+
+.square.right-highlight-second {
+    position: relative;
+}
+
+.square.right-highlight-second::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--bg-right2);
+    pointer-events: none;
+    z-index: 1;
+}
+
+.square.can-move-highlight {
+    position: relative;
+}
+
+.square.can-move-highlight::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 24px;
+    height: 24px;
+    background: var(--bg-can-move);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    z-index: 3;
+}
+
+.square.premove-highlight {
+    position: relative;
+}
+
+.square.premove-highlight::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--bg-premove);
+    pointer-events: none;
+    z-index: 1;
+}
+
+.white {
+    background-color: var(--white-square);
+}
+
+.black {
+    background-color: var(--black-square);
+}
+
+.piece {
+    width: 64px;
+    height: 64px;
+}
+
+.piece img {
+    outline: none;
+    user-select: none;
+    -webkit-user-drag: none;
+}

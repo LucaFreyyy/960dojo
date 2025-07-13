@@ -1,4 +1,4 @@
-export function get_position(number, color) {
+function get_position(number, color) {
     var key = number.toString().padStart(3, '0');
     var frontRank = STARTING_POSITIONS[key];
     if (!frontRank) throw new Error("Invalid position number: " + number);
@@ -35,15 +35,16 @@ export function get_position(number, color) {
     return board;
 }
 
-export function freestyleNumberToFEN(number) {
+
+function freestyleNumberToFEN(number) {
     var key = number.toString().padStart(3, '0');
     var frontRank = STARTING_POSITIONS[key];
     if (!frontRank) throw new Error("Invalid position number: " + number);
-    var fen = frontRank.toLowerCase() + '/pppppppp/8/8/8/8/PPPPPPPP/' + frontRank + ' w KQkq - 0 1';
+    fen = frontRank.toLowerCase() + '/pppppppp/8/8/8/8/PPPPPPPP/' + frontRank + ' w KQkq - 0 1';
     return fen;
 }
 
-export function get_legal_moves(fen) {
+function get_legal_moves(fen) {
     const setupResult = parseFen(fen);
     if (setupResult.isErr) throw setupResult.error;
 
@@ -87,11 +88,9 @@ export function get_legal_moves(fen) {
     };
 }
 
-export function getCentipawnLoss(fen) {
+function getCentipawnLoss(fen) {
     return new Promise((resolve) => {
-        const engine = new Worker(new URL('./stockfish-worker.js', import.meta.url), {
-            type: 'module',
-        });
+        const engine = new Worker("/legacy-site/js/stockfish.js");
         let bestEval = null;
         let turn = fen.split(" ")[1]; // 'w' or 'b'
 
@@ -122,7 +121,7 @@ export function getCentipawnLoss(fen) {
     });
 }
 
-export async function fetch_lichess_data(fen, rating) {
+async function fetch_lichess_data(fen, rating) {
     const ratingMin = rating - 200;
     const ratingMax = rating + 200;
     const timeControls = ['bullet', 'blitz', 'rapid', 'classical'].join(',');
@@ -209,11 +208,10 @@ export async function fetch_lichess_data(fen, rating) {
     }
 }
 
-export function fetch_stockfish_move(fen, rating) {
+function fetch_stockfish_move(fen, rating) {
     return new Promise((resolve) => {
-        const engine = new Worker(new URL('./stockfish-worker.js', import.meta.url), {
-            type: 'module',
-        });
+        const engine = new Worker("/legacy-site/js/stockfish.js");
+
         const skillLevel = Math.max(0, Math.min(20, Math.round((rating - 800) / 80))); // Clamp between 0-20
 
         const setup = parseFen(fen);
@@ -275,7 +273,7 @@ export function fetch_stockfish_move(fen, rating) {
     });
 }
 
-export function position_with_fixed_pieces(piece, first, second) {
+function position_with_fixed_pieces(piece, first, second) {
     const pieceLetterMap = {
         'king': 'K',
         'queen': 'Q',
@@ -309,10 +307,10 @@ export function position_with_fixed_pieces(piece, first, second) {
     return results;
 }
 
-export async function getLichessAnalysisLink() {
+async function getLichessAnalysisLink() {
     // Grab values from DOM / global variables here:
     const startPositionNr = document.getElementById('numberSelect').value;
-    const user = userInfo ? userInfo.name : 'Guest';
+    const user = window.user?.name || 'Guest';
     const history = gameState.moveHistorySAN;
     const userColor = gameState.userColor;
 

@@ -1,0 +1,155 @@
+.controls-container {
+    grid-column: 2;
+    width: 200px;
+    margin-left: 0px;
+    margin-top: 20px;
+}
+
+.buttons {
+    margin: 20px 0;
+}
+
+button {
+    padding: 10px 20px;
+    margin: 5px 0px;
+    font-size: 16px;
+    background: var(--bg-button);
+    color: var(--text-color-main);
+    border: var(--border-soft);
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background 0.3s, border-color 0.2s, box-shadow 0.2s;
+    box-shadow: var(--box-shadow-soft);
+}
+
+button:hover {
+    background: var(--bg-hover);
+    border-color: #4CAF50;
+    color: #fff;
+}
+
+.mode button.active,
+.color button.active {
+    background: var(--bg-active);
+    color: white;
+    border-color: #388e3c;
+    cursor: default;
+    opacity: 1;
+}
+
+.mode button.inactive,
+.color button.inactive {
+    background: var(--bg-inactive);
+    color: #222;
+    border-color: #bbb;
+    cursor: pointer;
+    opacity: 0.7;
+}
+
+.start-button {
+    align-self: flex-start;
+    margin-bottom: 10px;
+    cursor: pointer;
+    padding: 12px 24px;
+    background: var(--grad-start);
+    color: white;
+    font-size: 1.2rem;
+    border: var(--border-strong);
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    box-shadow: var(--box-shadow-strong);
+    font-weight: 600;
+}
+
+.start-button:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+    filter: brightness(1.05);
+    background: var(--grad-hover);
+}
+
+.back-button,
+.browseback,
+.browseforward,
+.browseallthewayback,
+.browseallthewayforward {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 10px;
+    width: 24px;
+    height: 25px;
+    background: var(--bg-button);
+    padding: 16px 20px;
+    font-size: 24px;
+    border-radius: 8px;
+    color: #fff;
+    user-select: none;
+    box-shadow: var(--box-shadow-soft);
+    border: 1.5px solid #2ea4ff52;
+    transition: background 0.2s, box-shadow 0.2s, transform 0.15s, border-color 0.2s;
+}
+
+.back-button {
+    background: var(--grad-danger);
+    border: var(--border-danger);
+}
+
+.back-button:hover {
+    background: var(--grad-danger-hover);
+    box-shadow: 0 4px 16px rgba(255, 87, 34, 0.25);
+    transform: translateY(-2px) scale(1.07);
+    border-color: #ff1744;
+}
+
+.browseback:hover,
+.browseforward:hover,
+.browseallthewayback:hover,
+.browseallthewayforward:hover {
+    background: var(--grad-arrow-hover);
+    box-shadow: 0 4px 16px rgba(162, 171, 88, 0.18);
+    transform: translateY(-2px) scale(1.07);
+    border-color: #a2ab58;
+}
+
+.back-button::before {
+    content: '←';
+}
+
+.browseback::before {
+    content: '<';
+}
+
+.browseforward::before {
+    content: '>';
+}
+
+.browseallthewayback::before {
+    content: '<<';
+}
+
+.browseallthewayforward::before {
+    content: '>>';
+}
+
+.login-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: -60px;
+    color: #fff !important;
+    background: var(--bg-button) !important;
+    background-color: var(--bg-board) !important;
+    border: 1.5px solid #2ea4ff52;
+}
+
+.login-button * {
+    color: #fff !important;
+    fill: #fff !important;
+}
+
+.login-button:hover {
+    background: var(--bg-button) !important;
+    border-color: #2ea4ff;
+    filter: brightness(1.05);
+}
