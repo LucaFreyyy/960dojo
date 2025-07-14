@@ -29,7 +29,7 @@ export default function HomePage() {
                 <section className="practice">
                     <h2>Practice</h2>
                     <div className="practice-grid">
-                        <Link className="practice-box" href="/openings">
+                        <Link className="practice-box" href="/legacy">
                             <h3>Openings 🧭</h3>
                             <div className="practice-desc">
                                 <p><span className="emphasis">Pick</span> a starting <span className="emphasis">position</span></p>

@@ -15,34 +15,41 @@ function initializeUI() {
     selectColor('random');
 }
 
-// eventListeners.js
-function initializeEventListeners() {
-    document.getElementById("Category").addEventListener("change", () => toggleNumberSelect().catch(console.error));
-    document.getElementById("numberSelect").addEventListener("change", () => onNumberSelectChange().catch(console.error));
-    document.getElementById("ratedBtn").addEventListener("click", safeClick(() => selectMode("rated")));
-    document.getElementById("trainingBtn").addEventListener("click", safeClick(() => selectMode("training")));
-    document.getElementById("whiteBtn").addEventListener("click", safeClick(() => selectColor("white")));
-    document.getElementById("blackBtn").addEventListener("click", safeClick(() => selectColor("black")));
-    document.getElementById("randomBtn").addEventListener("click", safeClick(() => selectColor("random")));
-    document.getElementById("startBtn").addEventListener("click", safeClick(() => startGame().catch(console.error)));
-    document.getElementById("backButton").addEventListener("click", safeClick(backButtonClick));
-    document.getElementById("browseback").addEventListener("click", safeClick(browseBackClick));
-    document.getElementById("browseallthewayback").addEventListener("click", safeClick(browseAllTheWayBackClick));
-    document.getElementById("browseforward").addEventListener("click", safeClick(browseForwardClick));
-    document.getElementById("browseallthewayforward").addEventListener("click", safeClick(browseAllTheWayForwardClick));
-    document.getElementById("PieceSelector").addEventListener("change", () => createPositionWithFixedPieces().catch(console.error));
-    document.getElementById("SquareFixPieceSelector1").addEventListener("change", () => createPositionWithFixedPieces().catch(console.error));
-    document.getElementById("SquareFixPieceSelector2").addEventListener("change", () => createPositionWithFixedPieces().catch(console.error));
-    document.getElementById("playAgainBtn").addEventListener("click", safeClick(playAgain));
+function safeAddListener(id, event, handler) {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener(event, handler);
+}
 
-    document.getElementById("lichessBtn").addEventListener("click", safeClick(() => {
-        getLichessAnalysisLink()
-            .then(link => {
-                if (link) window.open(link, "_blank");
-                else alert("Failed to generate Lichess analysis link. Please try again later.");
-            })
-            .catch(console.error);
-    }));
+function initializeEventListeners() {
+    safeAddListener("Category", "change", () => toggleNumberSelect().catch(console.error));
+    safeAddListener("numberSelect", "change", () => onNumberSelectChange().catch(console.error));
+    safeAddListener("ratedBtn", "click", safeClick(() => selectMode("rated")));
+    safeAddListener("trainingBtn", "click", safeClick(() => selectMode("training")));
+    safeAddListener("whiteBtn", "click", safeClick(() => selectColor("white")));
+    safeAddListener("blackBtn", "click", safeClick(() => selectColor("black")));
+    safeAddListener("randomBtn", "click", safeClick(() => selectColor("random")));
+    safeAddListener("startBtn", "click", safeClick(() => startGame().catch(console.error)));
+    safeAddListener("backButton", "click", safeClick(backButtonClick));
+    safeAddListener("browseback", "click", safeClick(browseBackClick));
+    safeAddListener("browseallthewayback", "click", safeClick(browseAllTheWayBackClick));
+    safeAddListener("browseforward", "click", safeClick(browseForwardClick));
+    safeAddListener("browseallthewayforward", "click", safeClick(browseAllTheWayForwardClick));
+    safeAddListener("PieceSelector", "change", () => createPositionWithFixedPieces().catch(console.error));
+    safeAddListener("SquareFixPieceSelector1", "change", () => createPositionWithFixedPieces().catch(console.error));
+    safeAddListener("SquareFixPieceSelector2", "change", () => createPositionWithFixedPieces().catch(console.error));
+    safeAddListener("playAgainBtn", "click", safeClick(playAgain));
+
+    const lichessBtn = document.getElementById("lichessBtn");
+    if (lichessBtn) {
+        lichessBtn.addEventListener("click", safeClick(() => {
+            getLichessAnalysisLink()
+                .then(link => {
+                    if (link) window.open(link, "_blank");
+                    else alert("Failed to generate Lichess analysis link. Please try again later.");
+                })
+                .catch(console.error);
+        }));
+    }
 
     document.querySelectorAll('.selectors select').forEach(select => {
         select.addEventListener('change', () => select.blur());
@@ -51,6 +58,7 @@ function initializeEventListeners() {
 
 function setupArrowDrawing() {
     const squares = document.querySelectorAll('.square');
+    if (!squares.length) return;
 
     squares.forEach(square => {
         square.addEventListener('click', safeClick(async (e) => {
@@ -64,7 +72,7 @@ function setupArrowDrawing() {
             window.arrowStartSquare = square.getAttribute('data-square');
             window.isRightClickDragging = true;
             window.currentHoverSquare = window.arrowStartSquare;
-            window.previewHighlightSquare(window.arrowStartSquare);
+            window.previewHighlightSquare?.(window.arrowStartSquare);
             e.preventDefault();
         });
 
@@ -72,11 +80,14 @@ function setupArrowDrawing() {
             if (!window.isRightClickDragging || !window.arrowStartSquare) return;
 
             const hoverSquare = square.getAttribute('data-square');
+            const ctx = document.getElementById('arrow-layer')?.getContext('2d');
+            if (!ctx) return;
+
             clearCanvas();
-            drawAllSavedArrows(document.getElementById('arrow-layer').getContext('2d'));
+            drawAllSavedArrows(ctx);
 
             if (hoverSquare !== window.arrowStartSquare) {
-                drawSingleArrow(document.getElementById('arrow-layer').getContext('2d'), window.arrowStartSquare, hoverSquare, 'rgba(255,0,0,0.5)');
+                drawSingleArrow(ctx, window.arrowStartSquare, hoverSquare, 'rgba(255,0,0,0.5)');
             }
         });
 
@@ -87,10 +98,15 @@ function setupArrowDrawing() {
             clearCanvas();
 
             const endSquare = square.getAttribute('data-square');
+            const ctx = document.getElementById('arrow-layer')?.getContext('2d');
+            if (!ctx) return;
+
             if (window.arrowStartSquare === endSquare) {
                 const sqElem = document.querySelector(`[data-square="${endSquare}"]`);
-                if (e.ctrlKey || e.metaKey) sqElem.classList.toggle('right-highlight-second');
-                else sqElem.classList.toggle('right-highlight');
+                if (sqElem) {
+                    if (e.ctrlKey || e.metaKey) sqElem.classList.toggle('right-highlight-second');
+                    else sqElem.classList.toggle('right-highlight');
+                }
             } else {
                 const color = (e.ctrlKey || e.metaKey) ? 'green' : 'orange';
                 const pair = `${window.arrowStartSquare},${endSquare},${color}`;
@@ -98,7 +114,7 @@ function setupArrowDrawing() {
                 else window.savedArrows.add(pair);
             }
 
-            drawAllSavedArrows(document.getElementById('arrow-layer').getContext('2d'));
+            drawAllSavedArrows(ctx);
 
             window.arrowStartSquare = null;
             window.currentHoverSquare = null;

@@ -211,6 +211,8 @@ function moveListLoadingAnimationStart() {
             #moveListContainer.loading {
                 position: relative;
                 background: rgba(46, 164, 255, 0.08);
+                pointer-events: none;
+                user-select: none;
             }
             .move-list-chess-loader-bg {
                 position: absolute;
