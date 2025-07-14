@@ -30,7 +30,7 @@ function updateMoveListWithColor() {
     let html = `<div id="moveListScroll" style="display: flex; flex-direction: column; gap: 2px;">`;
     function getEvalColor(evalValue) {
         let v = Math.max(-500, Math.min(500, evalValue));
-        if (gameState.userColor === 'black') v = -v;
+        if (window.gameState.userColor === 'black') v = -v;
         let t = Math.sign(v) * Math.pow(Math.abs(v) / 500, 0.6);
         if (t >= 0) {
             let r = Math.round(204 + (39 - 204) * t);
@@ -45,19 +45,19 @@ function updateMoveListWithColor() {
             return `rgb(${r},${g},${b})`;
         }
     }
-    for (let i = 0; i < gameState.moveHistorySAN.length; i += 2) {
+    for (let i = 0; i < window.gameState.moveHistorySAN.length; i += 2) {
         const moveNumber = Math.floor(i / 2) + 1;
-        const whiteMove = gameState.moveHistorySAN[i] || "";
-        const blackMove = (i + 1 < gameState.moveHistorySAN.length ? gameState.moveHistorySAN[i + 1] : "") || "";
-        const whiteEval = gameState.evaluations[i];
-        const blackEval = gameState.evaluations[i + 1];
+        const whiteMove = window.gameState.moveHistorySAN[i] || "";
+        const blackMove = (i + 1 < window.gameState.moveHistorySAN.length ? window.gameState.moveHistorySAN[i + 1] : "") || "";
+        const whiteEval = window.gameState.evaluations[i];
+        const blackEval = window.gameState.evaluations[i + 1];
         const whiteColor = whiteEval !== undefined ? getEvalColor(whiteEval) : "#cccccc";
         const blackColor = blackEval !== undefined ? getEvalColor(blackEval) : "#cccccc";
-        const whiteMark = (currentBrowsePosition === i) ? 'background:rgb(25, 70, 70); font-weight: bold;' : '';
-        const blackMark = (currentBrowsePosition === i + 1) ? 'background:rgb(25, 70, 70); font-weight: bold;' : '';
+        const whiteMark = (window.currentBrowsePosition === i) ? 'background:rgb(25, 70, 70); font-weight: bold;' : '';
+        const blackMark = (window.currentBrowsePosition === i + 1) ? 'background:rgb(25, 70, 70); font-weight: bold;' : '';
 
         // If black move is not available, add 'disabled' class and remove pointer/hover
-        const blackMoveClass = (i + 1 >= gameState.moveHistorySAN.length || !blackMove.trim()) ? 'move-list-move disabled' : 'move-list-move';
+        const blackMoveClass = (i + 1 >= window.gameState.moveHistorySAN.length || !blackMove.trim()) ? 'move-list-move disabled' : 'move-list-move';
         const whiteMoveClass = whiteMove.trim() ? 'move-list-move' : 'move-list-move disabled';
 
         html += `
@@ -69,10 +69,10 @@ function updateMoveListWithColor() {
         `;
     }
     let currentEval = 0;
-    if (currentBrowsePosition === -1) {
-        currentEval = initialEval / 100;
+    if (window.currentBrowsePosition === -1) {
+        currentEval = window.initialEval / 100;
     } else {
-        currentEval = gameState.evaluations[currentBrowsePosition] / 100;
+        currentEval = window.gameState.evaluations[window.currentBrowsePosition] / 100;
     }
     if (currentEval !== undefined) {
         const evalColor = getEvalColor(currentEval);
@@ -92,8 +92,8 @@ function updateMoveListWithColor() {
     moveListContainer.querySelectorAll('.move-list-move:not(.disabled)').forEach(span => {
         span.addEventListener('click', function () {
             const idx = parseInt(this.getAttribute('data-move-index'));
-            if (!isNaN(idx) && idx < gameState.moveHistorySAN.length) {
-                currentBrowsePosition = idx;
+            if (!isNaN(idx) && idx < window.gameState.moveHistorySAN.length) {
+                window.currentBrowsePosition = idx;
                 updateMoveListWithColor();
                 redrawBoard();
             }
@@ -130,15 +130,15 @@ function updateMoveList() {
     }
 
     let html = `<div id="moveListScroll" style="display: flex; flex-direction: column; gap: 2px;">`;
-    for (let i = 0; i < gameState.moveHistorySAN.length; i += 2) {
+    for (let i = 0; i < window.gameState.moveHistorySAN.length; i += 2) {
         const moveNumber = Math.floor(i / 2) + 1;
-        const whiteMove = gameState.moveHistorySAN[i] || "";
-        const blackMove = (i + 1 < gameState.moveHistorySAN.length ? gameState.moveHistorySAN[i + 1] : "") || "";
-        const whiteMark = (currentBrowsePosition === i) ? 'background:rgb(25, 70, 70); font-weight: bold;' : '';
-        const blackMark = (currentBrowsePosition === i + 1) ? 'background:rgb(25, 70, 70); font-weight: bold;' : '';
+        const whiteMove = window.gameState.moveHistorySAN[i] || "";
+        const blackMove = (i + 1 < window.gameState.moveHistorySAN.length ? window.gameState.moveHistorySAN[i + 1] : "") || "";
+        const whiteMark = (window.currentBrowsePosition === i) ? 'background:rgb(25, 70, 70); font-weight: bold;' : '';
+        const blackMark = (window.currentBrowsePosition === i + 1) ? 'background:rgb(25, 70, 70); font-weight: bold;' : '';
 
         // If black move is not available, add 'disabled' class and remove pointer/hover
-        const blackMoveClass = (i + 1 >= gameState.moveHistorySAN.length || !blackMove.trim()) ? 'move-list-move disabled' : 'move-list-move';
+        const blackMoveClass = (i + 1 >= window.gameState.moveHistorySAN.length || !blackMove.trim()) ? 'move-list-move disabled' : 'move-list-move';
         const whiteMoveClass = whiteMove.trim() ? 'move-list-move' : 'move-list-move disabled';
 
         html += `
@@ -158,8 +158,8 @@ function updateMoveList() {
     moveListContainer.querySelectorAll('.move-list-move:not(.disabled)').forEach(span => {
         span.addEventListener('click', function (e) {
             const idx = parseInt(this.getAttribute('data-move-index'));
-            if (!isNaN(idx) && idx < gameState.moveHistorySAN.length) {
-                currentBrowsePosition = idx;
+            if (!isNaN(idx) && idx < window.gameState.moveHistorySAN.length) {
+                window.currentBrowsePosition = idx;
                 updateMoveList();
                 redrawBoard();
             }
@@ -168,33 +168,33 @@ function updateMoveList() {
 }
 
 function browseBackClick() {
-    if (currentBrowsePosition > -1) {
+    if (window.currentBrowsePosition > -1) {
         removeGameHighlights();
-        currentBrowsePosition--;
+        window.currentBrowsePosition--;
         redrawBoard();
     }
 }
 
 function browseAllTheWayBackClick() {
-    if (currentBrowsePosition !== -1) {
+    if (window.currentBrowsePosition !== -1) {
         removeGameHighlights();
-        currentBrowsePosition = -1;
+        window.currentBrowsePosition = -1;
         redrawBoard();
     }
 }
 
 function browseForwardClick() {
-    if (currentBrowsePosition < gameState.moveHistorySAN.length - 1) {
+    if (window.currentBrowsePosition < window.gameState.moveHistorySAN.length - 1) {
         removeGameHighlights();
-        currentBrowsePosition++;
+        window.currentBrowsePosition++;
         redrawBoard();
     }
 }
 
 function browseAllTheWayForwardClick() {
-    if (currentBrowsePosition !== gameState.moveHistorySAN.length - 1) {
+    if (window.currentBrowsePosition !== window.gameState.moveHistorySAN.length - 1) {
         removeGameHighlights();
-        currentBrowsePosition = gameState.moveHistorySAN.length - 1;
+        window.currentBrowsePosition = window.gameState.moveHistorySAN.length - 1;
         redrawBoard();
     }
 }
@@ -271,7 +271,7 @@ function moveListLoadingAnimationStart() {
     };
     // Pawns are not in the starting string, so fallback to ♙ for unknowns
     const pieces = positionString.split("").map(ch => pieceMap[ch] || "♙");
-    if (gameState.userColor === "black") { pieces.reverse(); }
+    if (window.gameState.userColor === "black") { pieces.reverse(); }
     if (!moveListContainer.querySelector(".move-list-chess-loader-bg")) {
         const loader = document.createElement("div");
         loader.className = "move-list-chess-loader-bg";

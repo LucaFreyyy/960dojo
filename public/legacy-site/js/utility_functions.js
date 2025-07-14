@@ -14,7 +14,7 @@ function chessNotation(square) {
     const row = parseInt(square.dataset.row);
     const col = parseInt(square.dataset.col);
     let file, rank;
-    if (gameState.userColor === 'black') {
+    if (window.gameState.userColor === 'black') {
         file = String.fromCharCode(97 + (7 - col));
         rank = row + 1;
     } else {
@@ -25,7 +25,7 @@ function chessNotation(square) {
 }
 
 function removeAllArrows() {
-    savedArrows.clear(); // Clear the list of saved arrows
+    window.savedArrows.clear(); // Clear the list of saved arrows
     const canvas = document.getElementById('arrow-layer');
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear all drawings
@@ -41,8 +41,8 @@ function removeMarkings() {
 }
 
 function removeGameHighlights() {
-    CURRENTLY_HIGHLIGHTED_SQUARE = null;
-    gameState.premove = null;
+    window.CURRENTLY_HIGHLIGHTED_SQUARE = null;
+    window.gameState.premove = null;
     document.querySelectorAll('.square').forEach(square => {
         square.classList.remove('premove-highlight');
         square.classList.remove('highlight');
@@ -90,7 +90,7 @@ async function playSound(soundPath) {
     }
 }
 
-function getAllPseudoLegalMovesForOpponent(fen) {
+function getAllPseudolegalMovesForOpponent(fen) {
     function parseFEN(fen) {
         const [piecePlacement, activeColor] = fen.split(' ');
         const rows = piecePlacement.split('/');
@@ -310,17 +310,17 @@ function reactivateMenu() {
 }
 
 function resetGameState() {
-    gameState.playing = false;
-    gameState.position = null;
-    gameState.userColor = null;
-    gameState.colorToMove = null;
-    gameState.isRated = false;
-    gameState.userRating = null;
-    gameState.halfMoveNumber = 0;
-    gameState.moveHistorySAN = [];
-    gameState.moveHistoryUCI = [];
-    currentBrowsePosition = -1;
-    lastDrawnPosition = -1;
-    gameState.fenHistory = [];
-    gameState.evaluations = [];
+    window.gameState.playing = false;
+    window.gameState.position = null;
+    window.gameState.userColor = null;
+    window.gameState.colorToMove = null;
+    window.gameState.isRated = false;
+    window.gameState.userRating = null;
+    window.gameState.halfMoveNumber = 0;
+    window.gameState.moveHistorySAN = [];
+    window.gameState.moveHistoryUCI = [];
+    window.currentBrowsePosition = -1;
+    window.lastDrawnPosition = -1;
+    window.gameState.fenHistory = [];
+    window.gameState.evaluations = [];
 }

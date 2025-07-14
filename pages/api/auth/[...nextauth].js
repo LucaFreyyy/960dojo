@@ -1,12 +1,7 @@
 import NextAuth from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '../../../lib/supabase';
 import { createHash } from 'crypto';
-
-const supabase = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY
-);
 
 export default NextAuth({
     providers: [
@@ -53,6 +48,21 @@ export default NextAuth({
                 console.error('Sign-in error:', err);
                 return false;
             }
+        },
+
+        // ✅ Add this to include hashed ID in token
+        async jwt({ token, user }) {
+            if (user?.email && !token.id) {
+                const id = createHash('sha256').update(user.email).digest('hex');
+                token.id = id;
+            }
+            return token;
+        },
+
+        // ✅ Add this to include hashed ID in session.user
+        async session({ session, token }) {
+            session.user.id = token.id;
+            return session;
         }
     }
 });

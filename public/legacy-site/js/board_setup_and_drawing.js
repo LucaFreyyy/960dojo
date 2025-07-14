@@ -29,35 +29,35 @@ async function setPositionByNumber(number, color = null) {
     removeAllArrows();
 }
 function redrawBoard() {
-    if (gameState.playing) {
+    if (window.gameState.playing) {
         updateMoveList();
     } else {
         updateMoveListWithColor();
     }
-    if (currentBrowsePosition === gameState.fenHistory.length - 2 && lastDrawnPosition === currentBrowsePosition) { // one move behind
-        currentBrowsePosition++;
+    if (window.currentBrowsePosition === window.gameState.fenHistory.length - 2 && window.lastDrawnPosition === window.currentBrowsePosition) { // one move behind
+        window.currentBrowsePosition++;
         updateMoveList();
     }
-    if (lastDrawnPosition === currentBrowsePosition) {
+    if (window.lastDrawnPosition === window.currentBrowsePosition) {
         return; // No need to redraw if the position hasn't changed
     }
-    if (currentBrowsePosition === -1) {
+    if (window.currentBrowsePosition === -1) {
         const startPositionNumber = document.getElementById('numberSelect').value;
-        setPositionByNumber(startPositionNumber, gameState.userColor);
-        lastDrawnPosition = currentBrowsePosition;
+        setPositionByNumber(startPositionNumber, window.gameState.userColor);
+        window.lastDrawnPosition = window.currentBrowsePosition;
         document.querySelectorAll('.square').forEach(square => {
             square.classList.remove('last-move-highlight');
         });
         return;
     }
-    lastDrawnPosition = currentBrowsePosition;
-    const fen = gameState.fenHistory[currentBrowsePosition].split(' ')[0];
+    window.lastDrawnPosition = window.currentBrowsePosition;
+    const fen = window.gameState.fenHistory[window.currentBrowsePosition].split(' ')[0];
     const rows = fen.split('/');
     document.querySelectorAll('.square').forEach(square => {
         square.innerHTML = '';
         square.classList.remove('last-move-highlight');
     });
-    const isBlack = gameState.userColor === 'black';
+    const isBlack = window.gameState.userColor === 'black';
     for (let row = 0; row < 8; row++) {
         let col = 0;
         for (const char of rows[row]) {
@@ -83,7 +83,7 @@ function redrawBoard() {
     addDragDropHandlers();
 
     // Highlight the last move
-    const uciMove = gameState.moveHistoryUCI[currentBrowsePosition];
+    const uciMove = window.gameState.moveHistoryUCI[window.currentBrowsePosition];
     // uciMove: [fromRow, fromCol, toRow, toCol] in 0-based board coordinates
     const fileToCol = file => 'abcdefgh'.indexOf(file);
     const fromCol = isBlack ? 7 - fileToCol(uciMove[0]) : fileToCol(uciMove[0]);
@@ -111,19 +111,19 @@ async function initializeBoard() {
 async function setupStartPosition() {
     const categorySelect = document.getElementById('Category');
     const numberSelect = document.getElementById('numberSelect');
-    gameState.colorToMove = 'white';
-    gameState.isRated = document.getElementById('ratedBtn').classList.contains('active');
-    gameState.userRating = document.getElementById('ratingDisplay').textContent;
-    if (gameState.isRated) {
+    window.gameState.colorToMove = 'white';
+    window.gameState.isRated = document.getElementById('ratedBtn').classList.contains('active');
+    window.gameState.userRating = document.getElementById('ratingDisplay').textContent;
+    if (window.gameState.isRated) {
         categorySelect.value = "Random";
         const user = window.user;
-        gameState.userColor = user.opening_color;
+        window.gameState.userColor = user.opening_color;
         numberSelect.value = user.opening_position;
-        gameState.userRating = user.rating_openings;
+        window.gameState.userRating = user.rating_openings;
     } else {
-        gameState.userColor = document.querySelector('.color .active').id.replace('Btn', '');
-        if (gameState.userColor === 'random') {
-            gameState.userColor = Math.random() > 0.5 ? 'white' : 'black';
+        window.gameState.userColor = document.querySelector('.color .active').id.replace('Btn', '');
+        if (window.gameState.userColor === 'random') {
+            window.gameState.userColor = Math.random() > 0.5 ? 'white' : 'black';
         }
         if (categorySelect.value === 'Random') {
             const randomNumber = Math.floor(Math.random() * 960);
@@ -140,6 +140,6 @@ async function setupStartPosition() {
             numberSelect.value = randomNumber;
         }
     }
-    gameState.position = freestyleNumberToFEN(parseInt(numberSelect.value));
-    setPositionByNumber(parseInt(numberSelect.value), gameState.userColor).catch(console.error);
+    window.gameState.position = freestyleNumberToFEN(parseInt(numberSelect.value));
+    setPositionByNumber(parseInt(numberSelect.value), window.gameState.userColor).catch(console.error);
 }

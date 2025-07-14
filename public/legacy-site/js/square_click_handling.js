@@ -1,47 +1,47 @@
 async function tryMove(startSquareElem, endSquareElem, premove = false) {
     // if it is not the user's turn, store premove
-    if (gameState.userColor !== gameState.colorToMove && endSquareElem.classList.contains('can-move-highlight')) {
+    if (window.gameState.userColor !== window.gameState.colorToMove && endSquareElem.classList.contains('can-move-highlight')) {
         unhighlightSquare();
-        gameState.premove = [startSquareElem, endSquareElem];
+        window.gameState.premove = [startSquareElem, endSquareElem];
         startSquareElem.classList.add('premove-highlight');
         endSquareElem.classList.add('premove-highlight');
         return;
     }
-    if (gameState.halfMoveNumber >= HALF_MOVE_THRESHOLD) {
+    if (window.gameState.halfMoveNumber >= window.HALF_MOVE_THRESHOLD) {
         return;
     }
-    if (MOVE_IN_PROGRESS) return;
-    MOVE_IN_PROGRESS = true;
+    if (window.MOVE_IN_PROGRESS) return;
+    window.MOVE_IN_PROGRESS = true;
 
     const startSquare = chessNotation(startSquareElem);
     const endSquare = chessNotation(endSquareElem);
     unhighlightSquare();
 
-    if (legalMoves.includes(startSquare + endSquare)) {
-        gameState.halfMoveNumber++;
+    if (window.legalMoves.includes(startSquare + endSquare)) {
+        window.gameState.halfMoveNumber++;
         squareMoves = startSquare + endSquare;
-        idx = legalMoves.indexOf(squareMoves);
-        move = legalSans[idx];
-        resultFen = fenResults[idx];
+        idx = window.legalMoves.indexOf(squareMoves);
+        move = window.legalSans[idx];
+        resultFen = window.fenResults[idx];
 
-        gameState.position = resultFen;
+        window.gameState.position = resultFen;
 
-        legalMoves = getAllPseudoLegalMovesForOpponent(gameState.position);
+        window.legalMoves = getAllPseudowindow.legalMovesForOpponent(window.gameState.position);
 
-        gameState.moveHistorySAN.push(move);
-        gameState.moveHistoryUCI.push(startSquare + endSquare);
-        gameState.fenHistory.push(resultFen);
+        window.gameState.moveHistorySAN.push(move);
+        window.gameState.moveHistoryUCI.push(startSquare + endSquare);
+        window.gameState.fenHistory.push(resultFen);
         redrawBoard();
         playMoveSound(move);
-        CURRENTLY_HIGHLIGHTED_SQUARE = null;
+        window.CURRENTLY_HIGHLIGHTED_SQUARE = null;
 
-        MOVE_IN_PROGRESS = false;
+        window.MOVE_IN_PROGRESS = false;
 
-        if (moveIsMate[idx]) {
+        if (window.moveIsMate[idx]) {
             updateMoveListWithColor();
-            gameState.playing = false;
+            window.gameState.playing = false;
         } else {
-            gameState.colorToMove = 'white' === gameState.colorToMove ? 'black' : 'white';
+            window.gameState.colorToMove = 'white' === window.gameState.colorToMove ? 'black' : 'white';
             dataBaseMove();
         }
         return;
@@ -51,16 +51,16 @@ async function tryMove(startSquareElem, endSquareElem, premove = false) {
         } else {
             playSound('/legacy-site/sounds/Error.mp3');
         }
-        MOVE_IN_PROGRESS = false;
+        window.MOVE_IN_PROGRESS = false;
         return;
     }
 }
 
 
 function isUserPiece(squareElem) {
-    if (gameState.userColor === null) return false;
+    if (window.gameState.userColor === null) return false;
     const img = squareElem.querySelector('img');
-    return img && img.src.includes('/' + gameState.userColor[0] + '_');
+    return img && img.src.includes('/' + window.gameState.userColor[0] + '_');
 }
 
 async function highlightSquare(squareElem) {
@@ -69,13 +69,13 @@ async function highlightSquare(squareElem) {
         square.classList.remove('right-highlight-second');
     });
     removeAllArrows();
-    CURRENTLY_HIGHLIGHTED_SQUARE = squareElem;
+    window.CURRENTLY_HIGHLIGHTED_SQUARE = squareElem;
     squareElem.classList.add('highlight');
     playSound('/legacy-site/sounds/Select.mp3');
     // Get legal moves for the highlighted square
     const square = chessNotation(squareElem);
-    legalMovesCopy = legalMoves.slice();
-    for (const move of legalMoves) {
+    window.legalMovesCopy = window.legalMoves.slice();
+    for (const move of window.legalMoves) {
         if (move[0] + move[1] !== square) continue;
         const indices = chessNotationToIndices(move[2] + move[3]);
         const targetSquare = document.querySelector(`.square[data-row="${indices[0]}"][data-col="${indices[1]}"]`);
@@ -83,13 +83,13 @@ async function highlightSquare(squareElem) {
             targetSquare.classList.add('can-move-highlight');
         }
     }
-    if (CURRENTLY_HIGHLIGHTED_SQUARE === null) {
+    if (window.CURRENTLY_HIGHLIGHTED_SQUARE === null) {
         unhighlightSquare();
     }
 }
 
 function unhighlightSquare() {
-    CURRENTLY_HIGHLIGHTED_SQUARE = null;
+    window.CURRENTLY_HIGHLIGHTED_SQUARE = null;
     document.querySelectorAll('.square').forEach(square => {
         square.classList.remove('right-highlight');
         square.classList.remove('right-highlight-second');
@@ -101,13 +101,13 @@ function unhighlightSquare() {
 
 async function square_clicked(square) {
     removeMarkings();
-    gameState.premove = null;
-    if (!gameState.playing || currentBrowsePosition !== gameState.moveHistorySAN.length - 1 || gameState.halfMoveNumber >= HALF_MOVE_THRESHOLD) return;
+    window.gameState.premove = null;
+    if (!window.gameState.playing || window.currentBrowsePosition !== window.gameState.moveHistorySAN.length - 1 || window.gameState.halfMoveNumber >= window.HALF_MOVE_THRESHOLD) return;
 
-    if (square === CURRENTLY_HIGHLIGHTED_SQUARE) {
+    if (square === window.CURRENTLY_HIGHLIGHTED_SQUARE) {
         unhighlightSquare();
-    } else if (CURRENTLY_HIGHLIGHTED_SQUARE) {
-        await tryMove(CURRENTLY_HIGHLIGHTED_SQUARE, square);
+    } else if (window.CURRENTLY_HIGHLIGHTED_SQUARE) {
+        await tryMove(window.CURRENTLY_HIGHLIGHTED_SQUARE, square);
     } else {
         if (isUserPiece(square)) {
             highlightSquare(square);
@@ -124,19 +124,19 @@ function addDragDropHandlers() {
 
         img.addEventListener('dragstart', event => {
             removeMarkings();
-            gameState.premove = null;
+            window.gameState.premove = null;
 
-            if (!gameState.playing || !isUser || currentBrowsePosition !== gameState.moveHistorySAN.length - 1 || gameState.halfMoveNumber >= HALF_MOVE_THRESHOLD) {
+            if (!window.gameState.playing || !isUser || window.currentBrowsePosition !== window.gameState.moveHistorySAN.length - 1 || window.gameState.halfMoveNumber >= window.HALF_MOVE_THRESHOLD) {
                 event.preventDefault();
                 return;
             }
 
-            if (CURRENTLY_HIGHLIGHTED_SQUARE) {
+            if (window.CURRENTLY_HIGHLIGHTED_SQUARE) {
                 unhighlightSquare();
             }
 
-            DRAG_START_SQUARE = parentSquare;
-            highlightSquare(DRAG_START_SQUARE);
+            window.DRAG_START_SQUARE = parentSquare;
+            highlightSquare(window.DRAG_START_SQUARE);
 
             event.dataTransfer.setData('text/plain', '');
 
@@ -183,16 +183,16 @@ function addDragDropHandlers() {
 
     document.querySelectorAll('.square').forEach(square => {
         square.addEventListener('dragover', event => {
-            if (gameState.playing) event.preventDefault();
+            if (window.gameState.playing) event.preventDefault();
         });
 
         square.addEventListener('drop', async event => {
             event.preventDefault();
-            if (!gameState.playing || !DRAG_START_SQUARE || !isUserPiece(DRAG_START_SQUARE) || DRAG_START_SQUARE === square) return;
+            if (!window.gameState.playing || !window.DRAG_START_SQUARE || !isUserPiece(window.DRAG_START_SQUARE) || window.DRAG_START_SQUARE === square) return;
 
-            const moved = await tryMove(DRAG_START_SQUARE, square);
+            const moved = await tryMove(window.DRAG_START_SQUARE, square);
             unhighlightSquare();
-            DRAG_START_SQUARE = null;
+            window.DRAG_START_SQUARE = null;
         });
     });
 }
@@ -209,12 +209,12 @@ function drawArrow(from, to, color, isPreview = false) {
     const canvas = document.getElementById('arrow-layer');
     const ctx = canvas.getContext('2d');
 
-    if (!isPreview) savedArrows.add([from, to, color]); // store permanent arrows
+    if (!isPreview) window.savedArrows.add([from, to, color]); // store permanent arrows
 
     resizeArrowCanvas(); // if needed
 
     clearCanvas(); // clear all arrows
-    drawAllSavedArrows(ctx);
+    drawAllwindow.savedArrows(ctx);
 
     if (isPreview) {
         drawSingleArrow(ctx, from, to, 'orange');
@@ -229,19 +229,19 @@ function squareToCoords(square, size) {
 }
 
 function clearPreview() {
-    if (previewArrow) {
-        previewArrow.remove(); // or clear the canvas if using 1 canvas
-        previewArrow = null;
+    if (window.previewArrow) {
+        window.previewArrow.remove(); // or clear the canvas if using 1 canvas
+        window.previewArrow = null;
     }
-    if (previewHighlight) {
-        previewHighlight.classList.remove('preview-highlight');
-        previewHighlight = null;
+    if (window.previewHighlight) {
+        window.previewHighlight.classList.remove('preview-highlight');
+        window.previewHighlight = null;
     }
 }
 
 function previewHighlightSquare(squareName) {
     const squareEl = document.querySelector(`[data-square="${squareName}"]`);
-    previewHighlight = squareEl;
+    window.previewHighlight = squareEl;
 }
 
 function clearCanvas() {
@@ -252,7 +252,7 @@ function clearCanvas() {
 
 function drawAllSavedArrows(ctx) {
     clearCanvas();
-    for (const pair of savedArrows) {
+    for (const pair of window.savedArrows) {
         const [from, to, color] = pair.split(',');
         drawSingleArrow(ctx, from, to, color);
     }

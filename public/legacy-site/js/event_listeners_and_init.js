@@ -2,7 +2,8 @@ console.log("init loaded")
 
 // initializeUI.js
 function initializeUI() {
-    selectMode('training');
+    const mode = window.sessionUser?.id ? 'ranked' : 'training';
+    selectMode(mode);
     selectColor('random');
 }
 
@@ -10,7 +11,7 @@ function initializeUI() {
 function initializeEventListeners() {
     document.getElementById("Category").addEventListener("change", () => toggleNumberSelect().catch(console.error));
     document.getElementById("numberSelect").addEventListener("change", () => onNumberSelectChange().catch(console.error));
-    document.getElementById("ratedBtn").addEventListener("click", () => ratedButtonClick());
+    document.getElementById("ratedBtn").addEventListener("click", () => selectMode("rated"));
     document.getElementById("trainingBtn").addEventListener("click", () => selectMode("training"));
     document.getElementById("whiteBtn").addEventListener("click", () => selectColor("white"));
     document.getElementById("blackBtn").addEventListener("click", () => selectColor("black"));
@@ -53,53 +54,53 @@ function setupArrowDrawing() {
         // Right click arrow drawing handlers
         square.addEventListener('mousedown', e => {
             if (e.button !== 2) return;
-            arrowStartSquare = square.getAttribute('data-square');
-            isRightClickDragging = true;
-            currentHoverSquare = arrowStartSquare;
-            previewHighlightSquare(arrowStartSquare);
+            window.arrowStartSquare = square.getAttribute('data-square');
+            window.isRightClickDragging = true;
+            window.currentHoverSquare = window.arrowStartSquare;
+            window.previewHighlightSquare(window.arrowStartSquare);
             e.preventDefault();
         });
 
         square.addEventListener('mouseenter', e => {
-            if (!isRightClickDragging || !arrowStartSquare) return;
+            if (!window.isRightClickDragging || !window.arrowStartSquare) return;
 
             const hoverSquare = square.getAttribute('data-square');
             clearCanvas();
-            drawAllSavedArrows(document.getElementById('arrow-layer').getContext('2d'));
+            drawAllwindow.savedArrows(document.getElementById('arrow-layer').getContext('2d'));
 
-            if (hoverSquare !== arrowStartSquare) {
-                drawSingleArrow(document.getElementById('arrow-layer').getContext('2d'), arrowStartSquare, hoverSquare, 'rgba(255,0,0,0.5)');
+            if (hoverSquare !== window.arrowStartSquare) {
+                drawSingleArrow(document.getElementById('arrow-layer').getContext('2d'), window.arrowStartSquare, hoverSquare, 'rgba(255,0,0,0.5)');
             }
         });
 
         square.addEventListener('mouseup', e => {
             if (e.button !== 2) return;
 
-            isRightClickDragging = false;
+            window.isRightClickDragging = false;
             clearCanvas();
 
             const endSquare = square.getAttribute('data-square');
-            if (arrowStartSquare === endSquare) {
+            if (window.arrowStartSquare === endSquare) {
                 const sqElem = document.querySelector(`[data-square="${endSquare}"]`);
                 if (e.ctrlKey || e.metaKey) sqElem.classList.toggle('right-highlight-second');
                 else sqElem.classList.toggle('right-highlight');
             } else {
                 const color = (e.ctrlKey || e.metaKey) ? 'green' : 'orange';
-                const pair = `${arrowStartSquare},${endSquare},${color}`;
-                if (savedArrows.has(pair)) savedArrows.delete(pair);
-                else savedArrows.add(pair);
+                const pair = `${window.arrowStartSquare},${endSquare},${color}`;
+                if (window.savedArrows.has(pair)) window.savedArrows.delete(pair);
+                else window.savedArrows.add(pair);
             }
 
-            drawAllSavedArrows(document.getElementById('arrow-layer').getContext('2d'));
+            drawAllwindow.savedArrows(document.getElementById('arrow-layer').getContext('2d'));
 
-            arrowStartSquare = null;
-            currentHoverSquare = null;
+            window.arrowStartSquare = null;
+            window.currentHoverSquare = null;
         });
     });
 }
 
 // Async login check outside DOMContentLoaded (runs immediately)
 window.onload = () => {
-    userInfo = window.user || null;
-    selectMode(userInfo ? 'rated' : 'training');
+    window.userInfo = window.user || null;
+    selectMode(window.userInfo ? 'rated' : 'training');
 };

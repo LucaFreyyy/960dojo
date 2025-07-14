@@ -5,11 +5,6 @@ async function selectMode(mode) {
     console.log('[selectMode] mode before user check:', mode);
     console.log('[selectMode] user:', user);
 
-    if (!user?.id) {
-        console.warn('[selectMode] no user ID, forcing training mode');
-        mode = 'training';
-    }
-
     if (mode === 'rated' && categorySelect.value !== 'Random') {
         console.log('[selectMode] forcing category to Random');
         categorySelect.value = 'Random';
@@ -35,17 +30,6 @@ async function selectMode(mode) {
     }
 }
 
-async function ratedButtonClick() {
-    console.log('[ratedButtonClick] triggered');
-    console.log('[ratedButtonClick] sessionUser:', window.sessionUser);
-
-    if (window.sessionUser?.id) {
-        console.log('[ratedButtonClick] user is logged in, calling selectMode("rated")');
-        await selectMode("rated");
-    } else {
-        console.warn('[ratedButtonClick] no user ID — user not logged in');
-    }
-}
 
 function selectColor(color) {
     const isRated = document.getElementById('ratedBtn').classList.contains('active');

@@ -311,8 +311,8 @@ async function getLichessAnalysisLink() {
     // Grab values from DOM / global variables here:
     const startPositionNr = document.getElementById('numberSelect').value;
     const user = window.user?.name || 'Guest';
-    const history = gameState.moveHistorySAN;
-    const userColor = gameState.userColor;
+    const history = window.gameState.moveHistorySAN;
+    const userColor = window.gameState.userColor;
 
     // (Then the rest of your function unchanged but using these variables)
 

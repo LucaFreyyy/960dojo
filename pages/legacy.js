@@ -1,96 +1,113 @@
 import Head from 'next/head';
 import { useEffect } from 'react';
 import { useSession } from 'next-auth/react';
+import { exposeChessopsGlobalsToWindow } from '../lib/exposeChessops.js';
 
 export default function LegacyPage() {
     const { data: session, status } = useSession();
 
     useEffect(() => {
-        if (status !== 'authenticated') return;
+        exposeChessopsGlobalsToWindow();
 
-        console.log('[legacy.js] Session ready:', session?.user?.email);
-
-        // Make user info available to legacy code
+        // Always define sessionUser immediately
         window.sessionUser = {
             id: null,
-            rating_openings: 1500,
-            ...session.user,
+            rating_openings: 1400,
+            ...(session?.user || {})
         };
 
-        // Fetch Supabase user
-        (async () => {
-            try {
-                const { createClient } = await import('@supabase/supabase-js');
-                const supabase = createClient(
-                    process.env.NEXT_PUBLIC_SUPABASE_URL,
-                    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-                );
-
-                const email = session.user.email;
-                const buffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(email));
-                const userId = Array.from(new Uint8Array(buffer))
-                    .map(b => b.toString(16).padStart(2, '0'))
-                    .join('');
-
-                const { data, error } = await supabase
-                    .from('User')
-                    .select('id, rating_openings')
-                    .eq('id', userId)
-                    .maybeSingle();
-
-                if (data) {
-                    window.sessionUser.id = data.id;
-                    window.sessionUser.rating_openings = data.rating_openings;
-                    console.log('[legacy.js] Supabase user loaded:', data);
+        const finishSetup = () => {
+            console.log('[legacy.js] All legacy scripts loaded');
+            if (typeof initializeUI === 'function') {
+                initializeUI(); console.log('UI ready');
+                const ratedBtn = document.getElementById('ratedBtn');
+                if (!window.sessionUser?.id) {
+                    ratedBtn.classList.add('locked');
+                    ratedBtn.disabled = true;
+                    ratedBtn.title = 'Log in to play rated';
+                    selectMode('training');
                 } else {
-                    console.warn('[legacy.js] Supabase user not found:', error);
+                    ratedBtn.classList.remove('locked');
+                    ratedBtn.disabled = false;
+                    ratedBtn.title = '';
+                    selectMode('rated');
                 }
-            } catch (err) {
-                console.error('[legacy.js] Supabase fetch error:', err);
+                initializeEventListeners(); console.log('Listeners attached');
+                setupRatingControls();
+                setupArrowDrawing();
+                initializeBoard();
+                resizeArrowCanvas();
+                window.addEventListener('resize', resizeArrowCanvas);
+            } else {
+                console.error('initializeUI is not defined');
             }
-        })();
+        };
 
-        // Load legacy JS files
-        const scriptFiles = [
-            'stockfish.js',
-            'chess_constants.js',
-            'chess_logic.js',
-            'constants_and_globals.js',
-            'utility_functions.js',
-            'board_setup_and_drawing.js',
-            'game_mode_and_color_selection.js',
-            'game_flow.js',
-            'move_list_display.js',
-            'square_click_handling.js',
-            'event_listeners_and_init.js',
-        ];
+        // If authenticated, fetch from Supabase and override sessionUser
+        if (status === 'authenticated') {
+            (async () => {
+                try {
+                    const { createClient } = await import('@supabase/supabase-js');
+                    const supabase = createClient(
+                        process.env.NEXT_PUBLIC_SUPABASE_URL,
+                        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+                    );
 
-        let loadedCount = 0;
+                    const { data, error } = await supabase
+                        .from('User')
+                        .select('id, rating_openings')
+                        .eq('id', session.user.id)
+                        .maybeSingle();
 
-        scriptFiles.forEach(file => {
-            const script = document.createElement('script');
-            script.src = `/legacy-site/js/${file}`;
-            script.async = false;
-            script.onload = () => {
-                loadedCount++;
-                if (loadedCount === scriptFiles.length) {
-                    console.log('[legacy.js] All legacy scripts loaded');
-                    if (typeof initializeUI === 'function') {
-                        initializeUI(); console.log('UI ready');
-                        console.log('ratedButtonClick defined:', typeof ratedButtonClick);
-                        initializeEventListeners(); console.log('Listeners attached');
-                        setupRatingControls();
-                        setupArrowDrawing();
-                        initializeBoard();
-                        resizeArrowCanvas();
-                        window.addEventListener('resize', resizeArrowCanvas);
+                    if (data) {
+                        window.sessionUser.id = data.id;
+                        window.sessionUser.rating_openings = data.rating_openings;
+                        console.log('[legacy.js] Supabase user loaded:', data);
                     } else {
-                        console.error('initializeUI is not defined');
+                        console.warn('[legacy.js] Supabase user not found:', error);
                     }
+                } catch (err) {
+                    console.error('[legacy.js] Supabase fetch error:', err);
+                } finally {
+                    // Now that sessionUser is complete, load scripts
+                    loadLegacyScripts(finishSetup);
                 }
-            };
-            document.body.appendChild(script);
-        });
+            })();
+        } else {
+            // Not logged in, just load legacy scripts immediately
+            loadLegacyScripts(finishSetup);
+        }
+
+        function loadLegacyScripts(callback) {
+            const scriptFiles = [
+                'stockfish.js',
+                'chess_constants.js',
+                'chess_logic.js',
+                'constants_and_globals.js',
+                'utility_functions.js',
+                'board_setup_and_drawing.js',
+                'game_mode_and_color_selection.js',
+                'game_flow.js',
+                'move_list_display.js',
+                'square_click_handling.js',
+                'event_listeners_and_init.js',
+            ];
+
+            let loadedCount = 0;
+
+            scriptFiles.forEach(file => {
+                const script = document.createElement('script');
+                script.src = `/legacy-site/js/${file}`;
+                script.async = false;
+                script.onload = () => {
+                    loadedCount++;
+                    if (loadedCount === scriptFiles.length) {
+                        callback();
+                    }
+                };
+                document.body.appendChild(script);
+            });
+        }
     }, [status, session]);
 
     return (

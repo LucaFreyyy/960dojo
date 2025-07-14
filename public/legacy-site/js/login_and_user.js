@@ -9,7 +9,7 @@ async function checkLoginStatus() {
             <a onclick="logout()">Logout</a>
         `;
         document.getElementById("loginName").textContent = session.user.name || session.user.email;
-        window.userInfo = {
+        window.window.userInfo = {
             name: session.user.name,
             email: session.user.email,
             rating: session.user.rating, // if you store rating on the session
@@ -21,7 +21,7 @@ async function checkLoginStatus() {
         `;
         document.getElementById("loginName").textContent = "";
         selectMode('training');
-        window.userInfo = null;
+        window.window.userInfo = null;
     }
 }
 
