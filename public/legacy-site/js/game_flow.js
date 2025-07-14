@@ -143,6 +143,25 @@ async function endGame() {
         const newPosition = Math.floor(Math.random() * 960);
         const newColor = Math.random() > 0.5 ? "white" : "black";
 
+        fetch('/api/updateOpeningRating', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                id: window.sessionUser.id,
+                newRating,
+            }),
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (!data.success) {
+                    console.error("Rating update failed:", data.error);
+                } else {
+                    console.log("Rating successfully updated in Supabase");
+                }
+            })
+            .catch(console.error);
+
+
         fetch("/update_user_data", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
