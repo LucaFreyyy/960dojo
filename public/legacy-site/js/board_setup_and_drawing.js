@@ -114,32 +114,37 @@ async function setupStartPosition() {
     window.gameState.colorToMove = 'white';
     window.gameState.isRated = document.getElementById('ratedBtn').classList.contains('active');
     window.gameState.userRating = document.getElementById('ratingDisplay').textContent;
-    if (window.gameState.isRated) {
+
+    const user = window.sessionUser;
+
+    if (window.gameState.isRated && user) {
         categorySelect.value = "Random";
-        const user = window.user;
-        window.gameState.userColor = user.opening_color;
-        numberSelect.value = user.opening_position;
-        window.gameState.userRating = user.rating_openings;
+        window.gameState.userColor = user.opening_color || (Math.random() > 0.5 ? 'white' : 'black');
+        numberSelect.value = user.opening_position || Math.floor(Math.random() * 960);
+        window.gameState.userRating = user.rating_openings ?? 1500;
     } else {
         window.gameState.userColor = document.querySelector('.color .active').id.replace('Btn', '');
         if (window.gameState.userColor === 'random') {
             window.gameState.userColor = Math.random() > 0.5 ? 'white' : 'black';
         }
+
         if (categorySelect.value === 'Random') {
-            const randomNumber = Math.floor(Math.random() * 960);
-            numberSelect.value = randomNumber;
+            numberSelect.value = Math.floor(Math.random() * 960);
         } else if (categorySelect.value === 'Fixed Piece') {
-            const positions = position_with_fixed_pieces(document.getElementById('PieceSelector').value, document.getElementById('SquareFixPieceSelector1').value, document.getElementById('SquareFixPieceSelector2').value);
-            const startPosNumbers = positions;
-            if (startPosNumbers.length === 0) {
+            const positions = position_with_fixed_pieces(
+                document.getElementById('PieceSelector').value,
+                document.getElementById('SquareFixPieceSelector1').value,
+                document.getElementById('SquareFixPieceSelector2').value
+            );
+            if (positions.length === 0) {
                 backButtonClick();
                 return;
             }
-            const startPosNumbersInt = startPosNumbers.map(n => parseInt(n, 10));
-            const randomNumber = startPosNumbersInt[Math.floor(Math.random() * startPosNumbersInt.length)];
+            const randomNumber = parseInt(positions[Math.floor(Math.random() * positions.length)], 10);
             numberSelect.value = randomNumber;
         }
     }
+
     window.gameState.position = freestyleNumberToFEN(parseInt(numberSelect.value));
-    setPositionByNumber(parseInt(numberSelect.value), window.gameState.userColor).catch(console.error);
+    await setPositionByNumber(parseInt(numberSelect.value), window.gameState.userColor);
 }

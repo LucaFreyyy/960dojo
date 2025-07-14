@@ -266,47 +266,89 @@ function setupRatingControls() {
 }
 
 function deactivateMenu() {
-    // hide elements
-    document.getElementById('ratingChangeButtons').style.display = 'none';
-    document.querySelector(".mode").style.display = "none";
-    document.querySelector(".color").style.display = "none";
+    const ratingChangeButtons = document.getElementById('ratingChangeButtons');
+    if (ratingChangeButtons) ratingChangeButtons.style.display = 'none';
+
+    const mode = document.querySelector(".mode");
+    if (mode) mode.style.display = "none";
+
+    const color = document.querySelector(".color");
+    if (color) color.style.display = "none";
+
     document.querySelectorAll(".button-separator").forEach(el => el.style.display = "none");
-    document.getElementById("startBtn").style.display = "none";
-    document.getElementById("playAgainBtn").style.display = "none";
-    // disable selectors
-    document.getElementById("PieceSelector").disabled = true;
-    document.getElementById("SquareFixPieceSelector1").disabled = true;
-    document.getElementById("SquareFixPieceSelector2").disabled = true;
-    document.getElementById("Category").disabled = true;
-    document.getElementById("numberSelect").disabled = true;
-    // show move list
-    document.getElementById("moveListContainer").style.display = "flex";
+
+    const startBtn = document.getElementById("startBtn");
+    if (startBtn) startBtn.style.display = "none";
+
+    const playAgainBtn = document.getElementById("playAgainBtn");
+    if (playAgainBtn) playAgainBtn.style.display = "none";
+
+    const pieceSelector = document.getElementById("PieceSelector");
+    if (pieceSelector) pieceSelector.disabled = true;
+
+    const fix1 = document.getElementById("SquareFixPieceSelector1");
+    if (fix1) fix1.disabled = true;
+
+    const fix2 = document.getElementById("SquareFixPieceSelector2");
+    if (fix2) fix2.disabled = true;
+
+    const category = document.getElementById("Category");
+    if (category) category.disabled = true;
+
+    const numberSelect = document.getElementById("numberSelect");
+    if (numberSelect) numberSelect.disabled = true;
+
+    const moveListContainer = document.getElementById("moveListContainer");
+    if (moveListContainer) moveListContainer.style.display = "flex";
 }
 
 function reactivateMenu() {
-    document.querySelector(".mode").style.display = "";
-    document.querySelector(".color").style.display = "";
+    const modeEl = document.querySelector(".mode");
+    if (modeEl) modeEl.style.display = "";
+
+    const colorEl = document.querySelector(".color");
+    if (colorEl) colorEl.style.display = "";
+
     document.querySelectorAll(".button-separator").forEach(el => el.style.display = "");
-    document.getElementById("startBtn").style.display = "";
-    document.getElementById("playAgainBtn").style.display = "none";
-    document.getElementById("moveListContainer").style.display = "none";
+
+    const startBtn = document.getElementById("startBtn");
+    if (startBtn) startBtn.style.display = "";
+
+    const playAgainBtn = document.getElementById("playAgainBtn");
+    if (playAgainBtn) playAgainBtn.style.display = "none";
+
+    const moveListContainer = document.getElementById("moveListContainer");
+    if (moveListContainer) moveListContainer.style.display = "none";
+
     const categorySelect = document.getElementById("Category");
-    categorySelect.disabled = false;
     const numberSelect = document.getElementById("numberSelect");
-    if (categorySelect.value === "Number Selection") {
-        numberSelect.disabled = false;
+    if (categorySelect) {
+        categorySelect.disabled = false;
+
+        if (numberSelect && categorySelect.value === "Number Selection") {
+            numberSelect.disabled = false;
+        }
     }
-    document.getElementById("PieceSelector").disabled = false;
-    document.getElementById("SquareFixPieceSelector1").disabled = false;
-    document.getElementById("SquareFixPieceSelector2").disabled = false;
-    if (document.getElementById('ratedBtn').classList.contains('active')) {
-        document.getElementById('ratingChangeButtons').style.display = 'none';
+
+    const pieceSelector = document.getElementById("PieceSelector");
+    if (pieceSelector) pieceSelector.disabled = false;
+
+    const fix1 = document.getElementById("SquareFixPieceSelector1");
+    if (fix1) fix1.disabled = false;
+
+    const fix2 = document.getElementById("SquareFixPieceSelector2");
+    if (fix2) fix2.disabled = false;
+
+    const ratedBtn = document.getElementById('ratedBtn');
+    const ratingChange = document.getElementById('ratingChangeButtons');
+    if (ratedBtn && ratingChange) {
+        ratingChange.style.display = ratedBtn.classList.contains('active') ? 'none' : 'block';
     }
-    else {
-        document.getElementById('ratingChangeButtons').style.display = 'block';
+
+    if (numberSelect) {
+        const number = parseInt(numberSelect.value);
+        if (!isNaN(number)) setPositionByNumber(number).catch(console.error);
     }
-    const number = parseInt(numberSelect.value);
-    setPositionByNumber(number).catch(console.error);
 }
 
 function resetGameState() {

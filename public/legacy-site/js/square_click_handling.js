@@ -26,7 +26,7 @@ async function tryMove(startSquareElem, endSquareElem, premove = false) {
 
         window.gameState.position = resultFen;
 
-        window.legalMoves = getAllPseudowindow.legalMovesForOpponent(window.gameState.position);
+        window.legalMoves = getAllPseudolegalMovesForOpponent(window.gameState.position);
 
         window.gameState.moveHistorySAN.push(move);
         window.gameState.moveHistoryUCI.push(startSquare + endSquare);
@@ -170,14 +170,6 @@ function addDragDropHandlers() {
             }, { once: true });
 
             img.style.visibility = 'hidden';
-
-
-            img.addEventListener('dragend', () => {
-                img.style.visibility = 'visible';
-                if (clone.parentElement) {
-                    clone.remove();
-                }
-            }, { once: true });
         });
     });
 
@@ -214,7 +206,7 @@ function drawArrow(from, to, color, isPreview = false) {
     resizeArrowCanvas(); // if needed
 
     clearCanvas(); // clear all arrows
-    drawAllwindow.savedArrows(ctx);
+    drawAllSavedArrows(ctx);
 
     if (isPreview) {
         drawSingleArrow(ctx, from, to, 'orange');

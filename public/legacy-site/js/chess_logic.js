@@ -310,7 +310,7 @@ function position_with_fixed_pieces(piece, first, second) {
 async function getLichessAnalysisLink() {
     // Grab values from DOM / global variables here:
     const startPositionNr = document.getElementById('numberSelect').value;
-    const user = window.user?.name || 'Guest';
+    const user = window.sessionUser?.name || 'Guest';
     const history = window.gameState.moveHistorySAN;
     const userColor = window.gameState.userColor;
 

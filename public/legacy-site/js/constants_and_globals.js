@@ -10,7 +10,7 @@ if (typeof window.HALF_MOVE_THRESHOLD === 'undefined') window.HALF_MOVE_THRESHOL
 if (typeof window.ENGINE_RUNNING === 'undefined') window.ENGINE_RUNNING = false;
 if (typeof window.CURRENTLY_HIGHLIGHTED_SQUARE === 'undefined') window.CURRENTLY_HIGHLIGHTED_SQUARE = null;
 if (typeof window.DRAG_START_SQUARE === 'undefined') window.DRAG_START_SQUARE = null;
-if (typeof window.userInfo === 'undefined') window.userInfo = null;
+if (typeof window.sessionUserInfo === 'undefined') window.sessionUserInfo = null;
 if (typeof window.gameState === 'undefined') window.gameState = {
     playing: false,
     position: null,

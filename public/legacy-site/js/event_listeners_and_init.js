@@ -1,6 +1,3 @@
-console.log("init loaded")
-
-// initializeUI.js
 function initializeUI() {
     const mode = window.sessionUser?.id ? 'ranked' : 'training';
     selectMode(mode);
@@ -66,7 +63,7 @@ function setupArrowDrawing() {
 
             const hoverSquare = square.getAttribute('data-square');
             clearCanvas();
-            drawAllwindow.savedArrows(document.getElementById('arrow-layer').getContext('2d'));
+            drawAllSavedArrows(document.getElementById('arrow-layer').getContext('2d'));
 
             if (hoverSquare !== window.arrowStartSquare) {
                 drawSingleArrow(document.getElementById('arrow-layer').getContext('2d'), window.arrowStartSquare, hoverSquare, 'rgba(255,0,0,0.5)');
@@ -91,7 +88,7 @@ function setupArrowDrawing() {
                 else window.savedArrows.add(pair);
             }
 
-            drawAllwindow.savedArrows(document.getElementById('arrow-layer').getContext('2d'));
+            drawAllSavedArrows(document.getElementById('arrow-layer').getContext('2d'));
 
             window.arrowStartSquare = null;
             window.currentHoverSquare = null;
@@ -99,8 +96,3 @@ function setupArrowDrawing() {
     });
 }
 
-// Async login check outside DOMContentLoaded (runs immediately)
-window.onload = () => {
-    window.userInfo = window.user || null;
-    selectMode(window.userInfo ? 'rated' : 'training');
-};

@@ -9,8 +9,6 @@ async function startGame() {
         setTimeout(() => msg.remove(), 1800);
         return;
     }
-    const loadingOverlay = document.getElementById('fullScreenLoadingOverlay');
-    loadingOverlay.style.display = 'flex';
 
     removeMarkings();
     if (window.ENGINE_RUNNING) return;
@@ -18,11 +16,14 @@ async function startGame() {
     await setupStartPosition();
 
     if (window.gameState.userColor === 'black') {
-        window.legalMoves = getAllPseudowindow.legalMovesForOpponent(window.gameState.position);
+        window.legalMoves = getAllPseudolegalMovesForOpponent(window.gameState.position);
         window.gameState.playing = true;
-        loadingOverlay.style.display = 'none';
-        await dataBaseMove();
-        window.gameState.evaluations = window.gameState.evaluations.slice(1);
+        try {
+            await dataBaseMove();
+            window.gameState.evaluations = window.gameState.evaluations.slice(1);
+        } catch (e) {
+            console.error('dataBaseMove error:', e);
+        }
     } else {
         js_data = get_legal_moves(window.gameState.position);
         window.legalMoves = js_data.uci;
@@ -31,13 +32,13 @@ async function startGame() {
         window.moveIsMate = js_data.isMate;
         window.initialEval = getCentipawnLoss(window.gameState.position);
         window.gameState.playing = true;
-        loadingOverlay.style.display = 'none';
     }
 }
 
 async function dataBaseMove() {
-    startLoadingAnimation();
+    if (window.ENGINE_RUNNING) return;
     window.ENGINE_RUNNING = true;
+    startLoadingAnimation();
     window.gameState.halfMoveNumber++;
     js_lichess_move = await fetch_lichess_data(window.gameState.position);
     new_position = js_lichess_move.resultFen;
@@ -117,19 +118,19 @@ function chessNotationToIndices(square) {
 }
 
 async function endGame() {
-    // remove premove highlights
     removeGameHighlights();
     moveListLoadingAnimationStart();
     window.gameState.evaluations = await Promise.all(window.gameState.evaluations);
 
     updateMoveListWithColor();
     window.gameState.playing = false;
-    // delete first eval, because we do not have a corresponding move for it
+
     if (window.gameState.isRated) {
-        eval = window.gameState.evaluations[window.gameState.evaluations.length - 1] / 100;
-        eval = Math.max(-5, Math.min(5, eval));
-        let ratingChange = Math.round(eval * 10);
+        let finalEval = window.gameState.evaluations[window.gameState.evaluations.length - 1] / 100;
+        finalEval = Math.max(-5, Math.min(5, finalEval));
+        let ratingChange = Math.round(finalEval * 10);
         if (window.gameState.userColor === 'black') ratingChange *= -1;
+
         if (ratingChange < 0) {
             playSound('legacy-site/sounds/Defeat.mp3');
         } else if (ratingChange > 0) {
@@ -137,9 +138,11 @@ async function endGame() {
         } else {
             playSound('legacy-site/sounds/Draw.mp3');
         }
+
         const newRating = parseInt(window.gameState.userRating) + ratingChange;
         const newPosition = Math.floor(Math.random() * 960);
         const newColor = Math.random() > 0.5 ? "white" : "black";
+
         fetch("/update_user_data", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -147,59 +150,74 @@ async function endGame() {
         }).then(res => res.json()).then(data => {
             if (data.success) {
                 window.gameState.userRating = newRating;
-                document.getElementById("ratingDisplay").textContent = `${newRating}`;
+                const ratingDisplay = document.getElementById("ratingDisplay");
+                if (ratingDisplay) {
+                    ratingDisplay.textContent = `${newRating}`;
+                }
             } else {
                 console.error("Failed to update rating/position:", data.error);
             }
         }).catch(console.error);
+
         const ratingDisplay = document.getElementById("ratingDisplay");
-        const start = parseInt(ratingDisplay.textContent) || 0;
-        const end = newRating;
+        const oldRating = parseInt(ratingDisplay?.textContent || 0, 10);
+        const finalRating = newRating;
         const duration = 2000;
         const stepTime = 20;
         const steps = Math.floor(duration / stepTime);
         let currentStep = 0;
-        const diff = end - start;
-        let ratingChangeElem = document.getElementById("ratingChangeDisplay");
-        if (!ratingChangeElem) {
-            ratingChangeElem = document.createElement("span");
-            ratingChangeElem.id = "ratingChangeDisplay";
-            ratingDisplay.parentNode.insertBefore(ratingChangeElem, ratingDisplay.nextSibling);
+        const diff = finalRating - oldRating;
+
+        if (ratingDisplay) {
+            let ratingChangeElem = document.getElementById("ratingChangeDisplay");
+            if (!ratingChangeElem) {
+                ratingChangeElem = document.createElement("span");
+                ratingChangeElem.id = "ratingChangeDisplay";
+                ratingDisplay.parentNode.insertBefore(ratingChangeElem, ratingDisplay.nextSibling);
+            }
+
+            ratingChangeElem.style.marginLeft = "10px";
+            ratingChangeElem.style.fontWeight = "bold";
+            ratingChangeElem.style.fontSize = "1.1em";
+            ratingChangeElem.textContent = diff > 0 ? `+${diff}` : `${diff}`;
+            ratingChangeElem.style.color = diff > 0 ? "#2ecc40" : (diff < 0 ? "#ff4136" : "#888");
+
+            if (diff === 0) {
+                ratingDisplay.textContent = `${finalRating}`;
+            } else {
+                const animate = () => {
+                    currentStep++;
+                    const progress = Math.min(currentStep / steps, 1);
+                    const value = Math.round(oldRating + diff * progress);
+                    ratingDisplay.textContent = `${value}`;
+                    if (progress < 1) setTimeout(animate, stepTime);
+                };
+                animate();
+            }
+
+            setTimeout(() => {
+                if (ratingChangeElem) ratingChangeElem.textContent = "";
+            }, 3000);
         }
-        ratingChangeElem.style.marginLeft = "10px";
-        ratingChangeElem.style.fontWeight = "bold";
-        ratingChangeElem.style.fontSize = "1.1em";
-        ratingChangeElem.textContent = diff > 0 ? `+${diff}` : `${diff}`;
-        ratingChangeElem.style.color = diff > 0 ? "#2ecc40" : (diff < 0 ? "#ff4136" : "#888");
-        if (diff === 0) {
-            ratingDisplay.textContent = `${end}`;
-        } else {
-            const animate = () => {
-                currentStep++;
-                const progress = Math.min(currentStep / steps, 1);
-                const value = Math.round(start + diff * progress);
-                ratingDisplay.textContent = `${value}`;
-                if (progress < 1) setTimeout(animate, stepTime);
-            };
-            animate();
-        }
-        setTimeout(() => {
-            if (ratingChangeElem) ratingChangeElem.textContent = "";
-        }, 3000);
     }
-    document.getElementById("playAgainBtn").style.display = "block";
+
+    const playAgainBtn = document.getElementById("playAgainBtn");
+    if (playAgainBtn) playAgainBtn.style.display = "block";
+
     window.CURRENTLY_HIGHLIGHTED_SQUARE = null;
     document.querySelectorAll('.square').forEach(square => {
         square.classList.remove('highlight');
         square.classList.remove('can-move-highlight');
     });
-    document.getElementById("lichessBtn").style.display = "block";
+
+    const lichessBtn = document.getElementById("lichessBtn");
+    if (lichessBtn) lichessBtn.style.display = "block";
 }
 
 function backButtonClick() {
     stopLoadingAnimation();
     reactivateMenu();
-    resetwindow.gameState();
+    resetGameState();
     updateMoveList();
     removeAllBoardHighlights();
     document.getElementById("lichessBtn").style.display = "none";
