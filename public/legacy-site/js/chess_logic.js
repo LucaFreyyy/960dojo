@@ -317,7 +317,7 @@ async function getLichessAnalysisLink() {
     // (Then the rest of your function unchanged but using these variables)
 
     const fen = freestyleNumberToFEN(startPositionNr);
-    const game = defaultGame();
+    const game = window.defaultGame();
 
     game.headers = new Map([
         ["Event", "960 Opening Practice"],
@@ -338,12 +338,12 @@ async function getLichessAnalysisLink() {
         const move = parseSan(pos, san);
         if (!move) break;
         const actualSan = makeSanAndPlay(pos, move);
-        const child = new ChildNode({ san: actualSan });
+        const child = new window.ChildNode({ san: actualSan });
         node.children.push(child);
         node = child;
     }
 
-    const pgn = makePgn(game);
+    const pgn = window.makePgn(game);
 
     try {
         const response = await fetch("https://lichess.org/api/import", {
