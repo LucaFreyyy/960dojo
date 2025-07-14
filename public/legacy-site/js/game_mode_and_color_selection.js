@@ -1,34 +1,49 @@
 async function selectMode(mode) {
     const categorySelect = document.getElementById('Category');
-    if (!userInfo) mode = 'training';
-    if (mode === 'rated' && categorySelect.value !== 'Random') {
-        categorySelect.value = 'Random';
-        toggleNumberSelect().catch(console.error);
+    const user = window.sessionUser;
+
+    console.log('[selectMode] mode before user check:', mode);
+    console.log('[selectMode] user:', user);
+
+    if (!user?.id) {
+        console.warn('[selectMode] no user ID, forcing training mode');
+        mode = 'training';
     }
+
+    if (mode === 'rated' && categorySelect.value !== 'Random') {
+        console.log('[selectMode] forcing category to Random');
+        categorySelect.value = 'Random';
+        await toggleNumberSelect().catch(e => console.error('[selectMode] toggleNumberSelect error:', e));
+    }
+
     document.getElementById('ratedBtn').classList.toggle('active', mode === 'rated');
     document.getElementById('ratedBtn').classList.toggle('inactive', mode !== 'rated');
     document.getElementById('trainingBtn').classList.toggle('active', mode === 'training');
     document.getElementById('trainingBtn').classList.toggle('inactive', mode !== 'training');
+
     const ratingDisplay = document.getElementById('ratingDisplay');
+    const rating = user?.rating_openings ?? 1500;
+    ratingDisplay.textContent = `${rating}`;
+
+    document.getElementById('ratingChangeButtons').style.display = (mode === 'rated') ? 'none' : 'block';
+
     if (mode === 'rated') {
-        ratingDisplay.textContent = `${userInfo.rating}`;
-        document.getElementById('ratingChangeButtons').style.display = 'none';
+        console.log('[selectMode] entering rated mode');
         selectColor('random');
     } else {
-        if (userInfo) {
-            ratingDisplay.textContent = `${userInfo.rating}`;
-        } else {
-            ratingDisplay.textContent = `1500`;
-        }
-        document.getElementById('ratingChangeButtons').style.display = 'block';
+        console.log('[selectMode] entering training mode');
     }
 }
 
-function ratedButtonClick() {
-    if (userInfo) {
-        selectMode("rated");
+async function ratedButtonClick() {
+    console.log('[ratedButtonClick] triggered');
+    console.log('[ratedButtonClick] sessionUser:', window.sessionUser);
+
+    if (window.sessionUser?.id) {
+        console.log('[ratedButtonClick] user is logged in, calling selectMode("rated")');
+        await selectMode("rated");
     } else {
-        startLogin();
+        console.warn('[ratedButtonClick] no user ID — user not logged in');
     }
 }
 

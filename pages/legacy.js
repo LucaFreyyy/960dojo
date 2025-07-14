@@ -1,12 +1,56 @@
 import Head from 'next/head';
 import { useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 
-export default function LegacyPage({ session }) {
+export default function LegacyPage() {
+    const { data: session, status } = useSession();
+
     useEffect(() => {
-        if (session?.user) {
-            window.user = session.user;
-        }
+        if (status !== 'authenticated') return;
 
+        console.log('[legacy.js] Session ready:', session?.user?.email);
+
+        // Make user info available to legacy code
+        window.sessionUser = {
+            id: null,
+            rating_openings: 1500,
+            ...session.user,
+        };
+
+        // Fetch Supabase user
+        (async () => {
+            try {
+                const { createClient } = await import('@supabase/supabase-js');
+                const supabase = createClient(
+                    process.env.NEXT_PUBLIC_SUPABASE_URL,
+                    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+                );
+
+                const email = session.user.email;
+                const buffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(email));
+                const userId = Array.from(new Uint8Array(buffer))
+                    .map(b => b.toString(16).padStart(2, '0'))
+                    .join('');
+
+                const { data, error } = await supabase
+                    .from('User')
+                    .select('id, rating_openings')
+                    .eq('id', userId)
+                    .maybeSingle();
+
+                if (data) {
+                    window.sessionUser.id = data.id;
+                    window.sessionUser.rating_openings = data.rating_openings;
+                    console.log('[legacy.js] Supabase user loaded:', data);
+                } else {
+                    console.warn('[legacy.js] Supabase user not found:', error);
+                }
+            } catch (err) {
+                console.error('[legacy.js] Supabase fetch error:', err);
+            }
+        })();
+
+        // Load legacy JS files
         const scriptFiles = [
             'stockfish.js',
             'chess_constants.js',
@@ -23,41 +67,34 @@ export default function LegacyPage({ session }) {
 
         let loadedCount = 0;
 
-        scriptFiles.forEach((file) => {
+        scriptFiles.forEach(file => {
             const script = document.createElement('script');
             script.src = `/legacy-site/js/${file}`;
             script.async = false;
             script.onload = () => {
                 loadedCount++;
                 if (loadedCount === scriptFiles.length) {
+                    console.log('[legacy.js] All legacy scripts loaded');
                     if (typeof initializeUI === 'function') {
                         initializeUI(); console.log('UI ready');
+                        console.log('ratedButtonClick defined:', typeof ratedButtonClick);
                         initializeEventListeners(); console.log('Listeners attached');
                         setupRatingControls();
                         setupArrowDrawing();
                         initializeBoard();
                         resizeArrowCanvas();
                         window.addEventListener('resize', resizeArrowCanvas);
+                    } else {
+                        console.error('initializeUI is not defined');
                     }
                 }
             };
             document.body.appendChild(script);
         });
-    }, [session]);
+    }, [status, session]);
 
     return (
         <>
-            <Head>
-                <title>960 Dojo</title>
-                <link rel="icon" href="/legacy-site/favicon.ico" />
-                <link rel="stylesheet" href="/legacy-site/css/base.css" />
-                <link rel="stylesheet" href="/legacy-site/css/buttons.css" />
-                <link rel="stylesheet" href="/legacy-site/css/dropdown.css" />
-                <link rel="stylesheet" href="/legacy-site/css/chessboard.css" />
-                <link rel="stylesheet" href="/legacy-site/css/selectors.css" />
-                <link rel="stylesheet" href="/legacy-site/css/others.css" />
-            </Head>
-
             <div id="fullScreenLoadingOverlay" style={{ display: 'none' }}>
                 <div className="loader">
                     <svg width="60" height="60" viewBox="0 0 50 50">

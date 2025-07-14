@@ -10,7 +10,7 @@ function initializeUI() {
 function initializeEventListeners() {
     document.getElementById("Category").addEventListener("change", () => toggleNumberSelect().catch(console.error));
     document.getElementById("numberSelect").addEventListener("change", () => onNumberSelectChange().catch(console.error));
-    document.getElementById("ratedBtn").addEventListener("click", () => ratedButtonClick().catch(console.error));
+    document.getElementById("ratedBtn").addEventListener("click", () => ratedButtonClick());
     document.getElementById("trainingBtn").addEventListener("click", () => selectMode("training"));
     document.getElementById("whiteBtn").addEventListener("click", () => selectColor("white"));
     document.getElementById("blackBtn").addEventListener("click", () => selectColor("black"));
