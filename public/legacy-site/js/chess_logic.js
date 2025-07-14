@@ -1,3 +1,5 @@
+import { Chess, parseFen, makeFen, makeSan, makePgn, parseSan, makeSanAndPlay } from './chessops.js';
+
 function get_position(number, color) {
     var key = number.toString().padStart(3, '0');
     var frontRank = STARTING_POSITIONS[key];
