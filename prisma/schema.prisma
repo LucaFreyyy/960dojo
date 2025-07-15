@@ -51,3 +51,32 @@ model Game {
   openingNr    Int
   result       String   // win/loss/draw
 }
+
+model Tactic {
+  id          Int      @id  // Just a sequential number is fine
+  fen         String   // Starting position
+  rating      Int      // Estimated difficulty
+  openingNr   Int      // Where tactic originates from
+  moveNr      Int      // When the tactic occurs in the game
+}
+
+model UserTacticProgress {
+  id         String   @id @default(cuid())
+  userId     String
+  tacticId   Int
+  solved     Boolean  @default(false)
+  lastSeenAt DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id])
+  tactic     Tactic   @relation(fields: [tacticId], references: [id])
+}
+
+model UserOpening {
+  id             String   @id @default(cuid())
+  userId         String
+  openingNr      Int       // 0–959
+  color          String    // "white" or "black"
+  pgn            String
+  evalCp         Int?      // Final eval in centipawns (e.g. +32, -10)
+  finished       DateTime  @default(now())
+  user           User      @relation(fields: [userId], references: [id])
+}
