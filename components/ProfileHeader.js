@@ -29,8 +29,10 @@ export default function ProfileHeader({ user }) {
             return;
         }
 
+        user[field] = formData[field]; // ✅ Instant local UI update
         setEditingField(null);
     }
+
 
     return (
         <div className="profile-header">
@@ -39,29 +41,49 @@ export default function ProfileHeader({ user }) {
             </div>
 
             <div className="profile-info">
-                <div className="profile-field">
+                <div className="profile-name-row">
+                    <label>Name</label>
                     {editingField === 'name' ? (
                         <>
-                            <input name="name" value={formData.name} onChange={handleChange} />
+                            <input
+                                name="name"
+                                className="name-input"
+                                value={formData.name}
+                                onChange={handleChange}
+                            />
                             <button onClick={() => handleSave('name')}>Save</button>
                         </>
                     ) : (
                         <>
-                            <h2>{user.name}</h2>
+                            <h2 className="name-text">{user.name}</h2>
                             <button onClick={() => handleEdit('name')}>Edit</button>
                         </>
                     )}
                 </div>
 
-                <div className="profile-field">
+                <div className="profile-bio-row">
+                    <label>Bio</label>
                     {editingField === 'bio' ? (
                         <>
-                            <textarea name="bio" value={formData.bio} onChange={handleChange} />
+                            <textarea
+                                className="bio-edit"
+                                name="bio"
+                                value={formData.bio}
+                                onChange={handleChange}
+                                rows={1}
+                                style={{ resize: 'none', overflow: 'hidden' }}
+                                ref={(el) => {
+                                    if (el) {
+                                        el.style.height = 'auto';
+                                        el.style.height = `${el.scrollHeight}px`;
+                                    }
+                                }}
+                            />
                             <button onClick={() => handleSave('bio')}>Save</button>
                         </>
                     ) : (
                         <>
-                            <p>{user.bio || 'No bio yet.'}</p>
+                            <p className="bio-box">{user.bio || 'No bio yet.'}</p>
                             <button onClick={() => handleEdit('bio')}>Edit</button>
                         </>
                     )}
