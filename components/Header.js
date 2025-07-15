@@ -10,9 +10,9 @@ export default function Header() {
         <header>
             <Link href="/" className="logo-container">
                 <Image
-                    src="/logo.png"
+                    src="/960_logo_red.png"
                     alt="960 Dojo Logo"
-                    width={60}
+                    width={80}
                     height={60}
                     priority
                 />
