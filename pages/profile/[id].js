@@ -1,31 +1,31 @@
 // pages/profile.js
 import Head from 'next/head';
-import { useSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
-import ProfileHeader from '../components/ProfileHeader';
-import FollowStats from '../components/FollowStats';
-import ProfileTabs from '../components/ProfileTabs';
+import { supabase } from '../../lib/supabase';
+import ProfileHeader from '../../components/ProfileHeader';
+import FollowStats from '../../components/FollowStats';
+import ProfileTabs from '../../components/ProfileTabs';
+import { useRouter } from 'next/router';
 
 export default function ProfilePage() {
-    const { data: session } = useSession();
+    const router = useRouter();
+    const { id } = router.query;
+
     const [userData, setUserData] = useState(null);
     const [followers, setFollowers] = useState([]);
     const [following, setFollowing] = useState([]);
 
     useEffect(() => {
-        if (session) {
-            console.log('Session:', session);
-            fetchUserData();
-            fetchFollowerData();
-        }
-    }, [session]);
+        if (!id) return;
+        fetchUserData();
+        fetchFollowerData();
+    }, [id]);
 
     async function fetchUserData() {
         const { data, error } = await supabase
             .from('User')
             .select('id, email, name, bio')
-            .eq('id', session.user.id)
+            .eq('id', id)
             .single();
 
         console.log("Fetched User:", data, "Error:", error);
@@ -35,7 +35,7 @@ export default function ProfilePage() {
     }
 
     async function fetchFollowerData() {
-        const userId = session.user.id;
+        const userId = id;
 
         // Fetch follower IDs
         const { data: followersData, error: followersError } = await supabase
@@ -84,19 +84,17 @@ export default function ProfilePage() {
             </Head>
 
             <main className="profile-page">
-                {!session ? (
-                    <p>Please log in to view your profile.</p>
-                ) : !userData ? (
+                {!userData ? (
                     <p>Loading profile...</p>
                 ) : (
                     <>
-                        <ProfileHeader user={userData} editable={true} />
+                        <ProfileHeader user={userData} editable={false} />
                         <FollowStats
                             user={userData}
                             followers={followers.map(f => f.name)}
                             following={following.map(f => f.name)}
                         />
-                        <ProfileTabs userId={session.user.id} />
+                        <ProfileTabs userId={id} />
                     </>
                 )}
             </main>

@@ -10,6 +10,7 @@ export default function FollowStats({ user }) {
     }, [user.id]);
 
     async function fetchFollowData() {
+        // Step 1: Get follower and following IDs
         const { data: followerData, error: err1 } = await supabase
             .from('Follower')
             .select('followerId')
@@ -23,8 +24,25 @@ export default function FollowStats({ user }) {
         if (err1) console.error('Follower fetch error', err1);
         if (err2) console.error('Following fetch error', err2);
 
-        setFollowers(followerData || []);
-        setFollowing(followingData || []);
+        const followerIds = followerData?.map(f => f.followerId) ?? [];
+        const followingIds = followingData?.map(f => f.followingId) ?? [];
+
+        // Step 2: Fetch full user info for those IDs
+        const { data: followerUsers, error: err3 } = await supabase
+            .from('User')
+            .select('id, name')
+            .in('id', followerIds);
+
+        const { data: followingUsers, error: err4 } = await supabase
+            .from('User')
+            .select('id, name')
+            .in('id', followingIds);
+
+        if (err3) console.error('Follower users fetch error', err3);
+        if (err4) console.error('Following users fetch error', err4);
+
+        setFollowers(followerUsers || []);
+        setFollowing(followingUsers || []);
     }
 
     return (
@@ -44,16 +62,24 @@ export default function FollowStats({ user }) {
                 <div>
                     <h4>Followers</h4>
                     <ul>
-                        {followers.map((f, i) => (
-                            <li key={i}>{f.followerId}</li>
+                        {followers.map((user) => (
+                            <li key={user.id}>
+                                <a href={`/profile/${user.id}`} className="text-blue-600 hover:underline">
+                                    {user.name}
+                                </a>
+                            </li>
                         ))}
                     </ul>
                 </div>
                 <div>
                     <h4>Following</h4>
                     <ul>
-                        {following.map((f, i) => (
-                            <li key={i}>{f.followingId}</li>
+                        {following.map((user) => (
+                            <li key={user.id}>
+                                <a href={`/profile/${user.id}`} className="text-blue-600 hover:underline">
+                                    {user.name}
+                                </a>
+                            </li>
                         ))}
                     </ul>
                 </div>
