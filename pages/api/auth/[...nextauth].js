@@ -108,7 +108,6 @@ export default NextAuth({
                         id,
                         email,
                         name: user.name || '',
-                        image: user.image || '',
                         bio: '',
                     });
 

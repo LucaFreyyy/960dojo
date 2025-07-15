@@ -24,7 +24,7 @@ export default function ProfilePage() {
     async function fetchUserData() {
         const { data, error } = await supabase
             .from('User')
-            .select('id, email, name, image, bio')
+            .select('id, email, name, bio')
             .eq('id', session.user.id)
             .single();
 
@@ -39,12 +39,12 @@ export default function ProfilePage() {
 
         const { data: followersData, error: followersError } = await supabase
             .from('Follower')
-            .select('followerId, follower:follower(id, name, image)')
+            .select('followerId, follower:follower(id, name)')
             .eq('followingId', userId);
 
         const { data: followingData, error: followingError } = await supabase
             .from('Follower')
-            .select('followingId, following:following(id, name, image)')
+            .select('followingId, following:following(id, name)')
             .eq('followerId', userId);
 
         if (followersError) console.error('[fetchFollowerData] Followers error:', followersError);
