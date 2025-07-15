@@ -61,7 +61,7 @@ export default function FollowStats({ user }) {
             <div className="follow-lists">
                 <div>
                     <h4>Followers</h4>
-                    <ul>
+                    <ul className="followlist">
                         {followers.map((user) => (
                             <li key={user.id}>
                                 <a href={`/profile/${user.id}`} className="text-blue-600 hover:underline">
@@ -73,7 +73,7 @@ export default function FollowStats({ user }) {
                 </div>
                 <div>
                     <h4>Following</h4>
-                    <ul>
+                    <ul className="followlist">
                         {following.map((user) => (
                             <li key={user.id}>
                                 <a href={`/profile/${user.id}`} className="text-blue-600 hover:underline">
