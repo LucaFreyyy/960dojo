@@ -39,11 +39,15 @@ model Rating {
 }
 
 model Game {
-  id        String   @id @default(cuid())
-  userId    String
-  type      String   // Bullet, Blitz, etc.
-  result    String   // win/loss/draw
-  opponent  String
-  playedAt  DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id])
+  id           String   @id @default(cuid())
+  whiteId      String
+  blackId      String
+  whiteRating  Int
+  blackRating  Int
+  type         String   // Bullet, Blitz, etc.
+  isRated      Boolean  @default(true)
+  playedAt     DateTime @default(now())
+  pgn          String
+  openingNr    Int
+  result       String   // win/loss/draw
 }
