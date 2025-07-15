@@ -10,6 +10,8 @@ function getRandomOpening() {
 }
 
 async function fetchNewTactic(userId) {
+    console.log('[fetchNewTactic] Start for user:', userId);
+
     // Step 1: Get user's tactics rating
     const { data: ratingRow, error: ratingError } = await supabase
         .from('Rating')
@@ -18,35 +20,53 @@ async function fetchNewTactic(userId) {
         .eq('type', 'tactics')
         .single();
 
-    if (ratingError || !ratingRow) throw new Error('Could not fetch user tactic rating');
-    const baseRating = ratingRow.value;
+    if (ratingError || !ratingRow) {
+        console.error('[fetchNewTactic] Rating fetch failed:', ratingError, ratingRow);
+        throw new Error('Could not fetch user tactic rating');
+    }
 
-    // Step 2: Get all tactics not yet finished by user
+    const baseRating = ratingRow.value;
+    console.log('[fetchNewTactic] Base rating:', baseRating);
+
+    // Step 2: Get all tactics
+    const { data: allTactics, error: allTacticsError } = await supabase
+        .from('Tactic')
+        .select('id, rating');
+
+    if (allTacticsError || !allTactics?.length) {
+        console.error('[fetchNewTactic] Tactic fetch failed:', allTacticsError, allTactics);
+        throw new Error('No tactics found in table');
+    }
+
+    console.log('[fetchNewTactic] Total tactics found:', allTactics.length);
+
+    // Step 3: Get finished tactic IDs
     const { data: finishedRows, error: finishedError } = await supabase
         .from('UserTactic')
         .select('tacticId')
         .eq('userId', userId)
         .not('finished', 'is', null);
 
-    if (finishedError) throw new Error('Failed to fetch finished tactics');
+    if (finishedError) {
+        console.error('[fetchNewTactic] Finished tactics fetch failed:', finishedError);
+        throw new Error('Could not fetch finished tactics');
+    }
 
-    const finishedIds = finishedRows.map(row => row.tacticId);
+    const finishedIds = new Set(finishedRows?.map(r => r.tacticId));
+    console.log('[fetchNewTactic] Finished tactic IDs:', [...finishedIds]);
 
-    const { data: allTactics, error: allError } = await supabase
-        .from('Tactic')
-        .select('id, difficulty')
-        .limit(1000);
+    // Step 4: Filter out finished ones
+    const unfinishedTactics = allTactics.filter(t => !finishedIds.has(t.id));
+    console.log('[fetchNewTactic] Unfinished tactics:', unfinishedTactics);
 
-    if (allError || !allTactics?.length) throw new Error('Failed to fetch tactics');
+    if (!unfinishedTactics.length) throw new Error('No unfinished tactics available');
 
-    const unfinished = allTactics.filter(t => !finishedIds.includes(t.id));
-    if (unfinished.length === 0) throw new Error('No unfinished tactics left');
-
-    // Step 3: Sort by distance to rating
-    const sorted = unfinished
-        .map(t => ({ id: t.id, diff: Math.abs(t.difficulty - baseRating) }))
+    // Step 5: Sort by rating distance
+    const sorted = unfinishedTactics
+        .map(t => ({ id: t.id, diff: Math.abs(t.rating - baseRating) }))
         .sort((a, b) => a.diff - b.diff);
 
+    console.log('[fetchNewTactic] Closest tactic selected:', sorted[0]);
     return sorted[0].id;
 }
 
@@ -118,19 +138,30 @@ export default NextAuth({
                         console.warn('[signIn] No tactic available yet:', err.message);
                         tacticId = null;
                     }
+                    console.log('[signIn] Initial tactic ID:', tacticId);
 
                     if (tacticId) {
-                        const { error: tacticInsertError } = await supabase.from('UserTactic').insert({
+                        console.log('[signIn] Attempting to insert UserTactic with:', {
                             userId: id,
-                            tacticId,
-                            finished: null,
+                            tacticId: tacticId,
                         });
+
+                        const { data: tacticInsertData, error: tacticInsertError } = await supabase
+                            .from('UserTactic')
+                            .insert({
+                                userId: id,
+                                tacticId,
+                            })
+                            .select(); // This will force Supabase to return the inserted row(s)
 
                         if (tacticInsertError) {
                             console.error('[signIn] Tactic insert error:', tacticInsertError);
                             return false;
                         }
+
+                        console.log('[signIn] Tactic insert success:', tacticInsertData);
                     }
+
 
                     // 4. Insert starting opening
                     const { openingNr, color } = getRandomOpening();

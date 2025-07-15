@@ -70,7 +70,7 @@ model UserTactic {
   id         String    @id @default(cuid())
   userId     String
   tacticId   Int
-  solved     Boolean   @default(false)
+  solved     Boolean?  @default(false)
   finished   DateTime? @default(now())
   user       User      @relation(fields: [userId], references: [id])
   tactic     Tactic    @relation(fields: [tacticId], references: [id])
