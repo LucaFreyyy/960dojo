@@ -4,60 +4,66 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
 
 model User {
-  id          String   @id @default(cuid())
-  email       String   @unique
-  name        String?
-  bio         String?
-  image       String?
-  followers   Follower[] @relation("followers")
-  following   Follower[] @relation("following")
-  ratings     Rating[]
-  games       Game[]
+  id                 String               @id @default(cuid())
+  email              String               @unique
+  name               String?
+  bio                String?
+  image              String?
+  followers          Follower[]           @relation("followers")
+  following          Follower[]           @relation("following")
+  ratings            Rating[]
+  whiteGames         Game[]               @relation("WhiteUser")
+  blackGames         Game[]               @relation("BlackUser")
+  UserTacticProgress UserTacticProgress[]
+  UserOpening        UserOpening[]
 }
 
 model Follower {
-  id          String   @id @default(cuid())
+  id          String @id @default(cuid())
   followerId  String
   followingId String
-  follower    User     @relation("followers", fields: [followerId], references: [id])
-  following   User     @relation("following", fields: [followingId], references: [id])
+  follower    User   @relation("followers", fields: [followerId], references: [id])
+  following   User   @relation("following", fields: [followingId], references: [id])
 }
 
 model Rating {
   id        String   @id @default(cuid())
   userId    String
-  type      String   // Bullet, Blitz, etc.
+  type      String // Bullet, Blitz, etc.
   value     Int
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id])
 }
 
 model Game {
-  id           String   @id @default(cuid())
-  whiteId      String
-  blackId      String
-  whiteRating  Int
-  blackRating  Int
-  type         String   // Bullet, Blitz, etc.
-  isRated      Boolean  @default(true)
-  playedAt     DateTime @default(now())
-  pgn          String
-  openingNr    Int
-  result       String   // win/loss/draw
+  id          String   @id @default(cuid())
+  whiteId     String
+  blackId     String
+  white       User     @relation("WhiteUser", fields: [whiteId], references: [id])
+  black       User     @relation("BlackUser", fields: [blackId], references: [id])
+  whiteRating Int
+  blackRating Int
+  type        String // Bullet, Blitz, etc.
+  isRated     Boolean  @default(true)
+  playedAt    DateTime @default(now())
+  pgn         String
+  openingNr   Int
+  result      String // win/loss/draw
 }
 
 model Tactic {
-  id          Int      @id  // Just a sequential number is fine
-  fen         String   // Starting position
-  rating      Int      // Estimated difficulty
-  openingNr   Int      // Where tactic originates from
-  moveNr      Int      // When the tactic occurs in the game
+  id                 Int                  @id // Just a sequential number is fine
+  fen                String // Starting position
+  rating             Int // Estimated difficulty
+  openingNr          Int // Where tactic originates from
+  moveNr             Int // When the tactic occurs in the game
+  UserTacticProgress UserTacticProgress[]
 }
 
 model UserTacticProgress {
@@ -71,12 +77,12 @@ model UserTacticProgress {
 }
 
 model UserOpening {
-  id             String   @id @default(cuid())
-  userId         String
-  openingNr      Int       // 0–959
-  color          String    // "white" or "black"
-  pgn            String
-  evalCp         Int?      // Final eval in centipawns (e.g. +32, -10)
-  finished       DateTime  @default(now())
-  user           User      @relation(fields: [userId], references: [id])
+  id        String   @id @default(cuid())
+  userId    String
+  openingNr Int // 0–959
+  color     String // "white" or "black"
+  pgn       String
+  evalCp    Int? // Final eval in centipawns (e.g. +32, -10)
+  finished  DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
 }

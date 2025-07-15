@@ -55,6 +55,7 @@ export default NextAuth({
             if (user?.email && !token.id) {
                 const id = createHash('sha256').update(user.email).digest('hex');
                 token.id = id;
+                token.email = user.email;
             }
             return token;
         },
