@@ -24,6 +24,34 @@
     box-shadow: var(--box-shadow-soft);
 }
 
+.profile-picture {
+    position: relative;
+    width: 8rem;
+    height: 8rem;
+    border-radius: 50%;
+    overflow: hidden;
+    box-shadow: var(--box-shadow-soft);
+}
+
+.profile-picture img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.edit-icon {
+    position: absolute;
+    bottom: 0.3rem;
+    right: 0.3rem;
+    background: var(--bg-button);
+    border-radius: 50%;
+    padding: 0.4rem;
+    font-size: 1rem;
+    cursor: pointer;
+    color: var(--text-color-main);
+    box-shadow: var(--box-shadow-heavy);
+}
+
 .profile-info {
     display: flex;
     flex-direction: column;
