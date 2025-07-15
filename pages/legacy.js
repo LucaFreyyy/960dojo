@@ -53,15 +53,18 @@ export default function LegacyPage() {
                         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
                     );
 
-                    const { data, error } = await supabase
-                        .from('User')
-                        .select('id, rating_openings')
-                        .eq('id', session.user.id)
+                    const { data: ratingData, error } = await supabase
+                        .from('Rating')
+                        .select('value')
+                        .eq('userId', session.user.id)
+                        .eq('type', 'openings')
+                        .order('createdAt', { ascending: false })
+                        .limit(1)
                         .maybeSingle();
 
-                    if (data) {
-                        window.sessionUser.id = data.id;
-                        window.sessionUser.rating_openings = data.rating_openings;
+                    if (ratingData) {
+                        window.sessionUser.id = session.user.id;
+                        window.sessionUser.rating_openings = ratingData.value;
                         console.log('[legacy.js] Supabase user loaded:', data);
                     } else {
                         console.warn('[legacy.js] Supabase user not found:', error);

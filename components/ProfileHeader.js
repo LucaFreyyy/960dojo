@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { supabase } from '../lib/supabase';
 
 export default function ProfileHeader({ user }) {
     const [editingField, setEditingField] = useState(null);
@@ -15,8 +16,19 @@ export default function ProfileHeader({ user }) {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     }
 
-    function handleSave(field) {
-        // TODO: save to Supabase
+    async function handleSave(field) {
+        const updates = { [field]: formData[field] };
+
+        const { error } = await supabase
+            .from('User')
+            .update(updates)
+            .eq('id', user.id);
+
+        if (error) {
+            console.error('Update error:', error);
+            return;
+        }
+
         setEditingField(null);
     }
 

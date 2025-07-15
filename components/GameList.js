@@ -21,9 +21,9 @@ export default function GameList({ userId, format }) {
         const { data, error } = await supabase
             .from('Game')
             .select('*')
-            .eq('user_id', userId)
-            .eq('format', format)
-            .order('timestamp', { ascending: false })
+            .or(`whiteId.eq.${userId},blackId.eq.${userId}`)
+            .eq('type', format)
+            .order('playedAt', { ascending: false })
             .range(offset, offset + 19);
 
         if (!error && data.length > 0) {
@@ -37,6 +37,10 @@ export default function GameList({ userId, format }) {
         setLoading(false);
     }
 
+    function getOpponent(game) {
+        return game.whiteId === userId ? game.blackId : game.whiteId;
+    }
+
     return (
         <div className="game-list">
             {games.length === 0 ? (
@@ -45,7 +49,10 @@ export default function GameList({ userId, format }) {
                 <ul>
                     {games.map(game => (
                         <li key={game.id} className="game-item">
-                            <p><strong>{game.result}</strong> vs {game.opponent} on {new Date(game.timestamp).toLocaleDateString()}</p>
+                            <p>
+                                <strong>{game.result}</strong> vs {getOpponent(game)} on{" "}
+                                {new Date(game.playedAt).toLocaleDateString()}
+                            </p>
                         </li>
                     ))}
                 </ul>

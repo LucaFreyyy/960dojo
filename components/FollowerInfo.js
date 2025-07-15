@@ -9,19 +9,23 @@ export default function FollowerInfo({ userId }) {
 
     useEffect(() => {
         async function fetchData() {
-            const { data: followersData } = await supabase
+            const { data: followersData, error: followersError } = await supabase
                 .from("Follower")
-                .select("follower_id")
-                .eq("followed_id", userId);
+                .select("followerId")
+                .eq("followingId", userId);
 
-            const { data: followingData } = await supabase
+            const { data: followingData, error: followingError } = await supabase
                 .from("Follower")
-                .select("followed_id")
-                .eq("follower_id", userId);
+                .select("followingId")
+                .eq("followerId", userId);
+
+            if (followersError) console.error(followersError);
+            if (followingError) console.error(followingError);
 
             setFollowers(followersData || []);
             setFollowing(followingData || []);
         }
+
         fetchData();
     }, [userId]);
 
@@ -34,11 +38,11 @@ export default function FollowerInfo({ userId }) {
             <div className="lists">
                 <div>
                     <h4>Followers</h4>
-                    <ul>{followers.map(f => <li key={f.follower_id}>{f.follower_id}</li>)}</ul>
+                    <ul>{followers.map(f => <li key={f.followerId}>{f.followerId}</li>)}</ul>
                 </div>
                 <div>
                     <h4>Following</h4>
-                    <ul>{following.map(f => <li key={f.followed_id}>{f.followed_id}</li>)}</ul>
+                    <ul>{following.map(f => <li key={f.followingId}>{f.followingId}</li>)}</ul>
                 </div>
             </div>
         </div>

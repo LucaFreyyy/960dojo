@@ -20,17 +20,17 @@ export default function RatingGraph({ userId, format }) {
     }, [userId, format]);
 
     async function fetchRatingData() {
-        const { data: games, error } = await supabase
-            .from('Game')
-            .select('rating, created_at')
-            .eq('user_id', userId)
-            .eq('format', format)
-            .order('created_at', { ascending: true });
+        const { data: ratings, error } = await supabase
+            .from('Rating')
+            .select('value, createdAt')
+            .eq('userId', userId)
+            .eq('type', format)
+            .order('createdAt', { ascending: true });
 
-        if (!error && games) {
-            const chartData = games.map(game => ({
-                date: new Date(game.created_at).toLocaleDateString(),
-                rating: game.rating,
+        if (!error && ratings) {
+            const chartData = ratings.map(r => ({
+                date: new Date(r.createdAt).toLocaleDateString(),
+                rating: r.value,
             }));
             setData(chartData);
         }

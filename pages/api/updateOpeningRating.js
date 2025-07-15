@@ -7,12 +7,15 @@ export default async function handler(req, res) {
     console.log('API called with:', { id, newRating });
 
     const { error } = await supabase
-        .from('User')
-        .update({ rating_openings: newRating })
-        .eq('id', id);
+        .from('Rating')
+        .insert({
+            userId: id,
+            type: 'openings',
+            value: newRating,
+        });
 
     if (error) {
-        console.error('Supabase update error:', error);
+        console.error('Supabase insert error:', error);
         return res.status(500).json({ success: false, error: error.message });
     }
 

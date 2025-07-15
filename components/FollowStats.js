@@ -10,15 +10,18 @@ export default function FollowStats({ user }) {
     }, [user.id]);
 
     async function fetchFollowData() {
-        const { data: followerData } = await supabase
+        const { data: followerData, error: err1 } = await supabase
             .from('Follower')
-            .select('follower_id')
-            .eq('followed_id', user.id);
+            .select('followerId')
+            .eq('followingId', user.id);
 
-        const { data: followingData } = await supabase
+        const { data: followingData, error: err2 } = await supabase
             .from('Follower')
-            .select('followed_id')
-            .eq('follower_id', user.id);
+            .select('followingId')
+            .eq('followerId', user.id);
+
+        if (err1) console.error('Follower fetch error', err1);
+        if (err2) console.error('Following fetch error', err2);
 
         setFollowers(followerData || []);
         setFollowing(followingData || []);
@@ -42,7 +45,7 @@ export default function FollowStats({ user }) {
                     <h4>Followers</h4>
                     <ul>
                         {followers.map((f, i) => (
-                            <li key={i}>{f.follower_id}</li>
+                            <li key={i}>{f.followerId}</li>
                         ))}
                     </ul>
                 </div>
@@ -50,7 +53,7 @@ export default function FollowStats({ user }) {
                     <h4>Following</h4>
                     <ul>
                         {following.map((f, i) => (
-                            <li key={i}>{f.followed_id}</li>
+                            <li key={i}>{f.followingId}</li>
                         ))}
                     </ul>
                 </div>

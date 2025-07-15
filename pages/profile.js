@@ -25,7 +25,7 @@ export default function ProfilePage() {
         const { data, error } = await supabase
             .from('User')
             .select('*')
-            .eq('email', session.user.email)
+            .eq('id', session.user.id)
             .single();
 
         console.log("Fetched User:", data, "Error:", error);
@@ -39,12 +39,12 @@ export default function ProfilePage() {
 
         const { data: followersData } = await supabase
             .from('Follower')
-            .select('follower_id, follower:User!Follower_follower_id_fkey(*)')
+            .select('follower_id, follower:User(id, name, image)')
             .eq('followed_id', userId);
 
         const { data: followingData } = await supabase
             .from('Follower')
-            .select('followed_id, followed:User!Follower_followed_id_fkey(*)')
+            .select('followed_id, followed:User(id, name, image)')
             .eq('follower_id', userId);
 
         setFollowers(followersData?.map(f => f.follower) || []);
