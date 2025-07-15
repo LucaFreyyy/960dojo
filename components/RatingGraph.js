@@ -38,7 +38,7 @@ export default function RatingGraph({ userId, format }) {
 
     return (
         <div className="rating-graph-container">
-            <h3>{format} Rating Over Time</h3>
+            <h3>Rating Over Time</h3>
             {data.length > 0 ? (
                 <ResponsiveContainer width="100%" height={300}>
                     <LineChart data={data}>

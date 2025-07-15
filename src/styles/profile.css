@@ -1,0 +1,33 @@
+/* styles/profile.css */
+.tab-icons {
+    display: flex;
+    justify-content: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.tab-icons button {
+    font-family: var(--font-main);
+    font-size: 0.875rem;
+    color: var(--text-color-main);
+    background: var(--bg-small-button);
+    border: var(--border-muted);
+    border-radius: 0.5rem;
+    padding: 0.375rem 0.875rem;
+    cursor: pointer;
+    transition: background 0.2s, box-shadow 0.2s;
+    box-shadow: var(--box-shadow-soft);
+}
+
+.tab-icons button:hover {
+    background: var(--bg-hover);
+    box-shadow: var(--box-shadow-strong);
+}
+
+.tab-icons button.active {
+    background: var(--bg-active);
+    border: var(--border-strong);
+    box-shadow: var(--box-shadow-glow);
+    font-weight: bold;
+    color: #000;
+}

@@ -118,7 +118,7 @@ export default NextAuth({
                     }
 
                     // 2. Insert default ratings
-                    const ratings = ['blitz', 'rapid', 'tactics'].map(type => ({
+                    const ratings = ['bullet', 'blitz', 'rapid', 'classical', 'tactics', 'openings'].map(type => ({
                         userId: id,
                         type,
                         value: 1500,

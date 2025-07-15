@@ -24,7 +24,7 @@ export default function ProfilePage() {
     async function fetchUserData() {
         const { data, error } = await supabase
             .from('User')
-            .select('*')
+            .select('id, email, name, image, bio')
             .eq('id', session.user.id)
             .single();
 
@@ -37,18 +37,21 @@ export default function ProfilePage() {
     async function fetchFollowerData() {
         const userId = session.user.id;
 
-        const { data: followersData } = await supabase
+        const { data: followersData, error: followersError } = await supabase
             .from('Follower')
-            .select('follower_id, follower:User(id, name, image)')
-            .eq('followed_id', userId);
+            .select('followerId, follower:follower(id, name, image)')
+            .eq('followingId', userId);
 
-        const { data: followingData } = await supabase
+        const { data: followingData, error: followingError } = await supabase
             .from('Follower')
-            .select('followed_id, followed:User(id, name, image)')
-            .eq('follower_id', userId);
+            .select('followingId, following:following(id, name, image)')
+            .eq('followerId', userId);
+
+        if (followersError) console.error('[fetchFollowerData] Followers error:', followersError);
+        if (followingError) console.error('[fetchFollowerData] Following error:', followingError);
 
         setFollowers(followersData?.map(f => f.follower) || []);
-        setFollowing(followingData?.map(f => f.followed) || []);
+        setFollowing(followingData?.map(f => f.following) || []);
     }
 
     return (
