@@ -20,6 +20,9 @@ async function selectMode(mode) {
 
     if (mode === 'rated') {
         selectColor('random');
+        const numSelect = document.getElementById('numberSelect');
+        numSelect.value = window.sessionUser.openingNr;
+        setPositionByNumber(window.sessionUser.openingNr, window.sessionUser.color);
     }
 }
 

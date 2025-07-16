@@ -2,6 +2,7 @@ import Head from 'next/head';
 import { useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { exposeChessopsGlobalsToWindow } from '../lib/exposeChessops.js';
+import { fetchUnfinishedOpening } from '../lib/opening_supabase_functions.js';
 
 export default function LegacyPage() {
     const { data: session, status } = useSession();
@@ -63,6 +64,12 @@ export default function LegacyPage() {
                     if (ratingData) {
                         window.sessionUser.rating_openings = ratingData.value;
                     }
+
+                    const opening = await fetchUnfinishedOpening(session.user.id);
+
+                    window.sessionUser.openingNr = opening.openingNr;
+                    window.sessionUser.color = opening.color;
+                    window.sessionUser.pgn = opening.pgn;
 
                 } catch (err) {
                     console.error('[legacy.js] Supabase fetch error:', err);
