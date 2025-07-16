@@ -119,9 +119,9 @@ async function setupStartPosition() {
 
     if (window.gameState.isRated && user) {
         categorySelect.value = "Random";
-        window.gameState.userColor = user.opening_color || (Math.random() > 0.5 ? 'white' : 'black');
-        numberSelect.value = user.opening_position || Math.floor(Math.random() * 960);
-        window.gameState.userRating = user.rating_openings ?? 1500;
+        window.gameState.userColor = window.sessionUser.color || (Math.random() > 0.5 ? 'white' : 'black');
+        numberSelect.value = window.sessionUser.openingNr || Math.floor(Math.random() * 960);
+        window.gameState.userRating = window.sessionUser.rating_openings ?? 1500;
     } else {
         window.gameState.userColor = document.querySelector('.color .active').id.replace('Btn', '');
         if (window.gameState.userColor === 'random') {
@@ -147,4 +147,44 @@ async function setupStartPosition() {
 
     window.gameState.position = freestyleNumberToFEN(parseInt(numberSelect.value));
     await setPositionByNumber(parseInt(numberSelect.value), window.gameState.userColor);
+
+    pgn = window.sessionUser.pgn;
+    if (pgn) {
+        window.gameState.fenHistory = pgn.split('\n').map(line => line.split(' ')[0]);
+        window.gameState.evaluations = generateEvals(window.gameState.fenHistory);
+        window.gameState.moveHistoryUCI = pgn.split('\n').map(line => line.split(' ')[1]);
+        window.gameState.moveHistorySAN = generateSANHistory();
+        window.gameState.halfMoveNumber = window.gameState.moveHistoryUCI.length;
+        window.gameState.colorToMove = window.gameState.halfMoveNumber % 2 == 0 ? 'white' : 'black'
+        window.gameState.currentBrowsePosition = window.gameState.halfMoveNumber - 1;
+        updateMoveList();
+    }
+}
+
+function generateSANHistory() {
+    const { Chess } = window.chessops;
+    const game = Chess.fromFen(window.gameState.fenHistory[0]); // start position
+    const sanHistory = [];
+
+    for (let i = 0; i < window.gameState.moveHistoryUCI.length; i++) {
+        const uci = window.gameState.moveHistoryUCI[i];
+        const move = game.parseUci(uci);
+        const san = game.toSan(move);
+        sanHistory.push(san);
+        game.play(move);
+    }
+
+    return sanHistory;
+}
+
+
+async function generateEvals(fenHistory) {
+    const evals = [];
+
+    for (const fen of fenHistory) {
+        const cp = getCentipawnLoss(fen);
+        evals.push(cp);
+    }
+
+    return evals;
 }
