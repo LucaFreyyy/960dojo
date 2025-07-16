@@ -17,9 +17,7 @@ export default function LegacyPage() {
         };
 
         const finishSetup = () => {
-            console.log('[legacy.js] All legacy scripts loaded');
             if (typeof initializeUI === 'function') {
-                initializeUI(); console.log('UI ready');
                 const ratedBtn = document.getElementById('ratedBtn');
                 if (!window.sessionUser?.id) {
                     ratedBtn.classList.add('locked');
@@ -32,7 +30,7 @@ export default function LegacyPage() {
                     ratedBtn.title = '';
                     selectMode('rated');
                 }
-                initializeEventListeners(); console.log('Listeners attached');
+                initializeEventListeners();
                 setupRatingControls();
                 setupArrowDrawing();
                 initializeBoard();
@@ -65,9 +63,6 @@ export default function LegacyPage() {
                     if (ratingData) {
                         window.sessionUser.id = session.user.id;
                         window.sessionUser.rating_openings = ratingData.value;
-                        console.log('[legacy.js] Supabase user loaded:', data);
-                    } else {
-                        console.warn('[legacy.js] Supabase user not found:', error);
                     }
                 } catch (err) {
                     console.error('[legacy.js] Supabase fetch error:', err);

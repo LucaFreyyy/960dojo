@@ -15,7 +15,6 @@ export default function ProfilePage() {
 
     useEffect(() => {
         if (session) {
-            console.log('Session:', session);
             fetchUserData();
             fetchFollowerData();
         }
@@ -28,7 +27,6 @@ export default function ProfilePage() {
             .eq('id', session.user.id)
             .single();
 
-        console.log("Fetched User:", data, "Error:", error);
         if (!error) {
             setUserData(data);
         }
@@ -74,7 +72,6 @@ export default function ProfilePage() {
         // Set state
         setFollowers(followerUsers || []);
         setFollowing(followingUsers || []);
-        console.log("Followers:", followerUsers, "Following:", followingUsers);
     }
 
     return (

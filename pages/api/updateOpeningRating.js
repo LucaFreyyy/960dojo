@@ -4,7 +4,6 @@ export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).end();
 
     const { id, newRating } = req.body;
-    console.log('API called with:', { id, newRating });
 
     const { error } = await supabase
         .from('Rating')

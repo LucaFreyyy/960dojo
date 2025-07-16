@@ -10,8 +10,6 @@ function getRandomOpening() {
 }
 
 async function fetchNewTactic(userId) {
-    console.log('[fetchNewTactic] Start for user:', userId);
-
     // Step 1: Get user's tactics rating
     const { data: ratingRow, error: ratingError } = await supabase
         .from('Rating')
@@ -26,7 +24,6 @@ async function fetchNewTactic(userId) {
     }
 
     const baseRating = ratingRow.value;
-    console.log('[fetchNewTactic] Base rating:', baseRating);
 
     // Step 2: Get all tactics
     const { data: allTactics, error: allTacticsError } = await supabase
@@ -37,8 +34,6 @@ async function fetchNewTactic(userId) {
         console.error('[fetchNewTactic] Tactic fetch failed:', allTacticsError, allTactics);
         throw new Error('No tactics found in table');
     }
-
-    console.log('[fetchNewTactic] Total tactics found:', allTactics.length);
 
     // Step 3: Get finished tactic IDs
     const { data: finishedRows, error: finishedError } = await supabase
@@ -53,11 +48,9 @@ async function fetchNewTactic(userId) {
     }
 
     const finishedIds = new Set(finishedRows?.map(r => r.tacticId));
-    console.log('[fetchNewTactic] Finished tactic IDs:', [...finishedIds]);
 
     // Step 4: Filter out finished ones
     const unfinishedTactics = allTactics.filter(t => !finishedIds.has(t.id));
-    console.log('[fetchNewTactic] Unfinished tactics:', unfinishedTactics);
 
     if (!unfinishedTactics.length) throw new Error('No unfinished tactics available');
 
@@ -66,7 +59,6 @@ async function fetchNewTactic(userId) {
         .map(t => ({ id: t.id, diff: Math.abs(t.rating - baseRating) }))
         .sort((a, b) => a.diff - b.diff);
 
-    console.log('[fetchNewTactic] Closest tactic selected:', sorted[0]);
     return sorted[0].id;
 }
 
@@ -80,13 +72,10 @@ export default NextAuth({
     callbacks: {
         signIn: async ({ user }) => {
             try {
-                console.log('[signIn] Incoming user:', user);
-
                 const email = user.email;
                 if (!email) return false;
 
                 const id = createHash('sha256').update(email).digest('hex');
-                console.log('[signIn] Hashed ID:', id);
 
                 // Check if user already exists
                 const { data: existingUser, error: fetchError } = await supabase
@@ -101,8 +90,6 @@ export default NextAuth({
                 }
 
                 if (!existingUser) {
-                    console.log('[signIn] Creating user and associated tables...');
-
                     // 1. Insert user
                     const { error: userInsertError } = await supabase.from('User').insert({
                         id,
@@ -137,14 +124,8 @@ export default NextAuth({
                         console.warn('[signIn] No tactic available yet:', err.message);
                         tacticId = null;
                     }
-                    console.log('[signIn] Initial tactic ID:', tacticId);
 
                     if (tacticId) {
-                        console.log('[signIn] Attempting to insert UserTactic with:', {
-                            userId: id,
-                            tacticId: tacticId,
-                        });
-
                         const { data: tacticInsertData, error: tacticInsertError } = await supabase
                             .from('UserTactic')
                             .insert({
@@ -157,8 +138,6 @@ export default NextAuth({
                             console.error('[signIn] Tactic insert error:', tacticInsertError);
                             return false;
                         }
-
-                        console.log('[signIn] Tactic insert success:', tacticInsertData);
                     }
 
 
@@ -177,8 +156,6 @@ export default NextAuth({
                         console.error('[signIn] Opening insert error:', openingError);
                         return false;
                     }
-
-                    console.log('[signIn] All initial data created');
                 }
 
                 return true;

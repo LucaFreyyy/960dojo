@@ -44,7 +44,6 @@ export default function ProfilePage() {
             .eq('id', id)
             .single();
 
-        console.log("Fetched User:", data, "Error:", error);
         if (!error) {
             setUserData(data);
         }
@@ -90,7 +89,6 @@ export default function ProfilePage() {
         // Set state
         setFollowers(followerUsers || []);
         setFollowing(followingUsers || []);
-        console.log("Followers:", followerUsers, "Following:", followingUsers);
     }
 
     return (

@@ -2,11 +2,7 @@ async function selectMode(mode) {
     const categorySelect = document.getElementById('Category');
     const user = window.sessionUser;
 
-    console.log('[selectMode] mode before user check:', mode);
-    console.log('[selectMode] user:', user);
-
     if (mode === 'rated' && categorySelect.value !== 'Random') {
-        console.log('[selectMode] forcing category to Random');
         categorySelect.value = 'Random';
         await toggleNumberSelect().catch(e => console.error('[selectMode] toggleNumberSelect error:', e));
     }
@@ -23,10 +19,7 @@ async function selectMode(mode) {
     document.getElementById('ratingChangeButtons').style.display = (mode === 'rated') ? 'none' : 'block';
 
     if (mode === 'rated') {
-        console.log('[selectMode] entering rated mode');
         selectColor('random');
-    } else {
-        console.log('[selectMode] entering training mode');
     }
 }
 

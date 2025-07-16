@@ -155,8 +155,6 @@ async function endGame() {
             .then(data => {
                 if (!data.success) {
                     console.error("Rating update failed:", data.error);
-                } else {
-                    console.log("Rating successfully updated in Supabase");
                 }
             })
             .catch(console.error);
