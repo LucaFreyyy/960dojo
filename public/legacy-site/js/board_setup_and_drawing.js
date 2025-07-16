@@ -28,8 +28,8 @@ async function setPositionByNumber(number, color = null) {
     });
     removeAllArrows();
 }
-function redrawBoard() {
-    if (window.gameState.playing) {
+function redrawBoard(playing = window.gameState.playing) {
+    if (playing) {
         updateMoveList();
     } else {
         updateMoveListWithColor();
@@ -150,40 +150,48 @@ async function setupStartPosition() {
 
     pgn = window.sessionUser.pgn;
     if (pgn) {
-        window.gameState.fenHistory = pgn.split('\n').map(line => line.split(' ')[0]);
-        window.gameState.evaluations = generateEvals(window.gameState.fenHistory);
-        window.gameState.moveHistoryUCI = pgn.split('\n').map(line => line.split(' ')[1]);
+        window.gameState.fenHistory = pgn.split('\n').map(line => {
+            const lastSpace = line.lastIndexOf(' ');
+            return lastSpace !== -1 ? line.substring(0, lastSpace) : line;
+        });
+        window.gameState.moveHistoryUCI = pgn.split('\n').map(line => {
+            const parts = line.trim().split(' ');
+            return parts.at(-1);
+        });
+        for (const fen of window.gameState.fenHistory) {
+            window.gameState.evaluations.push(getCentipawnLoss(fen));
+        }
         window.gameState.moveHistorySAN = generateSANHistory();
         window.gameState.halfMoveNumber = window.gameState.moveHistoryUCI.length;
         window.gameState.colorToMove = window.gameState.halfMoveNumber % 2 == 0 ? 'white' : 'black'
-        window.gameState.currentBrowsePosition = window.gameState.halfMoveNumber - 1;
-        updateMoveList();
+        window.currentBrowsePosition = window.gameState.halfMoveNumber - 1;
+        window.gameState.position = window.gameState.fenHistory[window.gameState.fenHistory.length - 1];
+        redrawBoard(true);
     }
 }
 
 function generateSANHistory() {
-    const { Chess } = window.chessops;
-    const game = Chess.fromFen(window.gameState.fenHistory[0]); // start position
+    const fen = freestyleNumberToFEN(parseInt(window.sessionUser.openingNr));
+    const pos = parseFen(fen);
+    if (!pos.isOk) {
+        console.error('Invalid FEN in fenHistory[0]');
+        return [];
+    }
+
+    let setup = parseFen(fen).value;
+    let position = Chess.fromSetup(setup).value;
     const sanHistory = [];
 
-    for (let i = 0; i < window.gameState.moveHistoryUCI.length; i++) {
-        const uci = window.gameState.moveHistoryUCI[i];
-        const move = game.parseUci(uci);
-        const san = game.toSan(move);
+    for (const uci of window.gameState.moveHistoryUCI) {
+        const move = parseUci(uci);
+        if (!move) {
+            console.error('Invalid UCI move:', uci);
+            continue;
+        }
+
+        const san = makeSanAndPlay(position, move);
         sanHistory.push(san);
-        game.play(move);
     }
 
     return sanHistory;
-}
-
-async function generateEvals(fenHistory) {
-    const evals = [];
-
-    for (const fen of fenHistory) {
-        const cp = getCentipawnLoss(fen);
-        evals.push(cp);
-    }
-
-    return evals;
 }

@@ -33,7 +33,7 @@ async function tryMove(startSquareElem, endSquareElem, premove = false) {
         window.gameState.fenHistory.push(resultFen);
         redrawBoard();
         playMoveSound(move);
-        writeGameStateToDatabase();
+        window.writeGameStateToDatabase(window.sessionUser.id);
         window.CURRENTLY_HIGHLIGHTED_SQUARE = null;
 
         window.MOVE_IN_PROGRESS = false;
