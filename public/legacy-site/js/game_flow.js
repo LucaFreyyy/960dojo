@@ -64,6 +64,7 @@ async function dataBaseMove() {
     window.gameState.colorToMove = window.gameState.colorToMove === 'white' ? 'black' : 'white';
     window.ENGINE_RUNNING = false;
     stopLoadingAnimation();
+    writeGameStateToDatabase();
     if (window.gameState.halfMoveNumber >= window.HALF_MOVE_THRESHOLD || js_lichess_move.isMate) {
         endGame();
         return;
@@ -121,6 +122,7 @@ async function endGame() {
     removeGameHighlights();
     moveListLoadingAnimationStart();
     window.gameState.evaluations = await Promise.all(window.gameState.evaluations);
+    writeBackOldOpeningAndFetchNew();
 
     updateMoveListWithColor();
     window.gameState.playing = false;

@@ -177,7 +177,6 @@ function generateSANHistory() {
     return sanHistory;
 }
 
-
 async function generateEvals(fenHistory) {
     const evals = [];
 
