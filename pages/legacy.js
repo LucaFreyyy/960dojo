@@ -195,12 +195,12 @@ export default function LegacyPage() {
                             <button id="startBtn" className="start-button">Start</button>
                         </div>
                         <div className="move-list-container" id="moveListContainer" style={{ position: 'relative' }}>
-                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', position: 'relative' }} id="browseButtonContainer">
+                            <div id="browseButtonContainer">
                                 <button className="back-button" id="backButton"></button>
-                                <button id="browseallthewayback" className="browseallthewayback" style={{ position: 'absolute', right: '-50px' }}></button>
-                                <button id="browseback" className="browseback" style={{ position: 'absolute', right: '-95px' }}></button>
-                                <button id="browseforward" className="browseforward" style={{ position: 'absolute', right: '-140px' }}></button>
-                                <button id="browseallthewayforward" className="browseallthewayforward" style={{ position: 'absolute', right: '-185px' }}></button>
+                                <button id="browseallthewayback" className="browseallthewayback"></button>
+                                <button id="browseback" className="browseback"></button>
+                                <button id="browseforward" className="browseforward"></button>
+                                <button id="browseallthewayforward" className="browseallthewayforward"></button>
                             </div>
                             <ul className="move-list" id="moveList"></ul>
                             <button id="playAgainBtn" className="start-button" style={{ display: 'none', position: 'absolute', top: '120%', left: '60%', transform: 'translate(-50%, 20px)', zIndex: 1200, pointerEvents: 'auto', width: '200px' }}>Play Again</button>

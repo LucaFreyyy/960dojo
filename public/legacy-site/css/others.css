@@ -2,56 +2,54 @@
 .color {
     display: flex;
     flex-direction: row;
-    gap: 10px;
+    gap: 1.2rem;
+    /* Use rem for gap */
 }
 
 .text-output {
     display: flex;
     justify-content: center;
     align-items: center;
-    margin: 24px 0;
+    margin: 3.6rem 0;
+    /* Use rem for vertical margin */
 }
 
 .rating-box {
     background: #333;
-    /* not in :root, you might define --bg-rating if reused */
     color: var(--text-color-alt);
     font-weight: bold;
-    font-size: 1.3em;
-    padding: 10px 28px;
-    border-radius: 12px;
+    font-size: 1.1em;
+    /* Slightly smaller for mobile */
+    padding: 1.2rem 3.6rem;
+    border-radius: 1.8rem;
     box-shadow: var(--box-shadow-soft);
-    letter-spacing: 1px;
+    letter-spacing: 0.08em;
     border: var(--border-muted);
     display: inline-flex;
     align-items: center;
 }
 
 .rating-icon {
-    margin-right: 8px;
     vertical-align: middle;
 }
 
 .move-list {
     list-style: none;
     padding: 0;
-    margin: 10px 0 0 0;
     color: var(--text-color-alt);
     font-family: var(--font-alt);
-    font-size: 1.05em;
+    font-size: 1em;
 }
 
 .move-list li {
-    padding: 7px 12px;
-    border-radius: 6px;
+    padding: 0.9rem 1.8rem;
+    border-radius: 0.9rem;
     transition: background 0.2s, color 0.2s;
-    margin-bottom: 4px;
     cursor: pointer;
 }
 
 .move-list li:hover {
     background: #2ea4ff22;
-    /* semi-transparent hover not in :root, define if reused */
     color: var(--text-color-hover);
 }
 
@@ -61,16 +59,33 @@
     align-items: flex-start;
     justify-content: flex-start;
     background: linear-gradient(135deg, #23272f 60%, #2ea4ff22 100%);
-    /* not in :root */
     border: var(--border-muted);
     box-shadow: var(--box-shadow-heavy);
-    padding: 14px 12px;
+    padding: 0.4rem 1.2rem;
     box-sizing: border-box;
     overflow-y: auto;
-    margin-top: 80px;
-    height: 480px;
-    width: 260px;
-    border-radius: 14px;
+    height: 32rem;
+    width: 42rem;
+    max-width: 20rem;
+    border-radius: 1.8rem;
+}
+
+@media (max-width: 600px) {
+    .move-list-container {
+        height: 32rem;
+        width: 54rem;
+        padding: 2.4rem 1.8rem;
+    }
+
+    .rating-box {
+        font-size: 1em;
+        padding: 1.8rem 3rem;
+    }
+
+    .move-list li {
+        font-size: 0.95em;
+        padding: 1.2rem 2.4rem;
+    }
 }
 
 @keyframes spin {

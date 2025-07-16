@@ -1,21 +1,26 @@
 .selectors {
     display: flex;
-    gap: 16px;
+    gap: 1rem;
     justify-content: center;
-    margin-top: -30px;
-    position: absolute;
-    left: 50%;
-    margin-left: 30px;
-    transform: translateX(-50%);
-    height: 48px;
-    border-radius: 10px;
-    padding: 8px 20px;
-    width: 750px;
+    align-items: center;
+    position: relative;
+    left: auto;
+    margin-left: 0;
+    transform: none;
+    height: auto;
+    border-radius: 0.5rem;
+    padding: 0.8rem 1.6rem;
+    width: 40.5rem;
+    max-width: 46.875rem;
+    box-sizing: border-box;
+    margin: 0.6rem auto;
+    left: 0;
+    right: 0;
 }
 
 .selectors select {
-    padding: 8px 18px;
-    border-radius: 7px;
+    padding: 0.3em 1.2em;
+    border-radius: 0.375rem;
     border: var(--border-soft);
     background: var(--bg-button);
     color: var(--text-color-main);
@@ -23,14 +28,9 @@
     font-family: var(--font-alt);
     transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
     box-shadow: var(--box-shadow-soft);
-}
-
-.selectors select:focus,
-.selectors select:hover {
-    border-color: #4CAF50;
-    box-shadow: var(--box-shadow-glow);
-    background: var(--grad-selector-hover);
-    outline: none;
+    min-width: 0;
+    width: auto;
+    max-width: none;
 }
 
 .numberSelectContainer {
@@ -38,36 +38,51 @@
     align-items: center;
 }
 
-.invalid-position-msg {
+.invalid-position-msg,
+.error-message {
     position: fixed;
-    top: 20px;
+    top: 1rem;
     left: 50%;
     transform: translateX(-50%);
     background: #dd0000cc;
     color: white;
-    padding: 12px 24px;
-    border-radius: 8px;
-    font-size: 1.2em;
+    padding: 1.2rem 2.4rem;
+    border-radius: 0.5rem;
+    font-size: 1.1em;
     z-index: 10000;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 0.125rem 0.5rem rgba(0, 0, 0, 0.2);
+    max-width: 36rem;
+    box-sizing: border-box;
+    text-align: center;
 }
 
 .selectors select.error {
     border-color: #dd0000;
-    box-shadow: 0 0 0 3px #dd000077;
+    box-shadow: 0 0 0 0.28rem #dd000077;
     background: linear-gradient(135deg, #7d2323 0%, #232526 100%);
 }
 
-.error-message {
-    position: fixed;
-    top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: #dd0000cc;
-    color: white;
-    padding: 12px 24px;
-    border-radius: 8px;
-    font-size: 1.2em;
-    z-index: 10000;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+@media (max-width: 37.5rem) {
+    .selectors {
+        flex-direction: column;
+        gap: 0.75rem;
+        padding: 1.6rem 0.8rem;
+        width: 49rem;
+        max-width: 62.5rem;
+        border-radius: 0.75rem;
+    }
+
+    .selectors select {
+        font-size: 1em;
+        padding: 1.2rem 1.6rem;
+        border-radius: 0.5rem;
+        max-width: 100%;
+    }
+
+    .invalid-position-msg,
+    .error-message {
+        font-size: 1em;
+        padding: 1.6rem 1.6rem;
+        border-radius: 0.75rem;
+    }
 }

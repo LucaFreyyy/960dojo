@@ -1,59 +1,58 @@
 :root {
     /* Typography & Layout */
-    --font-main: 'Arial', sans-serif;
-    --font-alt: 'Segoe UI', Arial, sans-serif;
+    --font-main: Arial, sans-serif;
+    --font-alt: Arial, sans-serif;
 
     /* Text Colors */
     --text-color-main: #f0f0f0;
-    --text-color-dark: #333;
+    --text-color-dark: #2ea4ff;
     --text-color-hover: #2ea4ff;
-    --text-color-alt: #e0e7ef;
+    --text-color-alt: #e2ac60cc;
 
     /* Backgrounds */
-    --bg-main: #222;
-    --bg-button: linear-gradient(135deg, #232526 0%, #414345 100%);
-    --bg-hover: linear-gradient(135deg, #2ea4ff 0%, #232526 100%);
-    --bg-active: linear-gradient(135deg, #4CAF50 0%, #388e3c 100%);
-    --bg-inactive: linear-gradient(135deg, #ccc 0%, #888 100%);
+    --bg-main: #222222;
+    --bg-button: linear-gradient(135deg, #333333 0%, #444444 100%);
+    --bg-hover: linear-gradient(135deg, #2ea4ff 0%, #333333 100%);
+    --bg-active: linear-gradient(135deg, #38ef7dcc 0%, #11998ecc 100%);
+    --bg-inactive: linear-gradient(135deg, #f0f0f0 0%, #888888 100%);
     --bg-board: #2ea4ff5d;
     --bg-dropdown: linear-gradient(135deg, #232526 0%, #414345 100%);
-    --bg-highlight: rgba(100, 197, 253, 0.5);
-    --bg-last-move: rgba(116, 255, 98, 0.5);
-    --bg-right1: rgba(255, 240, 24, 0.5);
-    --bg-right2: rgba(240, 56, 56, 0.5);
-    --bg-can-move: rgba(100, 197, 253, 0.5);
-    --bg-premove: rgba(100, 197, 253, 0.5);
+    --bg-highlight: #2ea4ff;
+    --bg-last-move: #38ef7dcc;
+    --bg-right1: #e2ac60cc;
+    --bg-right2: #cc2b5ecc;
+    --bg-can-move: #2ea4ff;
+    --bg-premove: #2ea4ff;
 
     /* Borders & Shadows */
-    --border-soft: 1.5px solid #2ea4ff10;
+    --border-soft: 1.5px solid #333333;
     --border-strong: 1.5px solid #2ea4ff;
-    --border-muted: 1.5px solid #2ea4ff30;
+    --border-muted: 1.5px solid #444444;
     --border-danger: 1.5px solid #b71c1c;
-    --box-shadow-soft: 0 2px 8px rgba(46, 164, 255, 0.10);
-    --box-shadow-strong: 0 4px 12px rgba(0, 184, 148, 0.18);
-    --box-shadow-glow: 0 0 0 3px #4CAF5077;
-    --box-shadow-heavy: 0 4px 18px #0006;
-    --box-shadow-error: rgba(221, 0, 0, 0.467) 0px 0px 0px 3px;
+    --box-shadow-soft: 0 2px 8px #2ea4ff1a;
+    --box-shadow-strong: 0 4px 12px #11998ecc;
+    --box-shadow-glow: 0 0 0 3px #38ef7d77;
+    --box-shadow-heavy: 0 4px 18px #333333;
+    --box-shadow-error: #b71c1c 0px 0px 0px 3px;
 
     /* Specific Gradients */
-    --grad-start: linear-gradient(135deg, #00b894, #0984e3);
-    --grad-hover: linear-gradient(135deg, #0984e3, #00b894);
-    --grad-danger: linear-gradient(135deg, #ff512f 0%, #dd2476 100%);
-    --grad-danger-hover: linear-gradient(135deg, #ff6e40 0%, #ff1744 100%);
-    --grad-arrow-hover: linear-gradient(135deg, #636363 0%, #a2ab58 100%);
-    --grad-selector-hover: linear-gradient(135deg, #2e7d32 0%, #232526 100%);
+    --grad-start: linear-gradient(135deg, #38ef7dcc, #11998ecc);
+    --grad-hover: linear-gradient(135deg, #2ea4ff, #38ef7dcc);
+    --grad-danger: linear-gradient(135deg, #cc2b5ecc 0%, #b71c1c 100%);
+    --grad-danger-hover: linear-gradient(135deg, #ff6e40 0%, #b71c1c 100%);
+    --grad-arrow-hover: linear-gradient(135deg, #444444 0%, #e2ac60cc 100%);
+    --grad-selector-hover: linear-gradient(135deg, #11998ecc 0%, #333333 100%);
 
     /* Chessboard colors */
     --white-square: #f0d9b5;
     --black-square: #b58863;
 }
 
-
 header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 10px 20px;
+    padding: 2rem 4rem;
 }
 
 body {
@@ -61,12 +60,12 @@ body {
     background-color: var(--bg-main);
     color: var(--text-color-main);
     text-align: center;
-    margin: 20px;
+    margin: 4rem;
     padding: 0;
 }
 
 .login-name {
-    margin-left: 6px;
-    font-size: 14px;
+    margin-left: 1rem;
+    font-size: 1rem;
     color: var(--text-color-dark);
 }

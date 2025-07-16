@@ -2,18 +2,20 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 40px;
+    gap: 2rem;
+    flex-wrap: wrap;
+    padding: 1rem;
+    margin-top: 2rem;
 }
 
 .chessboard {
     display: inline-block;
     background-color: var(--bg-board);
-    /* #2ea4ff5d */
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    margin-top: 100px;
-    border-radius: 4px;
+    box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.2);
+    border-radius: 0.25rem;
     border: var(--border-soft);
-    /* 1.5px solid #2ea4ff10 */
+    max-width: 60rem;
+    width: auto;
 }
 
 .row {
@@ -21,14 +23,16 @@
 }
 
 .square {
-    width: 60px;
-    height: 60px;
+    width: 4rem;
+    height: 4rem;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 24px;
+    font-size: 1.5rem;
     cursor: pointer;
     transition: background-color 0.2s;
+    box-sizing: border-box;
+    position: relative;
 }
 
 .square img {
@@ -36,98 +40,27 @@
     user-select: none;
     -webkit-user-drag: none;
     z-index: 2;
+    max-width: 100%;
+    max-height: 100%;
 }
 
 .square:hover {
     opacity: 0.8;
 }
 
-.square.highlight {
-    position: relative;
-}
-
-.square.highlight::after {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: var(--bg-highlight);
-    pointer-events: none;
-    z-index: 1;
-}
-
-.square.last-move-highlight {
-    position: relative;
-}
-
-.square.last-move-highlight::after {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: var(--bg-last-move);
-    pointer-events: none;
-    z-index: 1;
-}
-
-.square.right-highlight {
-    position: relative;
-}
-
-.square.right-highlight::after {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: var(--bg-right1);
-    pointer-events: none;
-    z-index: 1;
-}
-
-.square.right-highlight-second {
-    position: relative;
-}
-
-.square.right-highlight-second::after {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: var(--bg-right2);
-    pointer-events: none;
-    z-index: 1;
-}
-
-.square.can-move-highlight {
-    position: relative;
-}
-
-.square.can-move-highlight::after {
-    content: "";
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 24px;
-    height: 24px;
-    background: var(--bg-can-move);
-    border-radius: 50%;
-    transform: translate(-50%, -50%);
-    pointer-events: none;
-    z-index: 3;
-}
-
+.square.highlight,
+.square.last-move-highlight,
+.square.right-highlight,
+.square.right-highlight-second,
+.square.can-move-highlight,
 .square.premove-highlight {
     position: relative;
 }
 
+.square.highlight::after,
+.square.last-move-highlight::after,
+.square.right-highlight::after,
+.square.right-highlight-second::after,
 .square.premove-highlight::after {
     content: "";
     position: absolute;
@@ -135,9 +68,42 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: var(--bg-premove);
     pointer-events: none;
     z-index: 1;
+}
+
+.square.highlight::after {
+    background-color: var(--bg-highlight);
+}
+
+.square.last-move-highlight::after {
+    background-color: var(--bg-last-move);
+}
+
+.square.right-highlight::after {
+    background-color: var(--bg-right1);
+}
+
+.square.right-highlight-second::after {
+    background-color: var(--bg-right2);
+}
+
+.square.can-move-highlight::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 1.6rem;
+    height: 1.6rem;
+    background: var(--bg-can-move);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    z-index: 3;
+}
+
+.square.premove-highlight::after {
+    background-color: var(--bg-premove);
 }
 
 .white {
@@ -149,12 +115,16 @@
 }
 
 .piece {
-    width: 64px;
-    height: 64px;
+    width: 100%;
+    height: 100%;
+    max-width: 4rem;
+    max-height: 4rem;
 }
 
 .piece img {
     outline: none;
     user-select: none;
     -webkit-user-drag: none;
+    width: 100%;
+    height: 100%;
 }
