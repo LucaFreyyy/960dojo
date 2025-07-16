@@ -23,7 +23,6 @@ async function selectMode(mode) {
     }
 }
 
-
 function selectColor(color) {
     const isRated = document.getElementById('ratedBtn').classList.contains('active');
     if ((color === 'white' || color === 'black') && isRated) {

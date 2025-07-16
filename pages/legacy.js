@@ -11,8 +11,8 @@ export default function LegacyPage() {
 
         // Always define sessionUser immediately
         window.sessionUser = {
-            id: null,
-            rating_openings: 1400,
+            id: session?.user?.id ?? null,
+            rating_openings: 1500,
             ...(session?.user || {})
         };
 
@@ -61,9 +61,9 @@ export default function LegacyPage() {
                         .maybeSingle();
 
                     if (ratingData) {
-                        window.sessionUser.id = session.user.id;
                         window.sessionUser.rating_openings = ratingData.value;
                     }
+
                 } catch (err) {
                     console.error('[legacy.js] Supabase fetch error:', err);
                 } finally {

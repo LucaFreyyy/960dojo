@@ -5,6 +5,10 @@ export default async function handler(req, res) {
 
     const { id, newRating } = req.body;
 
+    if (!id || typeof newRating !== 'number') {
+        return res.status(400).json({ success: false, error: 'Missing or invalid parameters' });
+    }
+
     const { error } = await supabase
         .from('Rating')
         .insert({
