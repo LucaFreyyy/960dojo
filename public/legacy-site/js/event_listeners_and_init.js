@@ -21,6 +21,8 @@ function safeAddListener(id, event, handler) {
 }
 
 function initializeEventListeners() {
+    if (document.body.dataset.listeners === 'true') return;
+    document.body.dataset.listeners = 'true';
     safeAddListener("Category", "change", () => toggleNumberSelect().catch(console.error));
     safeAddListener("numberSelect", "change", () => onNumberSelectChange().catch(console.error));
     safeAddListener("ratedBtn", "click", safeClick(() => selectMode("rated")));

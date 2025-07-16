@@ -1,8 +1,7 @@
-// pages/legacy.js
 import Head from 'next/head';
 import { useEffect } from 'react';
 
-export default function LegacyPage() {
+export default function OpeningPage() {
     useEffect(() => {
         // Dynamically load and run old JS files on mount
         const scriptFiles = [
