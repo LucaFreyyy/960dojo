@@ -19,6 +19,13 @@ export default function LegacyPage() {
 
         const finishSetup = () => {
             if (typeof initializeUI === 'function') {
+                initializeEventListeners();
+                setupRatingControls();
+                setupArrowDrawing();
+                initializeBoard();
+                resizeArrowCanvas();
+                window.addEventListener('resize', resizeArrowCanvas);
+
                 const ratedBtn = document.getElementById('ratedBtn');
                 if (!window.sessionUser?.id) {
                     ratedBtn.classList.add('locked');
@@ -31,12 +38,6 @@ export default function LegacyPage() {
                     ratedBtn.title = '';
                     selectMode('rated');
                 }
-                initializeEventListeners();
-                setupRatingControls();
-                setupArrowDrawing();
-                initializeBoard();
-                resizeArrowCanvas();
-                window.addEventListener('resize', resizeArrowCanvas);
             } else {
                 console.error('initializeUI is not defined');
             }
