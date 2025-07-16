@@ -49,39 +49,32 @@ export default function FollowStats({ user }) {
         <div className="follow-stats">
             <div className="follow-counts">
                 <div>
-                    <strong>{followers.length}</strong>
-                    <p>Followers</p>
+                    <strong>{followers.length} Followers</strong>
                 </div>
-                <div>
-                    <strong>{following.length}</strong>
-                    <p>Following</p>
-                </div>
-            </div>
-
-            <div className="follow-lists">
-                <div>
-                    <h4>Followers</h4>
-                    <ul className="followlist">
-                        {followers.map((user) => (
-                            <li key={user.id}>
-                                <a href={`/profile/${user.id}`} className="text-blue-600 hover:underline">
-                                    {user.name}
-                                </a>
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-                <div>
-                    <h4>Following</h4>
-                    <ul className="followlist">
-                        {following.map((user) => (
-                            <li key={user.id}>
-                                <a href={`/profile/${user.id}`} className="text-blue-600 hover:underline">
-                                    {user.name}
-                                </a>
-                            </li>
-                        ))}
-                    </ul>
+                <div className="follow-lists">
+                    <div>
+                        <ul className="followlist">
+                            {followers.map((user) => (
+                                <li key={user.id}>
+                                    <a href={`/profile/${user.id}`} className="text-blue-600 hover:underline">
+                                        {user.name}
+                                    </a>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                    <div>
+                        <strong>{following.length} Following</strong>
+                        <ul className="followlist">
+                            {following.map((user) => (
+                                <li key={user.id}>
+                                    <a href={`/profile/${user.id}`} className="text-blue-600 hover:underline">
+                                        {user.name}
+                                    </a>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
                 </div>
             </div>
         </div>

@@ -16,7 +16,7 @@ async function setPositionByNumber(number, color = null) {
         const piece = board[row][col];
         if (piece) {
             const img = document.createElement('img');
-            img.src = `legacy-site/pieces/${piece}.svg`;
+            img.src = `legacy-site/pieces/${piece}.png`;
             img.className = 'piece';
             square.appendChild(img);
         }
@@ -70,7 +70,7 @@ function redrawBoard() {
                     const img = document.createElement('img');
                     const colorPrefix = piece === piece.toUpperCase() ? 'w' : 'b';
                     const pieceLetter = piece.toUpperCase();
-                    img.src = `legacy-site/pieces/${colorPrefix}_${pieceLetter}.svg`;
+                    img.src = `legacy-site/pieces/${colorPrefix}_${pieceLetter}.png`;
                     img.className = 'piece';
                     square.appendChild(img);
                 }
