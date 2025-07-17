@@ -40,9 +40,8 @@ async function tryMove(startSquareElem, endSquareElem, premove = false) {
 
         window.MOVE_IN_PROGRESS = false;
 
-        if (window.moveIsMate[idx]) {
-            updateMoveListWithColor();
-            window.gameState.playing = false;
+        if (window.moveIsMate[idx] || window.gameState.halfMoveNumber >= window.HALF_MOVE_THRESHOLD) {
+            endGame();
         } else {
             window.gameState.colorToMove = 'white' === window.gameState.colorToMove ? 'black' : 'white';
             dataBaseMove();

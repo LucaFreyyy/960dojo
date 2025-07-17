@@ -1,4 +1,5 @@
 async function startGame() {
+    window.HALF_MOVE_THRESHOLD = Math.floor(Math.random() * 8) + 17;
     // Check if the user selected a valid position
     const mode = document.getElementById('Category');
     if (mode.classList.contains('error')) {
@@ -123,14 +124,16 @@ function chessNotationToIndices(square) {
 async function endGame() {
     removeGameHighlights();
     moveListLoadingAnimationStart();
+    let finalEval = await getCentipawnLoss(window.gameState.position, 25);
     window.gameState.evaluations = await Promise.all(window.gameState.evaluations);
+    window.gameState.evaluations[window.gameState.evaluations.length - 1] = finalEval;
+    finalEval = finalEval / 100;
 
     updateMoveListWithColor();
     window.gameState.playing = false;
 
     if (window.gameState.isRated) {
         writeBackOldOpeningAndFetchNew(window.sessionUser.id);
-        let finalEval = window.gameState.evaluations[window.gameState.evaluations.length - 1] / 100;
         finalEval = Math.max(-5, Math.min(5, finalEval));
         let ratingChange = Math.round(finalEval * 10);
         if (window.gameState.userColor === 'black') ratingChange *= -1;
@@ -144,8 +147,6 @@ async function endGame() {
         }
 
         const newRating = parseInt(window.gameState.userRating) + ratingChange;
-        const newPosition = Math.floor(Math.random() * 960);
-        const newColor = Math.random() > 0.5 ? "white" : "black";
 
         fetch('/api/createOpeningRating', {
             method: 'POST',
