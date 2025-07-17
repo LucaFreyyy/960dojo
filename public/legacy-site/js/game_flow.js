@@ -15,7 +15,15 @@ async function startGame() {
     deactivateMenu();
     await setupStartPosition();
 
-    if (window.gameState.userColor === 'black') {
+    if (window.gameState.userColor === window.gameState.colorToMove) {
+        js_data = get_legal_moves(window.gameState.position);
+        window.legalMoves = js_data.uci;
+        window.legalSans = js_data.san;
+        window.fenResults = js_data.fen;
+        window.moveIsMate = js_data.isMate;
+        window.initialEval = getCentipawnLoss(window.gameState.position);
+        window.gameState.playing = true;
+    } else {
         window.legalMoves = getAllPseudolegalMovesForOpponent(window.gameState.position);
         window.gameState.playing = true;
         try {
@@ -24,14 +32,6 @@ async function startGame() {
         } catch (e) {
             console.error('dataBaseMove error:', e);
         }
-    } else {
-        js_data = get_legal_moves(window.gameState.position);
-        window.legalMoves = js_data.uci;
-        window.legalSans = js_data.san;
-        window.fenResults = js_data.fen;
-        window.moveIsMate = js_data.isMate;
-        window.initialEval = getCentipawnLoss(window.gameState.position);
-        window.gameState.playing = true;
     }
 }
 
