@@ -104,34 +104,6 @@ header {
     width: auto;
 }
 
-
-/* ====== Search ====== */
-
-.search {
-    padding: 0.5rem 1rem;
-    font-size: 1rem;
-    font-family: var(--font-main);
-    border: var(--border-muted);
-    border-radius: 8px;
-    background: var(--bg-main);
-    color: var(--text-color-main);
-    box-shadow: var(--box-shadow-soft);
-    transition: all 0.2s ease;
-    width: 220px;
-    outline: none;
-}
-
-.search::placeholder {
-    color: #999;
-    opacity: 0.7;
-}
-
-.search:focus {
-    border: var(--border-strong);
-    box-shadow: var(--box-shadow-glow);
-    background: #2a2a2a;
-}
-
 /* ====== Dropdown ====== */
 
 .dropdown {

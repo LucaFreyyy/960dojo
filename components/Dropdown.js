@@ -63,12 +63,14 @@ export default function Dropdown({ isAuthenticated }) {
                     {isAuthenticated ? (
                         <>
                             <Link href="/profile">👤 Profile</Link>
+                            <Link href="/playerSearch">🔍 Player Search</Link>
                             <Link href="/settings">⚙️ Settings</Link>
                             <Link href="/info">ℹ️ Info</Link>
                             <a onClick={() => signOut({ callbackUrl: '/' })} style={{ cursor: 'pointer' }}>🚪 Sign Out</a>
                         </>
                     ) : (
                         <>
+                            <Link href="/playerSearch">🔍 Player Search</Link>
                             <Link href="/settings">⚙️ Settings</Link>
                             <Link href="/info">ℹ️ Info</Link>
                             <a onClick={() => signIn('google')} style={{ cursor: 'pointer' }}>🔐 Sign In</a>

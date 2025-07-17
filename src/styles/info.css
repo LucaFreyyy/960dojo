@@ -15,26 +15,31 @@
 .buy-coffee {
     display: inline-flex;
     align-items: center;
-    gap: 0.6rem;
-    margin-top: 2rem;
-    background: var(--bg-button);
-    padding: 0.6rem 1.2rem;
-    border-radius: 8px;
+    gap: 0.7rem;
+    margin-top: 0.2rem;
+    background: linear-gradient(90deg, var(--bg-button) 60%, var(--bg-hover) 100%);
+    padding: 0.7rem 1.6rem;
+    border-radius: 12px;
     color: var(--text-color-main);
     text-decoration: none;
-    font-weight: 600;
-    box-shadow: var(--box-shadow-soft);
-    transition: background 0.2s ease;
+    font-weight: 700;
+    box-shadow: 0 2px 8px var(--box-shadow-soft);
+    border: 1px solid var(--text-color-header);
+    letter-spacing: 0.03em;
+    cursor: pointer;
+    transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
 }
 
 .buy-coffee:hover {
-    background: var(--bg-hover);
-    box-shadow: var(--box-shadow-glow);
+    background: linear-gradient(90deg, var(--bg-hover) 60%, var(--bg-button) 100%);
+    box-shadow: 0 4px 16px var(--box-shadow-glow);
     color: var(--text-color-main);
+    transform: translateY(-2px) scale(1.03);
 }
 
 .coffee-icon {
-    font-size: 1.3rem;
+    font-size: 1.4rem;
+    filter: drop-shadow(0 1px 2px var(--box-shadow-soft));
 }
 
 .link {
