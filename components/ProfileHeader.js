@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 
 export default function ProfileHeader({ user, editable = true }) {
@@ -7,6 +7,15 @@ export default function ProfileHeader({ user, editable = true }) {
         name: user.name,
         bio: user.bio || '',
     });
+    const bioRef = useRef(null);
+
+    // Auto-resize bio textarea
+    useEffect(() => {
+        if (editingField === 'bio' && bioRef.current) {
+            bioRef.current.style.height = 'auto';
+            bioRef.current.style.height = `${bioRef.current.scrollHeight}px`;
+        }
+    }, [formData.bio, editingField]);
 
     function handleEdit(field) {
         setEditingField(field);
@@ -29,8 +38,40 @@ export default function ProfileHeader({ user, editable = true }) {
             return;
         }
 
-        user[field] = formData[field]; // ✅ Instant local UI update
+        user[field] = formData[field];
         setEditingField(null);
+    }
+
+    function handleNameKeyDown(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            handleSave('name');
+        } else if (e.key === 'Escape') {
+            setEditingField(null);
+        }
+    }
+
+    function handleBioKeyDown(e) {
+        if (e.key === 'Enter' && e.ctrlKey) {
+            // Manually insert a newline at the cursor position
+            const { selectionStart, selectionEnd } = e.target;
+            const newValue =
+                formData.bio.substring(0, selectionStart) +
+                '\n' +
+                formData.bio.substring(selectionEnd);
+
+            setFormData({ ...formData, bio: newValue });
+
+            // Move cursor to after the newline
+            setTimeout(() => {
+                e.target.selectionStart = e.target.selectionEnd = selectionStart + 1;
+            }, 0);
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            handleSave('bio');
+        } else if (e.key === 'Escape') {
+            setEditingField(null);
+        }
     }
 
     return (
@@ -42,22 +83,20 @@ export default function ProfileHeader({ user, editable = true }) {
                     )}</label>
                     {editingField === 'name' ? (
                         editable ? (
-                            <>
-                                <input
-                                    name="name"
-                                    className="name-input"
-                                    value={formData.name}
-                                    onChange={handleChange}
-                                />
-                                <button onClick={() => handleSave('name')}>Save</button>
-                            </>
+                            <input
+                                name="name"
+                                className="name-input"
+                                value={formData.name}
+                                onChange={handleChange}
+                                onKeyDown={handleNameKeyDown}
+                                onBlur={() => setEditingField(null)}
+                                autoFocus
+                            />
                         ) : (
                             <h2 className="name-text">{user.name}</h2>
                         )
                     ) : (
-                        <>
-                            <h2 className="name-text">{user.name}</h2>
-                        </>
+                        <h2 className="name-text">{user.name}</h2>
                     )}
                 </div>
 
@@ -67,30 +106,23 @@ export default function ProfileHeader({ user, editable = true }) {
                     )}</label>
                     {editingField === 'bio' ? (
                         editable ? (
-                            <>
-                                <textarea
-                                    className="bio-edit"
-                                    name="bio"
-                                    value={formData.bio}
-                                    onChange={handleChange}
-                                    rows={1}
-                                    style={{ resize: 'none', overflow: 'hidden' }}
-                                    ref={(el) => {
-                                        if (el) {
-                                            el.style.height = 'auto';
-                                            el.style.height = `${el.scrollHeight}px`;
-                                        }
-                                    }}
-                                />
-                                <button onClick={() => handleSave('bio')}>Save</button>
-                            </>
+                            <textarea
+                                ref={bioRef}
+                                className="bio-edit"
+                                name="bio"
+                                value={formData.bio}
+                                onChange={handleChange}
+                                onKeyDown={handleBioKeyDown}
+                                onBlur={() => setEditingField(null)}
+                                rows={1}
+                                style={{ resize: 'none', overflow: 'hidden' }}
+                                autoFocus
+                            />
                         ) : (
                             <p className="bio-box">{user.bio || 'No bio yet.'}</p>
                         )
                     ) : (
-                        <>
-                            <p className="bio-box">{user.bio || 'No bio yet.'}</p>
-                        </>
+                        <p className="bio-box">{user.bio || 'No bio yet.'}</p>
                     )}
                 </div>
             </div>

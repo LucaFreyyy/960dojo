@@ -43,6 +43,8 @@ export default function InfoPage() {
                         <FaCoffee className="coffee-icon" />
                         Buy me a coffee
                     </a>
+
+                    <p>My profile on this website: <a href="/profile/ef54c3891d0fd3ec1e42b326141a44d8365c1539e3c04fb04c8504fc30b0c8f9" className="link">OneEggIsUnOeuf</a></p>
                 </section>
             </main>
         </>

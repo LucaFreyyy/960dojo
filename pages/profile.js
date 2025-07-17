@@ -88,11 +88,13 @@ export default function ProfilePage() {
                 ) : (
                     <>
                         <ProfileHeader user={userData} editable={true} />
+                        <hr className='separating-line' />
                         <FollowStats
                             user={userData}
                             followers={followers.map(f => f.name)}
                             following={following.map(f => f.name)}
                         />
+                        <hr className='separating-line' />
                         <ProfileTabs userId={session.user.id} />
                     </>
                 )}
