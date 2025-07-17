@@ -1,8 +1,8 @@
-import Head from 'next/head';
 import { useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { exposeChessopsGlobalsToWindow } from '../lib/exposeChessops.js';
 import { fetchUnfinishedOpening, writeGameStateToDatabase, writeBackOldOpeningAndFetchNew } from '../lib/opening_supabase_functions.js';
+import { supabase } from '../lib/supabase.js';
 
 export default function LegacyPage() {
     const { data: session, status } = useSession();
@@ -49,12 +49,6 @@ export default function LegacyPage() {
         if (status === 'authenticated') {
             (async () => {
                 try {
-                    const { createClient } = await import('@supabase/supabase-js');
-                    const supabase = createClient(
-                        process.env.NEXT_PUBLIC_SUPABASE_URL,
-                        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-                    );
-
                     const { data: ratingData, error } = await supabase
                         .from('Rating')
                         .select('value')
