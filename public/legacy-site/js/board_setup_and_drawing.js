@@ -149,7 +149,7 @@ async function setupStartPosition() {
     await setPositionByNumber(parseInt(numberSelect.value), window.gameState.userColor);
 
     pgn = window.sessionUser.pgn;
-    if (pgn) {
+    if (pgn && window.gameState.isRated) {
         window.gameState.fenHistory = pgn.split('\n').map(line => {
             const lastSpace = line.lastIndexOf(' ');
             return lastSpace !== -1 ? line.substring(0, lastSpace) : line;

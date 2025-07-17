@@ -64,7 +64,9 @@ async function dataBaseMove() {
     window.gameState.colorToMove = window.gameState.colorToMove === 'white' ? 'black' : 'white';
     window.ENGINE_RUNNING = false;
     stopLoadingAnimation();
-    window.writeGameStateToDatabase(window.sessionUser.id);
+    if (window.gameState.isRated) {
+        window.writeGameStateToDatabase(window.sessionUser.id);
+    }
     if (window.gameState.halfMoveNumber >= window.HALF_MOVE_THRESHOLD || js_lichess_move.isMate) {
         endGame();
         return;
@@ -122,12 +124,12 @@ async function endGame() {
     removeGameHighlights();
     moveListLoadingAnimationStart();
     window.gameState.evaluations = await Promise.all(window.gameState.evaluations);
-    window.writeBackOldOpeningAndFetchNew(window.sessionUser.id);
 
     updateMoveListWithColor();
     window.gameState.playing = false;
 
     if (window.gameState.isRated) {
+        writeBackOldOpeningAndFetchNew(window.sessionUser.id);
         let finalEval = window.gameState.evaluations[window.gameState.evaluations.length - 1] / 100;
         finalEval = Math.max(-5, Math.min(5, finalEval));
         let ratingChange = Math.round(finalEval * 10);
