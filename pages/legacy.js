@@ -219,7 +219,6 @@ export default function LegacyPage() {
                                 <button id="browseallthewayforward" className="browseallthewayforward"></button>
                             </div>
                             <ul className="move-list" id="moveList"></ul>
-                            <button id="playAgainBtn" className="start-button">Play Again</button>
                         </div>
                     </div>
                 </section>
@@ -241,6 +240,7 @@ export default function LegacyPage() {
                         </button>
                     </span>
                 </section>
+                <button id="playAgainBtn" className="start-button" style={{ display: 'none', marginLeft: '75rem', marginTop: '-10rem' }}>Play Again</button>
 
                 <div id="loginMessage" style={{ color: 'red', display: 'none', marginTop: '10px' }}>
                     Log in to play rated

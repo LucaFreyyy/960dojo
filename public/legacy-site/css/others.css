@@ -68,6 +68,31 @@
     width: 42rem;
     max-width: 20rem;
     border-radius: 1.8rem;
+    overflow-y: auto;
+}
+
+.play-again-button {
+    display: none;
+    margin: 2.4rem auto 0 auto;
+    padding: 1.2rem 3.6rem;
+    background: linear-gradient(90deg, var(--primary-color) 60%, var(--background-color) 100%);
+    color: var(--text-color-alt);
+    font-size: 1.1em;
+    font-weight: bold;
+    border: none;
+    border-radius: 1.8rem;
+    box-shadow: var(--box-shadow-soft);
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+    letter-spacing: 0.08em;
+}
+
+.play-again-button:hover,
+.play-again-button:focus {
+    background: linear-gradient(90deg, var(--background-color) 60%, var(--primary-color) 100%);
+    color: var(--text-color-hover);
+    box-shadow: var(--box-shadow-heavy);
+    outline: none;
 }
 
 @media (max-width: 600px) {
