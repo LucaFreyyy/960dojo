@@ -80,7 +80,7 @@ model UserOpening {
   userId         String
   openingNr      Int       // 0–959
   color          String    // "white" or "black"
-  pgn            String
+  pgn            String?
   evalCp         Int?      // Final eval in centipawns (e.g. +32, -10)
   finished       DateTime? @default(now())
   user           User      @relation(fields: [userId], references: [id])

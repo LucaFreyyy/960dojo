@@ -145,7 +145,7 @@ async function endGame() {
         const newPosition = Math.floor(Math.random() * 960);
         const newColor = Math.random() > 0.5 ? "white" : "black";
 
-        fetch('/api/updateOpeningRating', {
+        fetch('/api/createOpeningRating', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
