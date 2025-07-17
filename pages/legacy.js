@@ -218,7 +218,7 @@ export default function LegacyPage() {
                                 <button id="browseallthewayforward" className="browseallthewayforward"></button>
                             </div>
                             <ul className="move-list" id="moveList"></ul>
-                            <button id="playAgainBtn" className="start-button" style={{ display: 'none', position: 'absolute', top: '120%', left: '60%', transform: 'translate(-50%, 20px)', zIndex: 1200, pointerEvents: 'auto', width: '200px' }}>Play Again</button>
+                            <button id="playAgainBtn" className="start-button">Play Again</button>
                         </div>
                     </div>
                 </section>

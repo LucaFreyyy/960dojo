@@ -161,23 +161,6 @@ async function endGame() {
             })
             .catch(console.error);
 
-
-        fetch("/update_user_data", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ rating: newRating, position: newPosition, color: newColor })
-        }).then(res => res.json()).then(data => {
-            if (data.success) {
-                window.gameState.userRating = newRating;
-                const ratingDisplay = document.getElementById("ratingDisplay");
-                if (ratingDisplay) {
-                    ratingDisplay.textContent = `${newRating}`;
-                }
-            } else {
-                console.error("Failed to update rating/position:", data.error);
-            }
-        }).catch(console.error);
-
         const ratingDisplay = document.getElementById("ratingDisplay");
         const oldRating = parseInt(ratingDisplay?.textContent || 0, 10);
         const finalRating = newRating;
