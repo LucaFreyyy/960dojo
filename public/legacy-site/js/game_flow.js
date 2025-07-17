@@ -216,7 +216,10 @@ async function endGame() {
     if (lichessBtn) lichessBtn.style.display = "block";
 }
 
-function backButtonClick() {
+async function backButtonClick() {
+    while (window.ENGINE_RUNNING || window.WRITING_INTO_DATABASE) {
+        await new Promise(resolve => setTimeout(resolve, 300));
+    }
     stopLoadingAnimation();
     reactivateMenu();
     resetGameState();

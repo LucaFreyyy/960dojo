@@ -78,6 +78,7 @@ export default function LegacyPage() {
                     window.sessionUser.openingNr = opening.openingNr;
                     window.sessionUser.color = opening.color;
                     window.sessionUser.pgn = opening.pgn;
+                    window.WRITING_INTO_DATABASE = false;
 
                 } catch (err) {
                     console.error('[legacy.js] Supabase fetch error:', err);
