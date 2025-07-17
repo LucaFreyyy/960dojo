@@ -161,18 +161,17 @@ export default function LegacyPage() {
                 </section>
 
                 <section className="chessboard-container">
-                    <button className="lichess-analysis" id="lichessBtn" style={{
-                        display: 'none', position: 'absolute', top: '0px', left: '50%', marginTop: '170px', marginLeft: '210px'
-                    }}>
-                        Lichess Analysis
-                    </button>
-
                     <div id="loading-circle" className="loading-spinner" style={{
                         display: 'none', position: 'absolute', top: 0, left: '50%', width: '24px', height: '24px',
                         border: '8px solid #8abfe2', borderTop: '8px solid #3498db', borderRadius: '50%',
                         animation: 'spin 1s linear infinite', zIndex: 1000, pointerEvents: 'none',
                         marginTop: '170px', marginLeft: '-350px'
                     }}></div>
+                    <button className="lichess-analysis" id="lichessBtn" style={{
+                        display: 'none', position: 'absolute'
+                    }}>
+                        Lichess Analysis
+                    </button>
 
                     <div className="chessboard" id="chessboard" style={{ position: 'relative' }}>
                         {[...Array(8)].map((_, row) => (

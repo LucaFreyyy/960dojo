@@ -206,3 +206,43 @@ button:hover {
         font-size: 1em;
     }
 }
+
+.lichess-analysis {
+    align-items: center;
+    justify-content: center;
+    gap: 0.5em;
+    background: #232323;
+    color: #fff;
+    border: 0.125em solid #b7b7b7;
+    border-radius: 0.5em;
+    font-size: 1em;
+    font-weight: 500;
+    box-shadow: 0 0.125em 0.5em rgba(0, 0, 0, 0.12);
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+    position: absolute;
+    top: 0;
+    left: 50%;
+    padding: 0.5em 0.7em;
+    min-width: 2.5em;
+    min-height: 2.5em;
+    margin-top: 10rem;
+    margin-left: 14rem;
+}
+
+.lichess-analysis::before {
+    content: '';
+    display: inline-block;
+    width: 2em;
+    height: 2em;
+    background-image: url('https://upload.wikimedia.org/wikipedia/commons/d/da/Lichess_Logo_2019.svg');
+    background-size: contain;
+    background-repeat: no-repeat;
+    vertical-align: middle;
+}
+
+.lichess-analysis:hover {
+    background: #111;
+    border-color: #f5c700;
+    box-shadow: 0 0.25em 1em rgba(0, 0, 0, 0.18);
+}
