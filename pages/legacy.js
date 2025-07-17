@@ -8,6 +8,17 @@ export default function LegacyPage() {
     const { data: session, status } = useSession();
 
     useEffect(() => {
+        const alreadyVisited = sessionStorage.getItem("visitedLegacyPage");
+
+        if (alreadyVisited === "true") {
+            sessionStorage.removeItem("visitedLegacyPage");
+            window.location.reload(); // reload only once per soft nav
+        } else {
+            sessionStorage.setItem("visitedLegacyPage", "true");
+        }
+    }, []);
+
+    useEffect(() => {
         exposeChessopsGlobalsToWindow();
 
         // Always define sessionUser immediately
