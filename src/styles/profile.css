@@ -208,3 +208,20 @@
     margin-bottom: 1rem;
     color: var(--text-color-highlight);
 }
+
+.edit-button {
+    all: unset;
+    display: inline;
+    background: none;
+    color: inherit;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    cursor: pointer;
+    box-shadow: none;
+    transition: none;
+}
+
+.edit-button:hover {
+    background: none;
+}

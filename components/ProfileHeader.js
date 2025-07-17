@@ -37,7 +37,9 @@ export default function ProfileHeader({ user, editable = true }) {
         <div className="profile-header">
             <div className="profile-info">
                 <div className="profile-name-row">
-                    <label>Name</label>
+                    <label>Name {editable && (
+                        <button onClick={() => handleEdit('name')} className='edit-button'>✏️</button>
+                    )}</label>
                     {editingField === 'name' ? (
                         editable ? (
                             <>
@@ -55,15 +57,14 @@ export default function ProfileHeader({ user, editable = true }) {
                     ) : (
                         <>
                             <h2 className="name-text">{user.name}</h2>
-                            {editable && (
-                                <button onClick={() => handleEdit('name')}>Edit</button>
-                            )}
                         </>
                     )}
                 </div>
 
                 <div className="profile-bio-row">
-                    <label>Bio</label>
+                    <label>Bio {editable && (
+                        <button onClick={() => handleEdit('bio')} className='edit-button'>✏️</button>
+                    )}</label>
                     {editingField === 'bio' ? (
                         editable ? (
                             <>
@@ -89,9 +90,6 @@ export default function ProfileHeader({ user, editable = true }) {
                     ) : (
                         <>
                             <p className="bio-box">{user.bio || 'No bio yet.'}</p>
-                            {editable && (
-                                <button onClick={() => handleEdit('bio')}>Edit</button>
-                            )}
                         </>
                     )}
                 </div>
