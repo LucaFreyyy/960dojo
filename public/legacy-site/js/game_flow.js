@@ -217,6 +217,7 @@ async function endGame() {
 }
 
 async function backButtonClick() {
+    document.getElementById("fullScreenLoadingOverlay").style.display = "flex";
     while (window.ENGINE_RUNNING || window.WRITING_INTO_DATABASE) {
         await new Promise(resolve => setTimeout(resolve, 300));
     }
@@ -226,4 +227,5 @@ async function backButtonClick() {
     updateMoveList();
     removeAllBoardHighlights();
     document.getElementById("lichessBtn").style.display = "none";
+    document.getElementById("fullScreenLoadingOverlay").style.display = "none";
 }
