@@ -89,7 +89,7 @@ function setupArrowDrawing() {
             drawAllSavedArrows(ctx);
 
             if (hoverSquare !== window.arrowStartSquare) {
-                drawSingleArrow(ctx, window.arrowStartSquare, hoverSquare, 'rgba(255,0,0,0.5)');
+                drawSingleArrow(ctx, window.arrowStartSquare, hoverSquare, 'rgba(180, 12, 12, 0.39)');
             }
         });
 
@@ -110,7 +110,7 @@ function setupArrowDrawing() {
                     else sqElem.classList.toggle('right-highlight');
                 }
             } else {
-                const color = (e.ctrlKey || e.metaKey) ? 'green' : 'orange';
+                const color = (e.ctrlKey || e.metaKey) ? '#0fb626cc' : '#00ccffbb';
                 const pair = `${window.arrowStartSquare},${endSquare},${color}`;
                 if (window.savedArrows.has(pair)) window.savedArrows.delete(pair);
                 else window.savedArrows.add(pair);

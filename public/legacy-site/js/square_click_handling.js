@@ -211,7 +211,7 @@ function drawArrow(from, to, color, isPreview = false) {
     drawAllSavedArrows(ctx);
 
     if (isPreview) {
-        drawSingleArrow(ctx, from, to, 'orange');
+        drawSingleArrow(ctx, from, to, '#001aff80');
     }
 }
 
@@ -252,7 +252,7 @@ function drawAllSavedArrows(ctx) {
     }
 }
 
-function drawSingleArrow(ctx, from, to, color = 'orange', alpha = 0.7) {
+function drawSingleArrow(ctx, from, to, color = '#001aff80', alpha = 0.7) {
     const startSquare = document.querySelector(`[data-square="${from}"]`);
     const endSquare = document.querySelector(`[data-square="${to}"]`);
     if (!startSquare || !endSquare) return;

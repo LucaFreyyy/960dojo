@@ -16,12 +16,12 @@
     --bg-inactive: linear-gradient(135deg, #f0f0f0 0%, #888888 100%);
     --bg-board: #2ea4ff5d;
     --bg-dropdown: linear-gradient(135deg, #232526 0%, #414345 100%);
-    --bg-highlight: #2ea4ff;
-    --bg-last-move: #38ef7dcc;
-    --bg-right1: #e2ac60cc;
-    --bg-right2: #cc2b5ecc;
-    --bg-can-move: #2ea4ff;
-    --bg-premove: #2ea4ff;
+    --bg-highlight: #2ea4ff80;
+    --bg-last-move: #38ef7d80;
+    --bg-right1: #fbff0080;
+    --bg-right2: #cc2b5e80;
+    --bg-can-move: #2ea4ff80;
+    --bg-premove: #2ea4ff80;
 
     --border-soft: 1.5px solid #333333;
     --border-strong: 1.5px solid #2ea4ff;
