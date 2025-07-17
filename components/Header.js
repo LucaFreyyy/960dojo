@@ -8,6 +8,7 @@ export default function Header() {
 
     return (
         <header>
+            <input type="text" placeholder="Player Search..." className="search" />
             <Link href="/" className="logo-container">
                 <Image
                     src="/960_logo_red.png"
@@ -16,9 +17,8 @@ export default function Header() {
                     height={60}
                     priority
                 />
-                <h1 className="logo-text">960<br></br>Dojo</h1>
+                <h1 className="logo-text">960 DOJO</h1>
             </Link>
-            <input type="text" placeholder="Player Search..." className="search" />
             <Dropdown isAuthenticated={!!session} />
         </header>
     );
