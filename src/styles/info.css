@@ -24,7 +24,7 @@
     text-decoration: none;
     font-weight: 700;
     box-shadow: 0 2px 8px var(--box-shadow-soft);
-    border: 1px solid var(--text-color-header);
+    border: 0px solid var(--text-color-header);
     letter-spacing: 0.03em;
     cursor: pointer;
     transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
