@@ -125,7 +125,7 @@ function getCentipawnLoss(fen) {
 async function fetch_lichess_data(fen, rating) {
     const ratingMin = rating - 200;
     const ratingMax = rating + 200;
-    const timeControls = ['bullet', 'blitz', 'rapid', 'classical'].join(',');
+    const timeControls = ['blitz', 'rapid', 'classical'].join(',');
 
     const url = `https://explorer.lichess.ovh/lichess?fen=${encodeURIComponent(fen)}&ratingMin=${ratingMin}&ratingMax=${ratingMax}&time=${timeControls}`;
 
@@ -215,6 +215,7 @@ function fetch_stockfish_move(fen, rating) {
         // TODO when changing to production: const engine = new Worker("https://lichess1.org/stockfish/stockfish.wasm.js");
 
         const skillLevel = Math.max(0, Math.min(20, Math.round((rating - 800) / 80))); // Clamp between 0-20
+        const cappedElo = Math.max(1350, Math.min(2850, rating));
 
         const setup = parseFen(fen);
         if (setup.isErr) return resolve(null);
@@ -224,11 +225,31 @@ function fetch_stockfish_move(fen, rating) {
         const clone = position.clone();
 
         let bestMove = null;
+        let uciOkReceived = false;
+        let supportsElo = false;
+        let supportsLimitStrength = false;
 
         engine.onmessage = (event) => {
             const line = event.data;
 
             if (typeof line === "string") {
+                if (line.startsWith("option name UCI_Elo")) supportsElo = true;
+                if (line.startsWith("option name UCI_LimitStrength")) supportsLimitStrength = true;
+
+                if (line === "uciok" && !uciOkReceived) {
+                    uciOkReceived = true;
+
+                    if (supportsElo && supportsLimitStrength) {
+                        engine.postMessage("setoption name UCI_LimitStrength value true");
+                        engine.postMessage("setoption name UCI_Elo value " + cappedElo);
+                    } else {
+                        engine.postMessage("setoption name Skill Level value " + skillLevel);
+                    }
+
+                    engine.postMessage(`position fen ${fen}`);
+                    engine.postMessage("go depth 12");
+                }
+
                 if (line.startsWith("bestmove")) {
                     const parts = line.split(" ");
                     bestMove = parts[1];
@@ -265,13 +286,6 @@ function fetch_stockfish_move(fen, rating) {
         };
 
         engine.postMessage("uci");
-        engine.postMessage("setoption name Skill Level value " + skillLevel);
-        engine.postMessage("go movetime 1000");
-
-        setTimeout(() => {
-            engine.postMessage(`position fen ${fen}`);
-            engine.postMessage("go depth 12");
-        }, 50);
     });
 }
 
