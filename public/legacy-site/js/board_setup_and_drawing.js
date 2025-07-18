@@ -159,7 +159,7 @@ async function setupStartPosition() {
             return parts.at(-1);
         });
         for (const fen of window.gameState.fenHistory) {
-            window.gameState.evaluations.push(getCentipawnLoss(fen));
+            window.gameState.evaluations.push(getCentipawnLoss(fen, 10));
         }
         window.gameState.moveHistorySAN = generateSANHistory();
         window.gameState.halfMoveNumber = window.gameState.moveHistoryUCI.length;

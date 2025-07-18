@@ -90,8 +90,8 @@ function get_legal_moves(fen) {
 
 function getCentipawnLoss(fen, depth = 15) {
     return new Promise((resolve) => {
-        // dev: const engine = new Worker("/legacy-site/js/stockfish.js");
-        const engine = new Worker("https://lichess.org/stockfish/stockfish.wasm.js"); // production
+        const engine = new Worker("/legacy-site/js/stockfish.js");
+
         let bestEval = null;
         let turn = fen.split(" ")[1]; // 'w' or 'b'
 
@@ -211,8 +211,7 @@ async function fetch_lichess_data(fen, rating) {
 
 function fetch_stockfish_move(fen, rating) {
     return new Promise((resolve) => {
-        // dev: const engine = new Worker("/legacy-site/js/stockfish.js");
-        const engine = new Worker("https://lichess.org/stockfish/stockfish.wasm.js"); // production
+        const engine = new Worker("/legacy-site/js/stockfish.js");
 
         const skillLevel = Math.max(0, Math.min(20, Math.round((rating - 800) / 80))); // Clamp between 0-20
 
