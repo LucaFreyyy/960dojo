@@ -202,7 +202,7 @@ async function endGame() {
 
             setTimeout(() => {
                 if (ratingChangeElem) ratingChangeElem.textContent = "";
-            }, 3000);
+            }, 300);
         }
     }
 
@@ -221,9 +221,10 @@ async function endGame() {
 
 async function backButtonClick() {
     document.getElementById("fullScreenLoadingOverlay").style.display = "flex";
-    while (window.ENGINE_RUNNING || window.WRITING_INTO_DATABASE) {
+    while (window.WRITING_INTO_DATABASE) {
         await new Promise(resolve => setTimeout(resolve, 300));
     }
+    stopEngine();
     stopLoadingAnimation();
     reactivateMenu();
     resetGameState();
@@ -231,4 +232,20 @@ async function backButtonClick() {
     removeAllBoardHighlights();
     document.getElementById("lichessBtn").style.display = "none";
     document.getElementById("fullScreenLoadingOverlay").style.display = "none";
+}
+
+function stopEngine() {
+    // Cancel all running evaluation promises if possible
+    if (window.gameState.evaluations && Array.isArray(window.gameState.evaluations)) {
+        for (let i = 0; i < window.gameState.evaluations.length; i++) {
+            const evalPromise = window.gameState.evaluations[i];
+            // If using AbortController for fetches, attach controller to each promise
+            if (evalPromise && evalPromise.abortController) {
+                evalPromise.abortController.abort();
+            }
+            if (evalPromise instanceof Promise) {
+                window.gameState.evaluations[i] = 0;
+            }
+        }
+    }
 }
