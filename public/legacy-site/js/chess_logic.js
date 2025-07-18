@@ -88,7 +88,7 @@ function get_legal_moves(fen) {
     };
 }
 
-function getCentipawnLoss(fen, depth = 15) {
+function oldCentipawnLossFunction(fen, depth = 15) {
     return new Promise((resolve) => {
         const engine = new Worker("/legacy-site/js/stockfish.js");
 
@@ -122,6 +122,47 @@ function getCentipawnLoss(fen, depth = 15) {
             engine.postMessage("go depth " + depth);
         }, 100);
     });
+}
+
+async function getCentipawnLoss(fen) {
+    try {
+        const evalData = await fetchLichessEval(fen);
+        const turn = fen.split(" ")[1]; // 'w' or 'b'
+
+        if (!evalData?.pvs?.length || !evalData.pvs[0].cp) {
+            return null; // no evaluation available
+        }
+
+        // Lichess returns evaluation from White's POV
+        let evalCp = evalData.pvs[0].cp;
+        const finalEval = turn === 'w' ? evalCp : -evalCp;
+
+        return finalEval;
+    } catch (err) {
+        console.error("Lichess eval error:", err);
+        return null;
+    }
+}
+
+async function fetchLichessEval(fen) {
+    const encodedFen = encodeURIComponent(fen);
+    const url = `https://lichess.org/api/cloud-eval?fen=${encodedFen}`;
+
+    const res = await fetch(url, {
+        headers: {
+            'Accept': 'application/json',
+        },
+    });
+
+    if (!res.ok) {
+        console.log(url)
+        return oldCentipawnLossFunction(fen);
+    }
+
+    console.log("Fetched Lichess eval for FEN:", fen);
+
+    const data = await res.json();
+    return data;
 }
 
 async function fetch_lichess_data(fen, rating) {

@@ -21,8 +21,6 @@ export default function LegacyPage() {
         }
     }, []);
 
-
-
     useEffect(() => {
         exposeChessopsGlobalsToWindow();
 
