@@ -10,13 +10,18 @@ export default function LegacyPage() {
     useEffect(() => {
         const alreadyVisited = sessionStorage.getItem("visitedLegacyPage");
 
-        if (alreadyVisited === "true") {
+        const navigationEntries = performance.getEntriesByType("navigation");
+        const navType = navigationEntries[0]?.type; // 'reload', 'navigate', 'back_forward', etc.
+
+        if (alreadyVisited === "true" && navType === "reload") {
             sessionStorage.removeItem("visitedLegacyPage");
-            window.location.reload(); // reload only once per soft nav
+            window.location.reload(); // Only after real reloads
         } else {
             sessionStorage.setItem("visitedLegacyPage", "true");
         }
     }, []);
+
+
 
     useEffect(() => {
         exposeChessopsGlobalsToWindow();
