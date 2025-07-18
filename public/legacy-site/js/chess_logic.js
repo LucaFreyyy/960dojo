@@ -116,6 +116,8 @@ function getCentipawnLoss(fen, depth = 15) {
 
         engine.postMessage("uci");
         setTimeout(() => {
+            engine.postMessage("setoption name Threads value 2"); // or 4
+            engine.postMessage("setoption name Hash value 32");   // MB of hash table
             engine.postMessage(`position fen ${fen}`);
             engine.postMessage("go depth " + depth);
         }, 100);
@@ -264,10 +266,11 @@ function fetch_stockfish_move(fen, rating) {
         };
 
         engine.postMessage("uci");
-        engine.postMessage("setoption name Skill Level value " + skillLevel);
-        engine.postMessage("go movetime 1000");
 
         setTimeout(() => {
+            engine.postMessage("setoption name Threads value 2"); // or 4
+            engine.postMessage("setoption name Hash value 32");   // MB of hash table
+            engine.postMessage("setoption name Skill Level value " + skillLevel);
             engine.postMessage(`position fen ${fen}`);
             engine.postMessage("go depth 15");
         }, 50);

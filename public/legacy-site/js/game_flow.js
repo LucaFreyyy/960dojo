@@ -124,7 +124,7 @@ function chessNotationToIndices(square) {
 async function endGame() {
     removeGameHighlights();
     moveListLoadingAnimationStart();
-    let finalEval = await getCentipawnLoss(window.gameState.position, 25);
+    let finalEval = await getCentipawnLoss(window.gameState.position, 20);
     window.gameState.evaluations = await Promise.all(window.gameState.evaluations);
     window.gameState.evaluations[window.gameState.evaluations.length - 1] = finalEval;
     finalEval = finalEval / 100;
