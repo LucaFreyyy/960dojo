@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { exposeChessopsGlobalsToWindow } from '../lib/exposeChessops.js';
-import { fetchUnfinishedOpening, writeGameStateToDatabase, writeBackOldOpeningAndFetchNew } from '../lib/opening_supabase_functions.js';
+import { fetchUnfinishedOpening, writeGameStateToDatabase, writeBackOldOpeningAndFetchNew, appendEvalToDatabase } from '../lib/opening_supabase_functions.js';
 import { supabase } from '../lib/supabase.js';
 
 export default function LegacyPage() {
@@ -35,6 +35,7 @@ export default function LegacyPage() {
             if (typeof initializeUI === 'function') {
                 window.writeGameStateToDatabase = writeGameStateToDatabase;
                 window.writeBackOldOpeningAndFetchNew = writeBackOldOpeningAndFetchNew;
+                window.appendEvalToDatabase = appendEvalToDatabase;
                 initializeEventListeners();
                 setupRatingControls();
                 setupArrowDrawing();
@@ -81,6 +82,7 @@ export default function LegacyPage() {
                     window.sessionUser.openingNr = opening.openingNr;
                     window.sessionUser.color = opening.color;
                     window.sessionUser.pgn = opening.pgn;
+                    window.sessionUser.evalHistory = opening.evalHistory || [];
                     window.WRITING_INTO_DATABASE = false;
 
                 } catch (err) {

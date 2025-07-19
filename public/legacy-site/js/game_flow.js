@@ -126,7 +126,12 @@ async function endGame() {
     moveListLoadingAnimationStart();
     let finalEval = await getCentipawnLoss(window.gameState.position);
     window.gameState.evaluations = await Promise.all(window.gameState.evaluations);
-    window.gameState.evaluations[window.gameState.evaluations.length - 1] = finalEval;
+    window.initialEval = await window.initialEval;
+    if (window.HALF_MOVE_THRESHOLD > window.gameState.evaluations.length) {
+        window.gameState.evaluations.push(window.initialEval);
+    } else {
+        window.gameState.evaluations[window.gameState.evaluations.length - 1] = finalEval;
+    }
     finalEval = finalEval / 100;
 
     updateMoveListWithColor();

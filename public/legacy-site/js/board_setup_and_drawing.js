@@ -158,8 +158,18 @@ async function setupStartPosition() {
             const parts = line.trim().split(' ');
             return parts.at(-1);
         });
-        for (const fen of window.gameState.fenHistory) {
-            window.gameState.evaluations.push(getCentipawnLoss(fen));
+        window.initialEval = window.sessionUser.evalHistory[0] || null;
+        if (window.initialEval === null) {
+            window.initialEval = getCentipawnLoss(window.gameState.position);
+        }
+        window.gameState.evaluations = window.sessionUser.evalHistory.slice(1);
+        for (let i = 0; i < window.gameState.evaluations.length; i++) {
+            if (window.gameState.evaluations[i] == null) {
+                window.gameState.evaluations[i] = getCentipawnLoss(window.gameState.fenHistory[i]);
+            }
+        }
+        for (let i = window.gameState.evaluations.length; i < window.gameState.fenHistory.length; i++) {
+            window.gameState.evaluations.push(getCentipawnLoss(window.gameState.fenHistory[i]));
         }
         window.gameState.moveHistorySAN = generateSANHistory();
         window.gameState.halfMoveNumber = window.gameState.moveHistoryUCI.length;

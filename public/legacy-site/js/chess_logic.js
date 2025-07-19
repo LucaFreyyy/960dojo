@@ -125,23 +125,28 @@ function oldCentipawnLossFunction(fen, depth = 15) {
 }
 
 async function getCentipawnLoss(fen) {
+    const turn = fen.split(" ")[1]; // 'w' or 'b'
+    let evalCp;
+
     try {
         const evalData = await fetchLichessEval(fen);
-        const turn = fen.split(" ")[1]; // 'w' or 'b'
-
-        if (!evalData?.pvs?.length || !evalData.pvs[0].cp) {
-            return null; // no evaluation available
-        }
-
-        // Lichess returns evaluation from White's POV
-        let evalCp = evalData.pvs[0].cp;
-        const finalEval = turn === 'w' ? evalCp : -evalCp;
-
-        return finalEval;
+        evalCp = evalData?.pvs?.[0]?.cp;
     } catch (err) {
-        console.error("Lichess eval error:", err);
-        return null;
+        console.info("Lichess eval fetch error:", err);
     }
+
+    // If evalCp is not a number, fallback to Stockfish
+    let finalEval;
+    if (typeof evalCp !== "number") {
+        finalEval = await oldCentipawnLossFunction(fen);
+    } else {
+        finalEval = turn === 'w' ? evalCp : -evalCp;
+    }
+
+    if (window.gameState.isRated) {
+        window.appendEvalToDatabase(window.sessionUser.id, finalEval, fen);
+    }
+    return finalEval;
 }
 
 async function fetchLichessEval(fen) {
@@ -156,7 +161,7 @@ async function fetchLichessEval(fen) {
 
     if (!res.ok) {
         console.log(url)
-        return oldCentipawnLossFunction(fen);
+        return null;
     }
 
     console.log("Fetched Lichess eval for FEN:", fen);

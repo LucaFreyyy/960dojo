@@ -84,4 +84,5 @@ model UserOpening {
   evalCp         Int?      // Final eval in centipawns (e.g. +32, -10)
   finished       DateTime? @default(now())
   user           User      @relation(fields: [userId], references: [id])
+  evalHistory    Int[]     // for local evaluation on last UserOpening
 }
