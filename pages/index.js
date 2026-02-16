@@ -62,6 +62,18 @@ export default function HomePage() {
                         ))}
                     </div>
                 </section>
+
+                <section className="practice">
+                    <h2>Analyse</h2>
+                    <div className="practice-grid">
+                        <Link className="practice-box" href="/analyse">
+                            <h3>Elo estimator 📊</h3>
+                            <div className="practice-desc">
+                                <p><span className="emphasis">Load your games and let the AI estimate your elo!</span></p>
+                            </div>
+                        </Link>
+                    </div>
+                </section>
             </main>
         </>
     );
