@@ -41,7 +41,7 @@ async function dataBaseMove() {
     window.ENGINE_RUNNING = true;
     startLoadingAnimation();
     window.gameState.halfMoveNumber++;
-    js_lichess_move = await fetch_lichess_data(window.gameState.position);
+    js_lichess_move = await fetch_lichess_data(window.gameState.position, window.gameState.userRating);
     new_position = js_lichess_move.resultFen;
     js_data = get_legal_moves(new_position);
     window.legalMoves = js_data.uci;

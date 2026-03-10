@@ -1,11 +1,11 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { useSession } from 'next-auth/react';
 import Dropdown from './Dropdown';
 import { FaCoffee } from 'react-icons/fa';
+import { useSupabaseSession } from '../lib/SessionContext';
 
 export default function Header() {
-    const { data: session } = useSession();
+    const session = useSupabaseSession();
 
     return (
         <header>
@@ -28,7 +28,7 @@ export default function Header() {
                 />
                 <h1 className="logo-text">960 DOJO</h1>
             </Link>
-            <Dropdown isAuthenticated={!!session} />
+            <Dropdown />
         </header>
     );
 }

@@ -1,35 +1,37 @@
 import { useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSupabaseSession, useSessionLoading } from '../lib/SessionContext';
 import { exposeChessopsGlobalsToWindow } from '../lib/exposeChessops.js';
 import { fetchUnfinishedOpening, writeGameStateToDatabase, writeBackOldOpeningAndFetchNew, appendEvalToDatabase } from '../lib/opening_supabase_functions.js';
 import { supabase } from '../lib/supabase.js';
 
+async function hashEmail(email) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(email);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 export default function LegacyPage() {
-    const { data: session, status } = useSession();
+    const session = useSupabaseSession();
+    const sessionLoading = useSessionLoading();
 
     useEffect(() => {
         const alreadyVisited = sessionStorage.getItem("visitedLegacyPage");
-
         const navigationEntries = performance.getEntriesByType("navigation");
-        const navType = navigationEntries[0]?.type; // 'reload', 'navigate', 'back_forward', etc.
-
+        const navType = navigationEntries[0]?.type;
         if (alreadyVisited === "true" && navType === "reload") {
             sessionStorage.removeItem("visitedLegacyPage");
-            window.location.reload(); // Only after real reloads
+            window.location.reload();
         } else {
             sessionStorage.setItem("visitedLegacyPage", "true");
         }
     }, []);
 
     useEffect(() => {
-        exposeChessopsGlobalsToWindow();
+        if (sessionLoading) return;
 
-        // Always define sessionUser immediately
-        window.sessionUser = {
-            id: session?.user?.id ?? null,
-            rating_openings: 1500,
-            ...(session?.user || {})
-        };
+        exposeChessopsGlobalsToWindow();
 
         const finishSetup = () => {
             if (typeof initializeUI === 'function') {
@@ -60,14 +62,22 @@ export default function LegacyPage() {
             }
         };
 
-        // If authenticated, fetch from Supabase and override sessionUser
-        if (status === 'authenticated') {
+        if (session) {
             (async () => {
                 try {
-                    const { data: ratingData, error } = await supabase
+                    const email = session?.user?.email;
+                    const user_id = email ? await hashEmail(email) : null;
+
+                    // Set sessionUser with correct sha256 id
+                    window.sessionUser = {
+                        id: user_id,
+                        rating_openings: 1500,
+                    };
+
+                    const { data: ratingData } = await supabase
                         .from('Rating')
                         .select('value')
-                        .eq('userId', session.user.id)
+                        .eq('userId', user_id)
                         .eq('type', 'openings')
                         .order('createdAt', { ascending: false })
                         .limit(1)
@@ -77,7 +87,7 @@ export default function LegacyPage() {
                         window.sessionUser.rating_openings = ratingData.value;
                     }
 
-                    const opening = await fetchUnfinishedOpening(session.user.id);
+                    const opening = await fetchUnfinishedOpening(user_id);
 
                     window.sessionUser.openingNr = opening.openingNr;
                     window.sessionUser.color = opening.color;
@@ -88,12 +98,15 @@ export default function LegacyPage() {
                 } catch (err) {
                     console.error('[legacy.js] Supabase fetch error:', err);
                 } finally {
-                    // Now that sessionUser is complete, load scripts
                     loadLegacyScripts(finishSetup);
                 }
             })();
         } else {
-            // Not logged in, just load legacy scripts immediately
+            // Not logged in
+            window.sessionUser = {
+                id: null,
+                rating_openings: 1500,
+            };
             loadLegacyScripts(finishSetup);
         }
 
@@ -127,7 +140,7 @@ export default function LegacyPage() {
                 document.body.appendChild(script);
             });
         }
-    }, [status, session]);
+    }, [session, sessionLoading]);
 
     return (
         <>

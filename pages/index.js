@@ -1,5 +1,5 @@
 import Head from 'next/head';
-import { useSession } from 'next-auth/react';
+import { useSupabaseSession } from '../lib/SessionContext';
 import Link from 'next/link';
 
 const timeControls = [
@@ -17,7 +17,7 @@ const timeControls = [
 ];
 
 export default function HomePage() {
-    const { data: session } = useSession();
+    const session = useSupabaseSession();
 
     return (
         <>

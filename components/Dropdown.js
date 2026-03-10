@@ -1,15 +1,17 @@
-import { useSession, signIn, signOut } from 'next-auth/react';
+import { supabase } from '../lib/supabase';
+import { useSupabaseSession } from '../lib/SessionContext';
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 
-export default function Dropdown({ isAuthenticated }) {
-    const { data: session } = useSession();
+export default function Dropdown() {
+    const session = useSupabaseSession();
+    const isAuthenticated = !!session;
+    const userName = session?.user?.email;
     const [open, setOpen] = useState(false);
     const [hovering, setHovering] = useState(false);
     const [clickedOpen, setClickedOpen] = useState(false);
     const dropdownRef = useRef();
 
-    // Close if clicked outside
     useEffect(() => {
         function handleClickOutside(e) {
             if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
@@ -17,47 +19,26 @@ export default function Dropdown({ isAuthenticated }) {
                 setOpen(false);
             }
         }
-
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    // Determine actual dropdown state
     useEffect(() => {
-        if (clickedOpen) {
-            setOpen(true);
-        } else {
-            setOpen(hovering);
-        }
+        setOpen(clickedOpen ? true : hovering);
     }, [hovering, clickedOpen]);
 
+    const handleSignOut = async () => {
+        await supabase.auth.signOut();
+        window.location.href = '/';
+    };
+
     return (
-        <div
-            className="dropdown"
-            ref={dropdownRef}
+        <div className="dropdown" ref={dropdownRef}
             onMouseEnter={() => setHovering(true)}
-            onMouseLeave={() => {
-                setHovering(false);
-                if (!clickedOpen) setOpen(false);
-            }}
-        >
-            <button
-                className="dropbtn"
-                onClick={(e) => {
-                    e.stopPropagation();
-                    setClickedOpen(!clickedOpen);
-                }}
-            >
-                {session?.user?.name ? (
-                    <>
-                        ♔ {session.user.name.split(' ')[0]}
-                    </>
-                ) : (
-                    '♟'
-                )}
+            onMouseLeave={() => { setHovering(false); if (!clickedOpen) setOpen(false); }}>
+            <button className="dropbtn" onClick={(e) => { e.stopPropagation(); setClickedOpen(!clickedOpen); }}>
+                {userName ? `♔ ${userName.split(' ')[0]}` : '♟'}
             </button>
-
-
             {open && (
                 <div className={`dropdown-content ${open ? 'open' : ''}`}>
                     {isAuthenticated ? (
@@ -66,14 +47,14 @@ export default function Dropdown({ isAuthenticated }) {
                             <Link href="/playerSearch">🔍 Player Search</Link>
                             <Link href="/settings">⚙️ Settings</Link>
                             <Link href="/info">ℹ️ Info</Link>
-                            <a onClick={() => signOut({ callbackUrl: '/' })} style={{ cursor: 'pointer' }}>🚪 Sign Out</a>
+                            <a onClick={handleSignOut} style={{ cursor: 'pointer' }}>🚪 Sign Out</a>
                         </>
                     ) : (
                         <>
                             <Link href="/playerSearch">🔍 Player Search</Link>
                             <Link href="/settings">⚙️ Settings</Link>
                             <Link href="/info">ℹ️ Info</Link>
-                            <a onClick={() => signIn('google')} style={{ cursor: 'pointer' }}>🔐 Sign In</a>
+                            <Link href="/login">🔐 Sign In</Link>
                         </>
                     )}
                 </div>

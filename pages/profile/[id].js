@@ -6,10 +6,10 @@ import ProfileHeader from '../../components/ProfileHeader';
 import FollowStats from '../../components/FollowStats';
 import ProfileTabs from '../../components/ProfileTabs';
 import { useRouter } from 'next/router';
-import { useSession } from 'next-auth/react';
+import { useSupabaseSession } from '../../lib/SessionContext';
 
 export default function ProfilePage() {
-    const { data: session, status } = useSession();
+    const session = useSupabaseSession();
 
     const router = useRouter();
     const { id } = router.query;
@@ -19,7 +19,7 @@ export default function ProfilePage() {
     const [following, setFollowing] = useState([]);
 
     useEffect(() => {
-        if (!id || status !== 'authenticated') return;
+        if (!id) return;
 
         // If user is viewing their own profile via /profile/[id], redirect to /profile
         if (session?.user?.id === id) {
@@ -29,7 +29,7 @@ export default function ProfilePage() {
 
         fetchUserData();
         fetchFollowerData();
-    }, [id, status, session]);
+    }, [id, session]);
 
     useEffect(() => {
         if (!id) return;

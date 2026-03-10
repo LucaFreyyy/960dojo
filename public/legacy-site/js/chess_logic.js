@@ -173,10 +173,11 @@ async function fetchLichessEval(fen) {
 async function fetch_lichess_data(fen, rating) {
     const ratingMin = rating - 200;
     const ratingMax = rating + 200;
+    console.log(`Fetching Lichess data for FEN: ${fen} with rating range ${ratingMin}-${ratingMax}`);
     const timeControls = ['blitz', 'rapid', 'classical'].join(',');
 
-    const url = `https://explorer.lichess.ovh/lichess?fen=${encodeURIComponent(fen)}&ratingMin=${ratingMin}&ratingMax=${ratingMax}&time=${timeControls}`;
-
+    const url = `/api/lichess_explorer?fen=${encodeURIComponent(fen)}&ratingMin=${ratingMin}&ratingMax=${ratingMax}`;
+    
     try {
         const response = await fetch(url);
         if (!response.ok) {

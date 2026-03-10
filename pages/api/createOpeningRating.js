@@ -12,6 +12,7 @@ export default async function handler(req, res) {
     const { error } = await supabase
         .from('Rating')
         .insert({
+            id: crypto.randomUUID(),
             userId: id,
             type: 'openings',
             value: newRating,
