@@ -112,7 +112,7 @@ export default function LegacyPage() {
 
         function loadLegacyScripts(callback) {
             const scriptFiles = [
-                'stockfish.js',
+                '/stockfish.wasm.js',
                 'chess_constants.js',
                 'chess_logic.js',
                 'constants_and_globals.js',
@@ -129,7 +129,7 @@ export default function LegacyPage() {
 
             scriptFiles.forEach(file => {
                 const script = document.createElement('script');
-                script.src = `/legacy-site/js/${file}`;
+                script.src = file.startsWith('/') ? file : `/legacy-site/js/${file}`;
                 script.async = false;
                 script.onload = () => {
                     loadedCount++;

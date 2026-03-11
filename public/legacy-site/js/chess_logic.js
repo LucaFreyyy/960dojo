@@ -88,22 +88,35 @@ function get_legal_moves(fen) {
     };
 }
 
-function oldCentipawnLossFunction(fen, depth = 15) {
+function oldCentipawnLossFunction(fen, depth = 16) {
     return new Promise((resolve) => {
-        const engine = new Worker("/legacy-site/js/stockfish.js");
+        const engine = new Worker("/stockfish.wasm.js");
 
         let bestEval = null;
-        let turn = fen.split(" ")[1]; // 'w' or 'b'
+        let turn = fen.split(" ")[1];
+        let uciReady = false;
 
         engine.onmessage = function (event) {
             const line = event.data;
             if (typeof line !== "string") return;
 
+            if (line === "uciok") {
+                engine.postMessage("setoption name Threads value 2");
+                engine.postMessage("setoption name Hash value 32");
+                engine.postMessage("isready");
+                return;
+            }
+
+            if (line === "readyok") {
+                engine.postMessage(`position fen ${fen}`);
+                engine.postMessage("go depth " + depth);
+                return;
+            }
+
             if (line.startsWith("info") && line.includes("score cp")) {
                 const match = line.match(/score cp (-?\d+)/);
                 if (match) {
                     let evalCp = parseInt(match[1], 10);
-                    // Always positive if white is better, negative if black is better
                     bestEval = turn === "w" ? evalCp : -evalCp;
                 }
             }
@@ -115,12 +128,6 @@ function oldCentipawnLossFunction(fen, depth = 15) {
         };
 
         engine.postMessage("uci");
-        setTimeout(() => {
-            engine.postMessage("setoption name Threads value 2"); // or 4
-            engine.postMessage("setoption name Hash value 32");   // MB of hash table
-            engine.postMessage(`position fen ${fen}`);
-            engine.postMessage("go depth " + depth);
-        }, 100);
     });
 }
 
@@ -260,9 +267,9 @@ async function fetch_lichess_data(fen, rating) {
 
 function fetch_stockfish_move(fen, rating) {
     return new Promise((resolve) => {
-        const engine = new Worker("/legacy-site/js/stockfish.js");
+        const engine = new Worker("/stockfish.wasm.js");
 
-        const skillLevel = Math.max(0, Math.min(20, Math.round((rating - 800) / 80))); // Clamp between 0-20
+        const skillLevel = Math.max(0, Math.min(20, Math.round((rating - 800) / 80)));
 
         const setup = parseFen(fen);
         if (setup.isErr) return resolve(null);
@@ -275,52 +282,57 @@ function fetch_stockfish_move(fen, rating) {
 
         engine.onmessage = (event) => {
             const line = event.data;
+            if (typeof line !== "string") return;
 
-            if (typeof line === "string") {
-                if (line.startsWith("bestmove")) {
-                    const parts = line.split(" ");
-                    bestMove = parts[1];
-                    engine.terminate();
+            if (line === "uciok") {
+                engine.postMessage("setoption name Threads value 2");
+                engine.postMessage("setoption name Hash value 32");
+                engine.postMessage("setoption name Skill Level value " + skillLevel);
+                engine.postMessage("isready");
+                return;
+            }
 
-                    if (!bestMove || bestMove.length < 4) return resolve(null);
+            if (line === "readyok") {
+                engine.postMessage(`position fen ${fen}`);
+                engine.postMessage("go depth 16");
+                return;
+            }
 
-                    const from = bestMove.slice(0, 2);
-                    const to = bestMove.slice(2, 4);
+            if (line.startsWith("bestmove")) {
+                const parts = line.split(" ");
+                bestMove = parts[1];
+                engine.terminate();
 
-                    function algebraicToIndex(sq) {
-                        return (parseInt(sq[1], 10) - 1) * 8 + (sq.charCodeAt(0) - 'a'.charCodeAt(0));
-                    }
+                if (!bestMove || bestMove.length < 4) return resolve(null);
 
-                    const move = {
-                        from: algebraicToIndex(from),
-                        to: algebraicToIndex(to),
-                    };
-                    clone.play(move);
+                const from = bestMove.slice(0, 2);
+                const to = bestMove.slice(2, 4);
 
-                    const resultFen = makeFen(clone.toSetup());
-                    const moveSan = makeSan(position, move);
-                    const isMate = clone.isCheckmate();
-
-                    return resolve({
-                        resultFen,
-                        moveSan,
-                        isMate,
-                        startSquare: from,
-                        endSquare: to
-                    });
+                function algebraicToIndex(sq) {
+                    return (parseInt(sq[1], 10) - 1) * 8 + (sq.charCodeAt(0) - 'a'.charCodeAt(0));
                 }
+
+                const move = {
+                    from: algebraicToIndex(from),
+                    to: algebraicToIndex(to),
+                };
+                clone.play(move);
+
+                const resultFen = makeFen(clone.toSetup());
+                const moveSan = makeSan(position, move);
+                const isMate = clone.isCheckmate();
+
+                return resolve({
+                    resultFen,
+                    moveSan,
+                    isMate,
+                    startSquare: from,
+                    endSquare: to
+                });
             }
         };
 
         engine.postMessage("uci");
-
-        setTimeout(() => {
-            engine.postMessage("setoption name Threads value 2"); // or 4
-            engine.postMessage("setoption name Hash value 32");   // MB of hash table
-            engine.postMessage("setoption name Skill Level value " + skillLevel);
-            engine.postMessage(`position fen ${fen}`);
-            engine.postMessage("go depth 15");
-        }, 50);
     });
 }
 
