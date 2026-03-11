@@ -1,4 +1,8 @@
+DONE
 - stockfish to wasm and care for error after ending game
+
+NOT
+- make use of the multithreading and single worker to speed up engine
 - remove console logs
 - use username in display instead of email and make name required on signup, then on username change put some checks for duplicates and stuff and update database. only allow renaming a limited number of times.
 

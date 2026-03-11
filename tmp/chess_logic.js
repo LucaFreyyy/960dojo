@@ -1,12 +1,58 @@
+// ─── Single Persistent Stockfish Worker ────────────────────────────────────
+
+var sfWorker = sfWorker || null;
+var sfReady = sfReady || false;
+
+function getSfWorker() {
+    if (sfWorker) return sfWorker;
+
+    sfWorker = new Worker("/stockfish-18.js");
+
+    sfWorker.addEventListener('message', function init(event) {
+        const line = event.data;
+        if (typeof line !== 'string') return;
+
+        if (line === 'uciok') {
+            const threads = Math.min(navigator.hardwareConcurrency || 2, 8);
+            const memory = navigator.deviceMemory || 4;
+            const hashSize = Math.min(Math.floor(memory * 32), 512);
+            sfWorker.postMessage(`setoption name Threads value ${threads}`);
+            sfWorker.postMessage(`setoption name Hash value ${hashSize}`);
+            sfWorker.postMessage('isready');
+        }
+
+        if (line === 'readyok') {
+            sfReady = true;
+            sfWorker.removeEventListener('message', init);
+        }
+    });
+
+    sfWorker.postMessage('uci');
+    return sfWorker;
+}
+
+function sfJob(onReady) {
+    const engine = getSfWorker();
+    if (sfReady) {
+        onReady(engine);
+    } else {
+        engine.addEventListener('message', function waitReady(event) {
+            if (event.data === 'readyok') {
+                engine.removeEventListener('message', waitReady);
+                onReady(engine);
+            }
+        });
+    }
+}
+
+// ─── Chess Logic ────────────────────────────────────────────────────────────
+
 function get_position(number, color) {
     var key = number.toString().padStart(3, '0');
     var frontRank = STARTING_POSITIONS[key];
     if (!frontRank) throw new Error("Invalid position number: " + number);
 
-    // Piece mapping
-    const pieceMap = {
-        'K': 'K', 'Q': 'Q', 'R': 'R', 'B': 'B', 'N': 'N'
-    };
+    const pieceMap = { 'K': 'K', 'Q': 'Q', 'R': 'R', 'B': 'B', 'N': 'N' };
 
     function mapPiece(piece, color) {
         return color + '_' + piece;
@@ -24,17 +70,15 @@ function get_position(number, color) {
         pawnColor = 'w';
     }
 
-    // Build the 2D array: [backRank, pawns, empty, empty, empty, empty, pawns, frontRank]
     let board = [];
     board.push(backRank.split('').map(piece => mapPiece(pieceMap[piece], color === 'black' ? 'w' : 'b')));
     board.push(Array(8).fill(mapPiece('P', color === 'black' ? 'w' : 'b')));
-    for (let i = 0; i < 4; i++) board.push(Array(8).fill('')); // 6th-3rd ranks empty
+    for (let i = 0; i < 4; i++) board.push(Array(8).fill(''));
     board.push(Array(8).fill(mapPiece('P', color === 'black' ? 'b' : 'w')));
     board.push(frontRankFinal.split('').map(piece => mapPiece(pieceMap[piece], color === 'black' ? 'b' : 'w')));
 
     return board;
 }
-
 
 function freestyleNumberToFEN(number) {
     var key = number.toString().padStart(3, '0');
@@ -55,11 +99,7 @@ function get_legal_moves(fen) {
     const ctx = position.ctx();
     const allDests = position.allDests(ctx);
 
-    // Four arrays for each category
-    const uciMoves = [];
-    const sanMoves = [];
-    const fenMoves = [];
-    const isMateMoves = [];
+    const uciMoves = [], sanMoves = [], fenMoves = [], isMateMoves = [];
 
     const file = (sq) => String.fromCharCode('a'.charCodeAt(0) + (sq & 7));
     const rank = (sq) => (Math.floor(sq / 8) + 1).toString();
@@ -68,11 +108,8 @@ function get_legal_moves(fen) {
     for (const [from, toSquares] of allDests.entries()) {
         for (const to of toSquares) {
             const move = { from, to };
-
-            // Clone position to play without mutating original
             const clonePos = position.clone();
             clonePos.play(move);
-
             uciMoves.push(squareToAlgebraic(move.from) + squareToAlgebraic(move.to));
             sanMoves.push(makeSan(position, move));
             fenMoves.push(makeFen(clonePos.toSetup()));
@@ -80,59 +117,42 @@ function get_legal_moves(fen) {
         }
     }
 
-    return {
-        uci: uciMoves,
-        san: sanMoves,
-        fen: fenMoves,
-        isMate: isMateMoves
-    };
+    return { uci: uciMoves, san: sanMoves, fen: fenMoves, isMate: isMateMoves };
 }
 
-function oldCentipawnLossFunction(fen, depth = 16) {
+function oldCentipawnLossFunction(fen, depth = 18) {
     return new Promise((resolve) => {
-        const engine = new Worker("/stockfish-18.js");
-
+        const turn = fen.split(" ")[1];
         let bestEval = null;
-        let turn = fen.split(" ")[1];
-        let uciReady = false;
 
-        engine.onmessage = function (event) {
+        function onMessage(event) {
             const line = event.data;
-            if (typeof line !== "string") return;
+            if (typeof line !== 'string') return;
 
-            if (line === "uciok") {
-                engine.postMessage("setoption name Threads value 2");
-                engine.postMessage("setoption name Hash value 32");
-                engine.postMessage("isready");
-                return;
-            }
-
-            if (line === "readyok") {
-                engine.postMessage(`position fen ${fen}`);
-                engine.postMessage("go depth " + depth);
-                return;
-            }
-
-            if (line.startsWith("info") && line.includes("score cp")) {
+            if (line.startsWith('info') && line.includes('score cp')) {
                 const match = line.match(/score cp (-?\d+)/);
                 if (match) {
-                    let evalCp = parseInt(match[1], 10);
-                    bestEval = turn === "w" ? evalCp : -evalCp;
+                    const evalCp = parseInt(match[1], 10);
+                    bestEval = turn === 'w' ? evalCp : -evalCp;
                 }
             }
 
-            if (line.startsWith("bestmove")) {
-                engine.terminate();
+            if (line.startsWith('bestmove')) {
+                sfWorker.removeEventListener('message', onMessage);
                 resolve(bestEval);
             }
-        };
+        }
 
-        engine.postMessage("uci");
+        sfJob((engine) => {
+            engine.addEventListener('message', onMessage);
+            engine.postMessage(`position fen ${fen}`);
+            engine.postMessage(`go depth ${depth}`);
+        });
     });
 }
 
 async function getCentipawnLoss(fen) {
-    const turn = fen.split(" ")[1]; // 'w' or 'b'
+    const turn = fen.split(" ")[1];
     let evalCp;
 
     try {
@@ -142,7 +162,6 @@ async function getCentipawnLoss(fen) {
         console.info("Lichess eval fetch error:", err);
     }
 
-    // If evalCp is not a number, fallback to Stockfish
     let finalEval;
     if (typeof evalCp !== "number") {
         finalEval = await oldCentipawnLossFunction(fen);
@@ -160,31 +179,24 @@ async function fetchLichessEval(fen) {
     const encodedFen = encodeURIComponent(fen);
     const url = `https://lichess.org/api/cloud-eval?fen=${encodedFen}`;
 
-    const res = await fetch(url, {
-        headers: {
-            'Accept': 'application/json',
-        },
-    });
+    const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
 
     if (!res.ok) {
-        console.log(url)
+        console.log(url);
         return null;
     }
 
     console.log("Fetched Lichess eval for FEN:", fen);
-
-    const data = await res.json();
-    return data;
+    return await res.json();
 }
 
 async function fetch_lichess_data(fen, rating) {
     const ratingMin = rating - 200;
     const ratingMax = rating + 200;
     console.log(`Fetching Lichess data for FEN: ${fen} with rating range ${ratingMin}-${ratingMax}`);
-    const timeControls = ['blitz', 'rapid', 'classical'].join(',');
 
     const url = `/api/lichess_explorer?fen=${encodeURIComponent(fen)}&ratingMin=${ratingMin}&ratingMax=${ratingMax}`;
-    
+
     try {
         const response = await fetch(url);
         if (!response.ok) {
@@ -193,70 +205,48 @@ async function fetch_lichess_data(fen, rating) {
         }
 
         const data = await response.json();
-
-        if (!data.moves || data.moves.length === 0) {
-            return fetch_stockfish_move(fen, rating);
-        }
+        if (!data.moves || data.moves.length === 0) return fetch_stockfish_move(fen, rating);
 
         const totalGames = data.total || data.moves.reduce((sum, m) => sum + (m.white + m.draws + m.black), 0);
         if (totalGames === 0) return fetch_stockfish_move(fen, rating);
 
         const movesWithProb = data.moves.map(move => {
             const count = move.white + move.draws + move.black;
-            return {
-                uci: move.uci,
-                san: move.san,
-                probability: count / totalGames
-            };
+            return { uci: move.uci, san: move.san, probability: count / totalGames };
         });
 
-        // Pick a move randomly weighted by probability
         const rand = Math.random();
         let cumulative = 0;
         let chosenMove = movesWithProb[movesWithProb.length - 1];
         for (const move of movesWithProb) {
             cumulative += move.probability;
-            if (rand < cumulative) {
-                chosenMove = move;
-                break;
-            }
+            if (rand < cumulative) { chosenMove = move; break; }
         }
 
-        // Use chessops to play the move and get result FEN, isMate, start/end squares
         const setupResult = parseFen(fen);
         if (setupResult.isErr) return fetch_stockfish_move(fen, rating);
         const posResult = Chess.fromSetup(setupResult.value);
         if (posResult.isErr) return fetch_stockfish_move(fen, rating);
         const position = posResult.value;
 
-        // Parse UCI move (e.g. e2e4)
         const uci = chosenMove.uci;
         const startSquare = uci.slice(0, 2);
         const endSquare = uci.slice(2, 4);
 
-        // Convert algebraic squares to 0-63 indices
         function algebraicToIndex(sq) {
             return (parseInt(sq[1], 10) - 1) * 8 + (sq.charCodeAt(0) - 'a'.charCodeAt(0));
         }
-        const moveObj = {
-            from: algebraicToIndex(startSquare),
-            to: algebraicToIndex(endSquare)
-        };
 
-        // Play the move
+        const moveObj = { from: algebraicToIndex(startSquare), to: algebraicToIndex(endSquare) };
         const clonePos = position.clone();
         clonePos.play(moveObj);
 
-        const resultFen = makeFen(clonePos.toSetup());
-        const isMate = clonePos.isCheckmate();
-        const moveSan = chosenMove.san;
-
         return {
-            resultFen,
-            moveSan,
-            isMate,
+            resultFen: makeFen(clonePos.toSetup()),
+            moveSan: chosenMove.san,
+            isMate: clonePos.isCheckmate(),
             startSquare,
-            endSquare
+            endSquare,
         };
 
     } catch (err) {
@@ -267,8 +257,6 @@ async function fetch_lichess_data(fen, rating) {
 
 function fetch_stockfish_move(fen, rating) {
     return new Promise((resolve) => {
-        const engine = new Worker("/stockfish-18.js");
-
         const skillLevel = Math.max(0, Math.min(20, Math.round((rating - 800) / 80)));
 
         const setup = parseFen(fen);
@@ -278,31 +266,15 @@ function fetch_stockfish_move(fen, rating) {
         const position = posResult.value;
         const clone = position.clone();
 
-        let bestMove = null;
-
-        engine.onmessage = (event) => {
+        function onMessage(event) {
             const line = event.data;
-            if (typeof line !== "string") return;
+            if (typeof line !== 'string') return;
 
-            if (line === "uciok") {
-                engine.postMessage("setoption name Threads value 2");
-                engine.postMessage("setoption name Hash value 32");
-                engine.postMessage("setoption name Skill Level value " + skillLevel);
-                engine.postMessage("isready");
-                return;
-            }
+            if (line.startsWith('bestmove')) {
+                sfWorker.removeEventListener('message', onMessage);
 
-            if (line === "readyok") {
-                engine.postMessage(`position fen ${fen}`);
-                engine.postMessage("go depth 16");
-                return;
-            }
-
-            if (line.startsWith("bestmove")) {
-                const parts = line.split(" ");
-                bestMove = parts[1];
-                engine.terminate();
-
+                const parts = line.split(' ');
+                const bestMove = parts[1];
                 if (!bestMove || bestMove.length < 4) return resolve(null);
 
                 const from = bestMove.slice(0, 2);
@@ -312,44 +284,34 @@ function fetch_stockfish_move(fen, rating) {
                     return (parseInt(sq[1], 10) - 1) * 8 + (sq.charCodeAt(0) - 'a'.charCodeAt(0));
                 }
 
-                const move = {
-                    from: algebraicToIndex(from),
-                    to: algebraicToIndex(to),
-                };
+                const move = { from: algebraicToIndex(from), to: algebraicToIndex(to) };
                 clone.play(move);
 
-                const resultFen = makeFen(clone.toSetup());
-                const moveSan = makeSan(position, move);
-                const isMate = clone.isCheckmate();
-
-                return resolve({
-                    resultFen,
-                    moveSan,
-                    isMate,
+                resolve({
+                    resultFen: makeFen(clone.toSetup()),
+                    moveSan: makeSan(position, move),
+                    isMate: clone.isCheckmate(),
                     startSquare: from,
-                    endSquare: to
+                    endSquare: to,
                 });
             }
-        };
+        }
 
-        engine.postMessage("uci");
+        sfJob((engine) => {
+            engine.addEventListener('message', onMessage);
+            engine.postMessage(`setoption name Skill Level value ${skillLevel}`);
+            engine.postMessage(`position fen ${fen}`);
+            engine.postMessage('go movetime 1500');
+        });
     });
 }
 
 function position_with_fixed_pieces(piece, first, second) {
-    const pieceLetterMap = {
-        'king': 'K',
-        'queen': 'Q',
-        'rook': 'R',
-        'bishop': 'B',
-        'knight': 'N'
-    };
+    const pieceLetterMap = { 'king': 'K', 'queen': 'Q', 'rook': 'R', 'bishop': 'B', 'knight': 'N' };
     const letter = pieceLetterMap[piece.toLowerCase()];
     if (!letter) throw new Error("Unknown piece: " + piece);
 
-    function fileToIndex(file) {
-        return file.charCodeAt(0) - 'a'.charCodeAt(0);
-    }
+    function fileToIndex(file) { return file.charCodeAt(0) - 'a'.charCodeAt(0); }
     const firstIdx = fileToIndex(first);
     const secondIdx = second !== '-' ? fileToIndex(second) : null;
 
@@ -371,13 +333,10 @@ function position_with_fixed_pieces(piece, first, second) {
 }
 
 async function getLichessAnalysisLink() {
-    // Grab values from DOM / global variables here:
     const startPositionNr = document.getElementById('numberSelect').value;
     const user = window.sessionUser?.name || 'Guest';
     const history = window.gameState.moveHistorySAN;
     const userColor = window.gameState.userColor;
-
-    // (Then the rest of your function unchanged but using these variables)
 
     const fen = freestyleNumberToFEN(startPositionNr);
     const game = window.defaultGame();
@@ -412,10 +371,7 @@ async function getLichessAnalysisLink() {
         const response = await fetch("https://lichess.org/api/import", {
             method: "POST",
             headers: { "Accept": "application/json" },
-            body: new URLSearchParams({
-                pgn,
-                color: userColor.toLowerCase()
-            })
+            body: new URLSearchParams({ pgn, color: userColor.toLowerCase() })
         });
 
         if (!response.ok) {
