@@ -2,6 +2,8 @@
 
 var sfWorker = sfWorker || null;
 var sfReady = sfReady || false;
+var sfJobQueue = sfJobQueue || [];
+var sfJobRunning = sfJobRunning || false;
 
 function getSfWorker() {
     if (sfWorker) return sfWorker;
@@ -18,6 +20,7 @@ function getSfWorker() {
             const hashSize = Math.min(Math.floor(memory * 32), 512);
             sfWorker.postMessage(`setoption name Threads value ${threads}`);
             sfWorker.postMessage(`setoption name Hash value ${hashSize}`);
+            sfWorker.postMessage(`setoption name UCI_Chess960 value true`);
             sfWorker.postMessage('isready');
         }
 
@@ -31,18 +34,33 @@ function getSfWorker() {
     return sfWorker;
 }
 
-function sfJob(onReady) {
+// Enqueue a job. Each job is a function that receives the engine and a `done`
+// callback it MUST call when it receives `bestmove`, so the next job can start.
+function sfJob(jobFn) {
+    sfJobQueue.push(jobFn);
+    sfFlushQueue();
+}
+
+function sfFlushQueue() {
+    if (sfJobRunning || sfJobQueue.length === 0) return;
+
     const engine = getSfWorker();
-    if (sfReady) {
-        onReady(engine);
-    } else {
+    if (!sfReady) {
         engine.addEventListener('message', function waitReady(event) {
             if (event.data === 'readyok') {
                 engine.removeEventListener('message', waitReady);
-                onReady(engine);
+                sfFlushQueue();
             }
         });
+        return;
     }
+
+    sfJobRunning = true;
+    const jobFn = sfJobQueue.shift();
+    jobFn(engine, function done() {
+        sfJobRunning = false;
+        sfFlushQueue();
+    });
 }
 
 // ─── Chess Logic ────────────────────────────────────────────────────────────
@@ -120,33 +138,39 @@ function get_legal_moves(fen) {
     return { uci: uciMoves, san: sanMoves, fen: fenMoves, isMate: isMateMoves };
 }
 
-function oldCentipawnLossFunction(fen, depth = 16) {
+function oldCentipawnLossFunction(fen, movetime = 1500, depth = 16) {
     return new Promise((resolve) => {
         const turn = fen.split(" ")[1];
         let bestEval = null;
-
-        function onMessage(event) {
-            const line = event.data;
-            if (typeof line !== 'string') return;
-
-            if (line.startsWith('info') && line.includes('score cp')) {
-                const match = line.match(/score cp (-?\d+)/);
-                if (match) {
-                    const evalCp = parseInt(match[1], 10);
-                    bestEval = turn === 'w' ? evalCp : -evalCp;
+        sfJob((engine, done) => {
+            function onMessage(event) {
+                const line = event.data;
+                if (typeof line !== 'string') return;
+                if (line.startsWith('info')) {
+                    if (line.includes('score cp')) {
+                        const match = line.match(/score cp (-?\d+)/);
+                        if (match) {
+                            const evalCp = parseInt(match[1], 10);
+                            bestEval = turn === 'w' ? evalCp : -evalCp;
+                        }
+                    } else if (line.includes('score mate')) {
+                        const match = line.match(/score mate (-?\d+)/);
+                        if (match) {
+                            const mateMoves = parseInt(match[1], 10);
+                            const mateEval = mateMoves > 0 ? 99 : -99;
+                            bestEval = turn === 'w' ? mateEval : -mateEval;
+                        }
+                    }
+                }
+                if (line.startsWith('bestmove')) {
+                    engine.removeEventListener('message', onMessage);
+                    done();
+                    resolve(bestEval);
                 }
             }
-
-            if (line.startsWith('bestmove')) {
-                sfWorker.removeEventListener('message', onMessage);
-                resolve(bestEval);
-            }
-        }
-
-        sfJob((engine) => {
             engine.addEventListener('message', onMessage);
             engine.postMessage(`position fen ${fen}`);
-            engine.postMessage(`go depth ${depth}`);
+            engine.postMessage(`go movetime ${movetime}`);
         });
     });
 }
@@ -162,17 +186,17 @@ async function getCentipawnLoss(fen) {
         console.info("Lichess eval fetch error:", err);
     }
 
-    let finalEval;
+    let evaluation;
     if (typeof evalCp !== "number") {
-        finalEval = await oldCentipawnLossFunction(fen);
+        evaluation = await oldCentipawnLossFunction(fen, movetime = 4000);
     } else {
-        finalEval = turn === 'w' ? evalCp : -evalCp;
+        evaluation = turn === 'w' ? evalCp : -evalCp; // TODO: verify this makes sense
     }
 
     if (window.gameState.isRated) {
-        window.appendEvalToDatabase(window.sessionUser.id, finalEval, fen);
+        window.appendEvalToDatabase(window.sessionUser.id, evaluation, fen);
     }
-    return finalEval;
+    return evaluation;
 }
 
 async function fetchLichessEval(fen) {
@@ -229,17 +253,15 @@ async function fetch_lichess_data(fen, rating) {
         if (posResult.isErr) return fetch_stockfish_move(fen, rating);
         const position = posResult.value;
 
-        const uci = chosenMove.uci;
-        const startSquare = uci.slice(0, 2);
-        const endSquare = uci.slice(2, 4);
+        // Use parseUci from chessops so castling/promotion are handled correctly
+        const moveObj = parseUci(chosenMove.uci);
+        if (!moveObj) return fetch_stockfish_move(fen, rating);
 
-        function algebraicToIndex(sq) {
-            return (parseInt(sq[1], 10) - 1) * 8 + (sq.charCodeAt(0) - 'a'.charCodeAt(0));
-        }
-
-        const moveObj = { from: algebraicToIndex(startSquare), to: algebraicToIndex(endSquare) };
         const clonePos = position.clone();
         clonePos.play(moveObj);
+
+        const startSquare = chosenMove.uci.slice(0, 2);
+        const endSquare = chosenMove.uci.slice(2, 4);
 
         return {
             resultFen: makeFen(clonePos.toSetup()),
@@ -255,7 +277,7 @@ async function fetch_lichess_data(fen, rating) {
     }
 }
 
-function fetch_stockfish_move(fen, rating) {
+function fetch_stockfish_move(fen, rating, movetime = 2000) {
     return new Promise((resolve) => {
         const skillLevel = Math.max(0, Math.min(20, Math.round((rating - 800) / 80)));
 
@@ -266,42 +288,42 @@ function fetch_stockfish_move(fen, rating) {
         const position = posResult.value;
         const clone = position.clone();
 
-        function onMessage(event) {
-            const line = event.data;
-            if (typeof line !== 'string') return;
+        sfJob((engine, done) => {
+            function onMessage(event) {
+                const line = event.data;
+                if (typeof line !== 'string') return;
 
-            if (line.startsWith('bestmove')) {
-                sfWorker.removeEventListener('message', onMessage);
+                if (line.startsWith('bestmove')) {
+                    engine.removeEventListener('message', onMessage);
+                    done();
 
-                const parts = line.split(' ');
-                const bestMove = parts[1];
-                if (!bestMove || bestMove.length < 4) return resolve(null);
+                    const parts = line.split(' ');
+                    const bestMove = parts[1];
+                    if (!bestMove || bestMove.length < 4) return resolve(null);
 
-                const from = bestMove.slice(0, 2);
-                const to = bestMove.slice(2, 4);
+                    // Use parseUci so castling/promotion are handled correctly
+                    const move = parseUci(bestMove);
+                    if (!move) return resolve(null);
 
-                function algebraicToIndex(sq) {
-                    return (parseInt(sq[1], 10) - 1) * 8 + (sq.charCodeAt(0) - 'a'.charCodeAt(0));
+                    const from = bestMove.slice(0, 2);
+                    const to = bestMove.slice(2, 4);
+
+                    clone.play(move);
+
+                    resolve({
+                        resultFen: makeFen(clone.toSetup()),
+                        moveSan: makeSan(position, move),
+                        isMate: clone.isCheckmate(),
+                        startSquare: from,
+                        endSquare: to,
+                    });
                 }
-
-                const move = { from: algebraicToIndex(from), to: algebraicToIndex(to) };
-                clone.play(move);
-
-                resolve({
-                    resultFen: makeFen(clone.toSetup()),
-                    moveSan: makeSan(position, move),
-                    isMate: clone.isCheckmate(),
-                    startSquare: from,
-                    endSquare: to,
-                });
             }
-        }
 
-        sfJob((engine) => {
             engine.addEventListener('message', onMessage);
             engine.postMessage(`setoption name Skill Level value ${skillLevel}`);
             engine.postMessage(`position fen ${fen}`);
-            engine.postMessage('go movetime 1500');
+            engine.postMessage(`go movetime ${movetime}`);
         });
     });
 }

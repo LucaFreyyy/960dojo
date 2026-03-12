@@ -1,9 +1,23 @@
 DONE
 - stockfish to wasm and care for error after ending game
+- make use of the multithreading and single worker to speed up engine
+- fix wrong eval's
+- fix speed
+- adjust movetime for final eval
+- checkmate eval
+- castling breaks game
+- show final eval on move list
+
 
 NOT
-- make use of the multithreading and single worker to speed up engine
+- adjust Play Again button position
 - remove console logs
 - use username in display instead of email and make name required on signup, then on username change put some checks for duplicates and stuff and update database. only allow renaming a limited number of times.
 
+
+For later publications
+- disable reloading page resets
+- leaderboard
 - tactics
+- move through move list with arrows
+- eval graph
