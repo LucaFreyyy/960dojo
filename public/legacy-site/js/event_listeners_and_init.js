@@ -21,6 +21,7 @@ function safeAddListener(id, event, handler) {
 }
 
 function initializeEventListeners() {
+    getSfWorker();
     if (document.body.dataset.listeners === 'true') return;
     document.body.dataset.listeners = 'true';
     safeAddListener("Category", "change", () => toggleNumberSelect().catch(console.error));

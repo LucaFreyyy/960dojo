@@ -128,17 +128,24 @@ export default function LegacyPage() {
             let loadedCount = 0;
 
             scriptFiles.forEach(file => {
-                const script = document.createElement('script');
-                script.src = file.startsWith('/') ? file : `/legacy-site/js/${file}`;
-                script.async = false;
-                script.onload = () => {
-                    loadedCount++;
-                    if (loadedCount === scriptFiles.length) {
-                        callback();
-                    }
-                };
-                document.body.appendChild(script);
-            });
+            const src = file.startsWith('/') ? file : `/legacy-site/js/${file}`;
+
+            // Skip if already in DOM
+            if (document.querySelector(`script[src="${src}"]`)) {
+                loadedCount++;
+                if (loadedCount === scriptFiles.length) callback();
+                return;
+            }
+
+            const script = document.createElement('script');
+            script.src = src;
+            script.async = false;
+            script.onload = () => {
+                loadedCount++;
+                if (loadedCount === scriptFiles.length) callback();
+            };
+            document.body.appendChild(script);
+        });
         }
     }, [session, sessionLoading]);
 
@@ -257,7 +264,7 @@ export default function LegacyPage() {
                         </button>
                     </span>
                 </section>
-                <button id="playAgainBtn" className="start-button" style={{ display: 'none', marginLeft: '75rem', marginTop: '-10rem' }}>Play Again</button>
+                <button id="playAgainBtn" className="start-button" style={{ display: 'none', marginLeft: '7.5rem', marginTop: '-10rem' }}>Play Again</button>
 
                 <div id="loginMessage" style={{ color: 'red', display: 'none', marginTop: '10px' }}>
                     Log in to play rated

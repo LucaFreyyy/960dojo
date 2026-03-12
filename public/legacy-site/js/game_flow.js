@@ -133,6 +133,7 @@ async function endGame() {
         window.gameState.evaluations[window.gameState.evaluations.length - 1] = finalEval;
     }
     finalEval = finalEval / 100;
+    console.log("Final evaluation:", finalEval);
 
     updateMoveListWithColor();
     window.gameState.playing = false;
@@ -207,7 +208,7 @@ async function endGame() {
 
             setTimeout(() => {
                 if (ratingChangeElem) ratingChangeElem.textContent = "";
-            }, 300);
+            }, 3000);
         }
     }
 
