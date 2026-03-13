@@ -139,8 +139,11 @@ async function endGame() {
 
     if (window.gameState.isRated) {
         await writeBackOldOpeningAndFetchNew(window.sessionUser.id);
-        finalEval = Math.max(-5, Math.min(5, finalEval));
-        let ratingChange = Math.round(finalEval * 10);
+        finalEval = Math.max(-3, Math.min(3, finalEval));
+
+        const gamesPlayed = await getFinishedGameCount(window.sessionUser.id);
+        const multiplier = Math.max(1, 10 - gamesPlayed);
+        let ratingChange = Math.round(finalEval * 10 * multiplier);
         if (window.gameState.userColor === 'black') ratingChange *= -1;
 
         if (ratingChange < 0) {

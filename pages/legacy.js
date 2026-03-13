@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useSupabaseSession, useSessionLoading } from '../lib/SessionContext';
 import { exposeChessopsGlobalsToWindow } from '../lib/exposeChessops.js';
-import { fetchUnfinishedOpening, writeGameStateToDatabase, writeBackOldOpeningAndFetchNew, appendEvalToDatabase } from '../lib/opening_supabase_functions.js';
+import { fetchUnfinishedOpening, writeGameStateToDatabase, writeBackOldOpeningAndFetchNew, appendEvalToDatabase, getFinishedGameCount } from '../lib/opening_supabase_functions.js';
 import { supabase } from '../lib/supabase.js';
 
 async function hashEmail(email) {
@@ -38,6 +38,7 @@ export default function LegacyPage() {
                 window.writeGameStateToDatabase = writeGameStateToDatabase;
                 window.writeBackOldOpeningAndFetchNew = writeBackOldOpeningAndFetchNew;
                 window.appendEvalToDatabase = appendEvalToDatabase;
+                window.getFinishedGameCount = getFinishedGameCount;
                 initializeEventListeners();
                 setupRatingControls();
                 setupArrowDrawing();

@@ -13,10 +13,10 @@ DONE
 - adjust Play Again button position in small window
 - FIX: move list color offset
 - FIX: final eval in move list missing sometimes
-
-NOT
 - FIX: Better Stockfish level to elo mapping
 - ADD: higher initial rating change
+
+NOT
 - ADD: use username in display instead of email and make name required on signup, then on username change put some checks for duplicates and stuff and update database. only allow renaming a limited number of times.
 
 
