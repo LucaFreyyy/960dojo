@@ -7,10 +7,11 @@ DONE
 - checkmate eval
 - castling breaks game
 - show final eval on move list
+- adjust Play Again button position
+- fix logo warning
 
 
 NOT
-- adjust Play Again button position
 - remove console logs
 - use username in display instead of email and make name required on signup, then on username change put some checks for duplicates and stuff and update database. only allow renaming a limited number of times.
 
@@ -21,3 +22,4 @@ For later publications
 - tactics
 - move through move list with arrows
 - eval graph
+- nicer graph in profile

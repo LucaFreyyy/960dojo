@@ -323,7 +323,7 @@ function fetch_stockfish_move(fen, rating, movetime = 2000) {
             engine.addEventListener('message', onMessage);
             engine.postMessage(`setoption name Skill Level value ${skillLevel}`);
             engine.postMessage(`position fen ${fen}`);
-            engine.postMessage(`go movetime ${movetime}`);
+            engine.postMessage(`go depth 15`);
         });
     });
 }
