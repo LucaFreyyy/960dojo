@@ -277,9 +277,36 @@ async function fetch_lichess_data(fen, rating) {
     }
 }
 
+function getRandomSkillLevel(rating) {
+    const ratingMap = {
+        0: 1347, 1: 1490, 2: 1597, 3: 1694, 4: 1785, 5: 1871,
+        6: 1954, 7: 2035, 8: 2113, 9: 2198, 10: 2264, 11: 2337,
+        12: 2409, 13: 2480, 14: 2550, 15: 2619, 16: 2686, 17: 2754,
+        18: 2820, 19: 2886
+    };
+
+    // Box-Muller transform for normal distribution
+    const u1 = Math.random(), u2 = Math.random();
+    const randNormal = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+    const sampledRating = rating + randNormal * 200;
+
+    // Find closest skill level
+    let closest = 0;
+    let minDiff = Infinity;
+    for (const [level, mappedRating] of Object.entries(ratingMap)) {
+        const diff = Math.abs(mappedRating - sampledRating);
+        if (diff < minDiff) {
+            minDiff = diff;
+            closest = parseInt(level);
+        }
+    }
+    console.log(`Sampled opponent rating: ${Math.round(sampledRating)}, mapped skill level: ${closest}`);
+    return closest;
+}
+
 function fetch_stockfish_move(fen, rating, movetime = 2000) {
     return new Promise((resolve) => {
-        const skillLevel = Math.max(0, Math.min(20, Math.round((rating - 800) / 80)));
+        const skillLevel = getRandomSkillLevel(rating);
 
         const setup = parseFen(fen);
         if (setup.isErr) return resolve(null);
