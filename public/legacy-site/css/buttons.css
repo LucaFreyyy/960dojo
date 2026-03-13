@@ -233,9 +233,9 @@ button:hover {
 .lichess-analysis::before {
     content: '';
     display: inline-block;
-    width: 2em;
-    height: 2em;
-    background-image: url('https://upload.wikimedia.org/wikipedia/commons/d/da/Lichess_Logo_2019.svg');
+    width: 1.8em;
+    height: 1.8em;
+    background-image: url('/lichess-icon.webp');
     background-size: contain;
     background-repeat: no-repeat;
     vertical-align: middle;
