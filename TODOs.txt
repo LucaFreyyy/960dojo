@@ -12,8 +12,8 @@ DONE
 - check final eval
 
 NOT
-- higher initial rating change
 - adjust Play Again button position in small window
+- higher initial rating change
 - use username in display instead of email and make name required on signup, then on username change put some checks for duplicates and stuff and update database. only allow renaming a limited number of times.
 
 

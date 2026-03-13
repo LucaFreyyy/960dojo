@@ -133,8 +133,6 @@ async function endGame() {
     window.gameState.evaluations.push(finalEval);
     
     finalEval = finalEval / 100;
-    console.log("Evaluations history:", window.gameState.evaluations);
-    console.log("Final evaluation:", finalEval);
 
     updateMoveListWithColor();
     window.gameState.playing = false;
