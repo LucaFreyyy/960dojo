@@ -157,7 +157,7 @@ function oldCentipawnLossFunction(fen, movetime = 1500, depth = 16) {
                         const match = line.match(/score mate (-?\d+)/);
                         if (match) {
                             const mateMoves = parseInt(match[1], 10);
-                            const mateEval = mateMoves > 0 ? 99 : -99;
+                            const mateEval = mateMoves > 0 ? 9999 : -9999;
                             bestEval = turn === 'w' ? mateEval : -mateEval;
                         }
                     }
