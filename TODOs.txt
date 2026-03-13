@@ -7,12 +7,13 @@ DONE
 - checkmate eval
 - castling breaks game
 - show final eval on move list
-- adjust Play Again button position
 - fix logo warning
-
+- remove console logs
+- check final eval
 
 NOT
-- remove console logs
+- higher initial rating change
+- adjust Play Again button position in small window
 - use username in display instead of email and make name required on signup, then on username change put some checks for duplicates and stuff and update database. only allow renaming a limited number of times.
 
 

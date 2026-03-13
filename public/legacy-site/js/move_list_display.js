@@ -69,11 +69,8 @@ function updateMoveListWithColor() {
         `;
     }
     let currentEval = 0;
-    if (window.currentBrowsePosition === -1) {
-        currentEval = window.initialEval / 100;
-    } else {
-        currentEval = window.gameState.evaluations[window.currentBrowsePosition] / 100;
-    }
+    currentEval = window.gameState.evaluations[window.currentBrowsePosition + 1] / 100;
+    
     if (currentEval !== undefined) {
         const evalColor = getEvalColor(currentEval);
         html += `

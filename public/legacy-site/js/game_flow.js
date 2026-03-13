@@ -23,6 +23,7 @@ async function startGame() {
         window.fenResults = js_data.fen;
         window.moveIsMate = js_data.isMate;
         window.initialEval = getCentipawnLoss(window.gameState.position);
+        window.gameState.evaluations.push(window.initialEval);
         window.gameState.playing = true;
     } else {
         window.legalMoves = getAllPseudolegalMovesForOpponent(window.gameState.position);
@@ -50,7 +51,9 @@ async function dataBaseMove() {
     window.moveIsMate = js_data.isMate;
     move = js_lichess_move.moveSan;
     window.gameState.evaluations.push(getCentipawnLoss(window.gameState.position));
-    window.gameState.evaluations.push(getCentipawnLoss(new_position));
+    if (window.gameState.evaluations.length < window.HALF_MOVE_THRESHOLD) {
+        window.gameState.evaluations.push(getCentipawnLoss(new_position));
+    }
     if (window.gameState.playing === false) {
         window.ENGINE_RUNNING = false;
         return;
@@ -126,20 +129,18 @@ async function endGame() {
     moveListLoadingAnimationStart();
     let finalEval = await getCentipawnLoss(window.gameState.position);
     window.gameState.evaluations = await Promise.all(window.gameState.evaluations);
-    window.initialEval = await window.initialEval;
-    if (window.HALF_MOVE_THRESHOLD > window.gameState.evaluations.length) {
-        window.gameState.evaluations.push(window.initialEval);
-    } else {
-        window.gameState.evaluations[window.gameState.evaluations.length - 1] = finalEval;
-    }
+    
+    window.gameState.evaluations.push(finalEval);
+    
     finalEval = finalEval / 100;
+    console.log("Evaluations history:", window.gameState.evaluations);
     console.log("Final evaluation:", finalEval);
 
     updateMoveListWithColor();
     window.gameState.playing = false;
 
     if (window.gameState.isRated) {
-        writeBackOldOpeningAndFetchNew(window.sessionUser.id);
+        await writeBackOldOpeningAndFetchNew(window.sessionUser.id);
         finalEval = Math.max(-5, Math.min(5, finalEval));
         let ratingChange = Math.round(finalEval * 10);
         if (window.gameState.userColor === 'black') ratingChange *= -1;
