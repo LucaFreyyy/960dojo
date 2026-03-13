@@ -49,10 +49,10 @@ function updateMoveListWithColor() {
         const moveNumber = Math.floor(i / 2) + 1;
         const whiteMove = window.gameState.moveHistorySAN[i] || "";
         const blackMove = (i + 1 < window.gameState.moveHistorySAN.length ? window.gameState.moveHistorySAN[i + 1] : "") || "";
-        const whiteEval = window.gameState.evaluations[i + 1];
-        const blackEval = window.gameState.evaluations[i + 2];
-        const whiteColor = whiteEval !== undefined ? getEvalColor(whiteEval) : "#cccccc";
-        const blackColor = blackEval !== undefined ? getEvalColor(blackEval) : "#cccccc";
+        const whiteEval = window.gameState.evaluations[i];
+        const blackEval = window.gameState.evaluations[i + 1];
+        const whiteColor = whiteEval !== undefined ? getEvalColor(window.gameState.evaluations[i + 1]) : "#ff00ff";
+        const blackColor = blackEval !== undefined ? getEvalColor(window.gameState.evaluations[i + 2]) : "#ff00ff";
         const whiteMark = (window.currentBrowsePosition === i) ? 'background:rgb(25, 70, 70); font-weight: bold;' : '';
         const blackMark = (window.currentBrowsePosition === i + 1) ? 'background:rgb(25, 70, 70); font-weight: bold;' : '';
 
