@@ -16,7 +16,18 @@ const supabaseAdmin = createClient(
 
 export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).end();
-    const { email, password } = req.body;
+    const { email, password, username } = req.body;
+
+    if (!username?.trim()) return res.status(400).json({ error: 'Username is required' });
+
+    // Double-check uniqueness server-side
+    const { data: existingName } = await supabaseAdmin
+        .from('User')
+        .select('id')
+        .eq('name', username.trim())
+        .maybeSingle();
+
+    if (existingName) return res.status(400).json({ error: 'Username already taken' });
 
     const { data, error } = await supabaseAdmin.auth.signUp({ email, password });
     if (error) return res.status(400).json({ error: error.message });
@@ -25,8 +36,7 @@ export default async function handler(req, res) {
     const { data: existing } = await supabaseAdmin.from('User').select('id').eq('id', id).maybeSingle();
 
     if (!existing) {
-        const { error: userError } = await supabaseAdmin.from('User').insert({ id, email, name: '', bio: '' });
-
+        const { error: userError } = await supabaseAdmin.from('User').insert({ id, email, name: username.trim(), bio: '' });
         const ratings = ['bullet', 'blitz', 'rapid', 'classical', 'tactics', 'openings'].map(type => ({
             id: crypto.randomUUID(),
             userId: id,
@@ -38,7 +48,7 @@ export default async function handler(req, res) {
         let tacticId = null;
         try { tacticId = await fetchNewTactic(id); } catch {}
         if (tacticId) {
-            const { error: tacticError } = await supabaseAdmin.from('UserTactic').insert({
+            await supabaseAdmin.from('UserTactic').insert({
                 id: crypto.randomUUID(),
                 userId: id,
                 tacticId,
@@ -46,7 +56,7 @@ export default async function handler(req, res) {
         }
 
         const { openingNr, color } = getRandomOpening();
-        const { error: openingError } = await supabaseAdmin.from('UserOpening').insert({
+        await supabaseAdmin.from('UserOpening').insert({
             id: crypto.randomUUID(),
             userId: id,
             openingNr,

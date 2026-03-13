@@ -300,7 +300,6 @@ function getRandomSkillLevel(rating) {
             closest = parseInt(level);
         }
     }
-    console.log(`Sampled opponent rating: ${Math.round(sampledRating)}, mapped skill level: ${closest}`);
     return closest;
 }
 

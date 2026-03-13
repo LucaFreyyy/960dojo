@@ -18,7 +18,9 @@ DONE
 
 NOT
 - ADD: use username in display instead of email and make name required on signup, then on username change put some checks for duplicates and stuff and update database. only allow renaming a limited number of times.
-
+    - mandatory username on account creation
+    - only allow non-empty username
+    - only allow username that is not taken yet
 
 For later publications
 - disable reloading page resets

@@ -34,6 +34,15 @@ export default function ProfilePage() {
         fetchFollowerData();
     }, [userId]);
 
+    async function checkUsernameAvailable(newName) {
+        const { data } = await supabase
+            .from('User')
+            .select('id')
+            .eq('name', newName.trim())
+            .maybeSingle();
+        return !data || data.id === userId;
+    }
+
     async function fetchUserData() {
         const { data, error } = await supabase
             .from('User')
@@ -91,7 +100,7 @@ export default function ProfilePage() {
                     <p>Loading profile...</p>
                 ) : (
                     <>
-                        <ProfileHeader user={userData} editable={true} />
+                        <ProfileHeader user={userData} editable={true} checkUsernameAvailable={checkUsernameAvailable} onNameUpdated={fetchUserData} />
                         <hr className='separating-line' />
                         <FollowStats
                             user={userData}
