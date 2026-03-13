@@ -19,16 +19,13 @@ export default async function handler(req, res) {
     const { email, password } = req.body;
 
     const { data, error } = await supabaseAdmin.auth.signUp({ email, password });
-    console.log('[signup] auth:', error ?? 'OK');
     if (error) return res.status(400).json({ error: error.message });
 
     const id = email ? await hashEmail(email) : null;
     const { data: existing } = await supabaseAdmin.from('User').select('id').eq('id', id).maybeSingle();
-    console.log('[signup] existing:', existing ?? 'none');
 
     if (!existing) {
         const { error: userError } = await supabaseAdmin.from('User').insert({ id, email, name: '', bio: '' });
-        console.log('[signup] user insert:', userError ?? 'OK');
 
         const ratings = ['bullet', 'blitz', 'rapid', 'classical', 'tactics', 'openings'].map(type => ({
             id: crypto.randomUUID(),
@@ -37,7 +34,6 @@ export default async function handler(req, res) {
             value: 1500,
         }));
         const { error: ratingError } = await supabaseAdmin.from('Rating').insert(ratings);
-        console.log('[signup] rating insert:', ratingError ?? 'OK');
 
         let tacticId = null;
         try { tacticId = await fetchNewTactic(id); } catch {}
@@ -47,7 +43,6 @@ export default async function handler(req, res) {
                 userId: id,
                 tacticId,
             });
-            console.log('[signup] tactic insert:', tacticError ?? 'OK');
         }
 
         const { openingNr, color } = getRandomOpening();
@@ -61,7 +56,6 @@ export default async function handler(req, res) {
             finished: null,
             evalHistory: [],
         });
-        console.log('[signup] opening insert:', openingError ?? 'OK');
     }
 
     return res.status(200).json({ success: true });
