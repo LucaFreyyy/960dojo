@@ -114,9 +114,7 @@ async function setupStartPosition() {
     window.gameState.colorToMove = 'white';
     window.gameState.isRated = document.getElementById('ratedBtn').classList.contains('active');
     window.gameState.userRating = document.getElementById('ratingDisplay').textContent;
-
     const user = window.sessionUser;
-
     if (window.gameState.isRated && user) {
         categorySelect.value = "Random";
         window.gameState.userColor = window.sessionUser.color || (Math.random() > 0.5 ? 'white' : 'black');
@@ -127,7 +125,6 @@ async function setupStartPosition() {
         if (window.gameState.userColor === 'random') {
             window.gameState.userColor = Math.random() > 0.5 ? 'white' : 'black';
         }
-
         if (categorySelect.value === 'Random') {
             numberSelect.value = Math.floor(Math.random() * 960);
         } else if (categorySelect.value === 'Fixed Piece') {
@@ -140,42 +137,38 @@ async function setupStartPosition() {
                 backButtonClick();
                 return;
             }
-            const randomNumber = parseInt(positions[Math.floor(Math.random() * positions.length)], 10);
-            numberSelect.value = randomNumber;
+            numberSelect.value = parseInt(positions[Math.floor(Math.random() * positions.length)], 10);
         }
     }
-
     window.gameState.position = freestyleNumberToFEN(parseInt(numberSelect.value));
     await setPositionByNumber(parseInt(numberSelect.value), window.gameState.userColor);
 
-    pgn = window.sessionUser.pgn;
+    const pgn = window.sessionUser.pgn;
     if (pgn && window.gameState.isRated) {
-        window.gameState.fenHistory = pgn.split('\n').map(line => {
+        const pgnLines = pgn.split('\n');
+        window.gameState.fenHistory = pgnLines.map(line => {
             const lastSpace = line.lastIndexOf(' ');
             return lastSpace !== -1 ? line.substring(0, lastSpace) : line;
         });
-        window.gameState.moveHistoryUCI = pgn.split('\n').map(line => {
-            const parts = line.trim().split(' ');
-            return parts.at(-1);
-        });
-        window.initialEval = window.sessionUser.evalHistory[0] || null;
-        if (window.initialEval === null) {
-            window.initialEval = getCentipawnLoss(window.gameState.position);
+        window.gameState.moveHistoryUCI = pgnLines.map(line => line.trim().split(' ').at(-1));
+
+        // evaluations[0] = initialEval, evaluations[i+1] = eval of fenHistory[i]
+        window.initialEval = window.sessionUser.evalHistory[0] ?? getCentipawnLoss(window.gameState.position);
+        window.gameState.evaluations = [window.initialEval];
+
+        const storedEvals = window.sessionUser.evalHistory.slice(1);
+        for (let i = 0; i < window.gameState.fenHistory.length; i++) {
+            const stored = storedEvals[i] ?? null;
+            window.gameState.evaluations.push(
+                stored !== null ? stored : getCentipawnLoss(window.gameState.fenHistory[i])
+            );
         }
-        window.gameState.evaluations = window.sessionUser.evalHistory.slice(1);
-        for (let i = 0; i < window.gameState.evaluations.length; i++) {
-            if (window.gameState.evaluations[i] == null) {
-                window.gameState.evaluations[i] = getCentipawnLoss(window.gameState.fenHistory[i]);
-            }
-        }
-        for (let i = window.gameState.evaluations.length; i < window.gameState.fenHistory.length; i++) {
-            window.gameState.evaluations.push(getCentipawnLoss(window.gameState.fenHistory[i]));
-        }
+
         window.gameState.moveHistorySAN = generateSANHistory();
         window.gameState.halfMoveNumber = window.gameState.moveHistoryUCI.length;
-        window.gameState.colorToMove = window.gameState.halfMoveNumber % 2 == 0 ? 'white' : 'black'
+        window.gameState.colorToMove = window.gameState.halfMoveNumber % 2 === 0 ? 'white' : 'black';
         window.currentBrowsePosition = window.gameState.halfMoveNumber - 1;
-        window.gameState.position = window.gameState.fenHistory[window.gameState.fenHistory.length - 1];
+        window.gameState.position = window.gameState.fenHistory.at(-1);
         redrawBoard(true);
     }
 }

@@ -1,4 +1,13 @@
+Immediate
+- black user with last move -> nan
+- white with last move -> point deduction for better position
+- black user -> twisted eval(or probably rather shifted by one) : Erste eval wird übersprungen, BUT also random extra value in between
+- white user -> eval right!?
+- Play button position still weird
+- occasional null values
+
 For later publications
+- make sure to empty eval lists
 - check if stockfish level is actually appplied
 - disable reloading page resets
 - leaderboard

@@ -1,6 +1,5 @@
 async function startGame() {
     window.HALF_MOVE_THRESHOLD = Math.floor(Math.random() * 8) + 17;
-    // Check if the user selected a valid position
     const mode = document.getElementById('Category');
     if (mode.classList.contains('error')) {
         let msg = document.createElement('div');
@@ -30,7 +29,6 @@ async function startGame() {
         window.gameState.playing = true;
         try {
             await dataBaseMove();
-            window.gameState.evaluations = window.gameState.evaluations.slice(1);
         } catch (e) {
             console.error('dataBaseMove error:', e);
         }
