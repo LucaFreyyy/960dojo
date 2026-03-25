@@ -326,19 +326,6 @@ export default function LeaderboardPage() {
                                     </tbody>
                                 </table>
                             </div>
-                            
-                            {lastUpdated && (
-                                <div style={{
-                                    padding: '0.75rem 1rem',
-                                    backgroundColor: '#f9fafb',
-                                    borderTop: '1px solid #e5e7eb',
-                                    fontSize: '0.75rem',
-                                    color: '#6b7280',
-                                    textAlign: 'right'
-                                }}>
-                                    Last updated: {lastUpdated.toLocaleString()}
-                                </div>
-                            )}
                         </>
                     )}
                 </div>
