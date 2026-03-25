@@ -9,7 +9,7 @@ export default function SettingsPage() {
             </Head>
             <main style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '4rem' }}>
                 <h1 style={{ fontSize: '2.5rem', fontWeight: 'bold', marginBottom: '1.5rem', textAlign: 'center' }}>
-                    Settings Coming Soon! (Number 2 on the list)
+                    Settings Coming Soon!
                 </h1>
                 <p style={{ fontSize: '1.25rem', marginBottom: '2rem', textAlign: 'center', maxWidth: '600px' }}>
                     Help accelerate development with a boost of caffeine!
