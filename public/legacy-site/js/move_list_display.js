@@ -2,6 +2,7 @@ function updateMoveListWithColor() {
     moveListLoadingAnimationStop();
     const moveListContainer = document.getElementById("moveListContainer");
     const browseButtonContainer = moveListContainer.querySelector("#browseButtonContainer");
+    const playAgainBtn = document.getElementById("playAgainBtn");
     moveListContainer.innerHTML = "";
     if (browseButtonContainer) moveListContainer.appendChild(browseButtonContainer);
 
@@ -70,7 +71,7 @@ function updateMoveListWithColor() {
     }
     let currentEval = 0;
     currentEval = window.gameState.evaluations[window.currentBrowsePosition + 1] / 100;
-    
+
     if (currentEval !== undefined) {
         const evalColor = getEvalColor(currentEval);
         html += `
@@ -83,6 +84,7 @@ function updateMoveListWithColor() {
     html += `</div>`;
     browseButtonContainer.insertAdjacentHTML("afterend", html);
     const moveListDiv = document.getElementById("moveListScroll");
+    if (moveListDiv && playAgainBtn) moveListDiv.appendChild(playAgainBtn);
     if (moveListDiv) moveListDiv.scrollTop = moveListDiv.scrollHeight;
 
     // Add click event listeners to move spans, but not to disabled ones
@@ -101,6 +103,7 @@ function updateMoveListWithColor() {
 function updateMoveList() {
     const moveListContainer = document.getElementById("moveListContainer");
     const browseButtonContainer = moveListContainer.querySelector("#browseButtonContainer");
+    const playAgainBtn = document.getElementById("playAgainBtn");
     moveListContainer.innerHTML = "";
     if (browseButtonContainer) moveListContainer.appendChild(browseButtonContainer);
 
@@ -149,6 +152,7 @@ function updateMoveList() {
     html += `</div>`;
     browseButtonContainer.insertAdjacentHTML("afterend", html);
     const moveListDiv = document.getElementById("moveListScroll");
+    if (moveListDiv && playAgainBtn) moveListDiv.appendChild(playAgainBtn);
     if (moveListDiv) moveListDiv.scrollTop = moveListDiv.scrollHeight;
 
     // Add click event listeners to move spans, but not to disabled ones
@@ -194,6 +198,27 @@ function browseAllTheWayForwardClick() {
         window.currentBrowsePosition = window.gameState.moveHistorySAN.length - 1;
         redrawBoard();
     }
+}
+
+function setupMoveBrowseKeyboardNavigation() {
+    if (window.__moveBrowseKeyboardBound) return;
+    window.__moveBrowseKeyboardBound = true;
+    window.addEventListener('keydown', (e) => {
+        const t = e.target;
+        const tag = t && t.tagName ? t.tagName.toLowerCase() : '';
+        if (tag === 'input' || tag === 'textarea' || tag === 'select' || t?.isContentEditable) return;
+        if (!window.gameState?.moveHistorySAN?.length) return;
+
+        if (e.key === 'ArrowLeft') {
+            e.preventDefault();
+            if (e.shiftKey) browseAllTheWayBackClick();
+            else browseBackClick();
+        } else if (e.key === 'ArrowRight') {
+            e.preventDefault();
+            if (e.shiftKey) browseAllTheWayForwardClick();
+            else browseForwardClick();
+        }
+    });
 }
 
 function moveListLoadingAnimationStart() {

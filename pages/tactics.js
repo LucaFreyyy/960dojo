@@ -358,7 +358,7 @@ export default function TacticsPage() {
       <Head>
         <title>Tactics - 960 Dojo</title>
       </Head>
-      <main style={{ maxWidth: 1100, margin: '0 auto', padding: '1.5rem 1rem' }}>
+      <main className="tactics-page" style={{ maxWidth: 1100, margin: '0 auto', padding: '1.5rem 1rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
           <h1 style={{ margin: 0 }}>Tactics</h1>
           <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>

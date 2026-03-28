@@ -48,10 +48,10 @@ async function dataBaseMove() {
     window.fenResults = js_data.fen;
     window.moveIsMate = js_data.isMate;
     move = js_lichess_move.moveSan;
+    // Always record eval before and after the opponent move. Skipping the second push
+    // when near HALF_MOVE_THRESHOLD used to desync evaluations[] from fenHistory[] / SAN index.
     window.gameState.evaluations.push(getCentipawnLoss(window.gameState.position));
-    if (window.gameState.evaluations.length < window.HALF_MOVE_THRESHOLD) {
-        window.gameState.evaluations.push(getCentipawnLoss(new_position));
-    }
+    window.gameState.evaluations.push(getCentipawnLoss(new_position));
     if (window.gameState.playing === false) {
         window.ENGINE_RUNNING = false;
         return;

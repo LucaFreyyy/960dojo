@@ -57,6 +57,8 @@ function initializeEventListeners() {
     document.querySelectorAll('.selectors select').forEach(select => {
         select.addEventListener('change', () => select.blur());
     });
+
+    setupMoveBrowseKeyboardNavigation();
 }
 
 function setupArrowDrawing() {

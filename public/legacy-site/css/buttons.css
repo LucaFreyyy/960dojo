@@ -3,6 +3,9 @@
     width: 100%;
     max-width: 220px;
     margin-left: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
 }
 
 .buttons {
@@ -88,6 +91,14 @@ button:hover {
     align-items: center;
     width: 100%;
     padding: 1rem 0;
+}
+
+#moveListScroll #playAgainBtn {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    margin-top: 0.75rem;
+    align-self: stretch;
 }
 
 #browseButtonContainer>button {
