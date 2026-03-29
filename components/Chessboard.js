@@ -49,5 +49,5 @@ export default function ChessBoard() {
     setGround(cg);
   }, []);
 
-  return <div ref={boardRef} style={{ width: '400px', height: '400px' }} />;
+  return <div ref={boardRef} style={{ width: '500px', height: '500px' }} />;
 };
