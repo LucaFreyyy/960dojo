@@ -1,14 +1,17 @@
+import { useState } from 'react'
 import ChessBoard from '../components/Chessboard';
 import Button from '../components/Button.js'
 import { freestyleNumberToFEN } from '../lib/freestyleUtils';
 
 export default function Openings() {
 
+  const [fen, setFen] = useState(freestyleNumberToFEN(1))
+
   const handleNewPosition = () => {
     const randomNumber = Math.floor(Math.random() * 960);
     const newFen = freestyleNumberToFEN(randomNumber);
-    // Update the board with newFen (we'll do this in Step 2)
-    console.log('New FEN generated: ' + newFen);
+    setFen(newFen)
+    console.log('New FEN generated: ' + fen);
   };
 
   return (
@@ -28,7 +31,7 @@ export default function Openings() {
           </h2>
 
           <div className="chessboard-container">
-            <ChessBoard />
+            <ChessBoard fen={fen} />
             <Button onClick={handleNewPosition}>
               New position
             </Button>
