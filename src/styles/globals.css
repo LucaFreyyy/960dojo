@@ -349,3 +349,30 @@ header {
 #fullScreenLoadingOverlay .loader {
     margin-bottom: 20px;
 }
+
+
+/* == Léo does stuff (cleanup later?)*/
+.button {
+  padding: 0.75rem 1.5rem;
+  fontSize: 1rem;
+  background: var(--bg-button);
+  color: var(--text-color-main);
+  border: var(--border-soft);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 600;
+}
+.button:hover {
+  background: var(--bg-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(46, 164, 255, 0.3);
+}
+.button:active {
+  transform: translateY(0);
+}
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
