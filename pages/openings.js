@@ -3,12 +3,14 @@ import Button from '../components/Button.js'
 import { freestyleNumberToFEN } from '../lib/freestyleUtils';
 
 export default function Openings() {
+
   const handleNewPosition = () => {
     const randomNumber = Math.floor(Math.random() * 960);
     const newFen = freestyleNumberToFEN(randomNumber);
     // Update the board with newFen (we'll do this in Step 2)
     console.log('New FEN generated: ' + newFen);
   };
+
   return (
     <>
       <main>
@@ -27,7 +29,7 @@ export default function Openings() {
 
           <div className="chessboard-container">
             <ChessBoard />
-            <Button onClick={handleNewPosition()}>
+            <Button onClick={handleNewPosition}>
               New position
             </Button>
           </div>
