@@ -51,23 +51,31 @@ export default function ChessBoard({ fen, orientation }) {
     setGround(cg);
   }, []);
 
-  // Runs on FEN change
+  // FEN got updated: Setup new game
   useEffect(() => {
     if (!ground || !fen) return;
 
     // Update game instance
     const newGame = new Chess(fen, { chess960: true })
     gameRef.current = newGame
-    orientationRef.current = orientation
 
     // Update ground instance (visu)
     ground.set({
       fen: fen,
       lastMove: undefined,
-      orientation: orientationRef.current,
       movable: { dests: toDests(gameRef.current) }
     });
-  }, [fen, orientation]);
+  }, [fen]);
+
+  // orientation got updated: Flip the board
+  useEffect(() => {
+    if (!ground) return;
+
+    orientationRef.current = orientation
+    ground.set({
+      orientation: orientationRef.current,
+    });
+  }, [orientation]);
 
   return <div ref={containerRef} style={{ width: '500px', height: '500px' }} />;
 };
