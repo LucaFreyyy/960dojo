@@ -2,9 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import { Chessground } from 'chessground';
 import { Chess } from 'chess.js';
 
-export default function ChessBoard({ fen }) {
-  const boardRef = useRef(null);
-  const [game, setGame] = useState(new Chess(fen, { chess960: true }));
+export default function ChessBoard({ fen, orientation }) {
+  const containerRef = useRef(null);
+  const gameRef = useRef(new Chess(fen, { chess960: true }));
+  const orientationRef = useRef(orientation)
   const [ground, setGround] = useState(null);
 
   // This function outputs all the available moves in a given position as a Map
@@ -26,19 +27,21 @@ export default function ChessBoard({ fen }) {
   // Runs on mount
   useEffect(() => {
     // Initialize board
-    const cg = Chessground(boardRef.current, {
+    const cg = Chessground(containerRef.current, {
       fen: fen,
+      orientation: orientation,
       movable: {
         free: false,
         color: 'both',
-        dests: toDests(game),
+        dests: toDests(gameRef.current),
         events: {
           after: (orig, dest) => {
-            const move = game.move({ from: orig, to: dest });
+            const move = gameRef.current.move({ from: orig, to: dest });
             // TODO: send to database or somewhere
             cg.set({
-              fen: game.fen(),
-              movable: { dests: toDests(game) }
+              fen: gameRef.current.fen(),
+              orientation: orientationRef.current,
+              movable: { dests: toDests(gameRef.current) }
             });
             console.log("Move made: " + move)
           }
@@ -54,14 +57,17 @@ export default function ChessBoard({ fen }) {
 
     // Update game instance
     const newGame = new Chess(fen, { chess960: true })
-    setGame(newGame)
+    gameRef.current = newGame
+    orientationRef.current = orientation
 
     // Update ground instance (visu)
     ground.set({
-      fen: game.fen(),
-      movable: { dests: toDests(game) }
+      fen: fen,
+      lastMove: undefined,
+      orientation: orientationRef.current,
+      movable: { dests: toDests(gameRef.current) }
     });
-  }, [fen]);
+  }, [fen, orientation]);
 
-  return <div ref={boardRef} style={{ width: '500px', height: '500px' }} />;
+  return <div ref={containerRef} style={{ width: '500px', height: '500px' }} />;
 };

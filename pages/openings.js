@@ -6,11 +6,15 @@ import { freestyleNumberToFEN } from '../lib/freestyleUtils';
 export default function Openings() {
 
   const [fen, setFen] = useState(freestyleNumberToFEN(1))
+  const [orientation, setOrientation] = useState('white')
 
   const handleNewPosition = () => {
     const randomNumber = Math.floor(Math.random() * 960);
     const newFen = freestyleNumberToFEN(randomNumber);
+    const randomColor = Math.random() < 0.5 ? 'white' : 'black';
+
     setFen(newFen)
+    setOrientation(randomColor)
     console.log('New FEN generated: ' + fen);
   };
 
@@ -31,7 +35,7 @@ export default function Openings() {
           </h2>
 
           <div className="chessboard-container">
-            <ChessBoard fen={fen} />
+            <ChessBoard fen={fen} orientation={orientation} />
             <Button onClick={handleNewPosition}>
               New position
             </Button>
