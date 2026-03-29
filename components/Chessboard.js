@@ -7,6 +7,8 @@ export default function ChessBoard() {
   const [game] = useState(new Chess());
   const [ground, setGround] = useState(null);
 
+  // This function outputs all the available moves in a given position as a Map
+  // This gets passed to the visualization to display and accept legal moves
   const toDests = (game) => {
     const dests = new Map();
     const moves = game.moves({ verbose: true });
@@ -20,7 +22,6 @@ export default function ChessBoard() {
 
     return dests;
   };
-
 
   useEffect(() => {
     // Initialize board
