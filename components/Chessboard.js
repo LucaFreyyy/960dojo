@@ -27,7 +27,7 @@ export default function ChessBoard({ fen }) {
   useEffect(() => {
     // Initialize board
     const cg = Chessground(boardRef.current, {
-      fen: game.fen(),
+      fen: fen,
       movable: {
         free: false,
         color: 'both',
@@ -62,8 +62,6 @@ export default function ChessBoard({ fen }) {
       movable: { dests: toDests(game) }
     });
   }, [fen]);
-
-
 
   return <div ref={boardRef} style={{ width: '500px', height: '500px' }} />;
 };
