@@ -2,6 +2,9 @@ import Head from 'next/head';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import MoveList, { buildEvalTemplate, createLine, parsePgnTree, validateEvalShape } from '../components/MoveList';
 
+const samplePgn = '1. e4 e5 (1... c5 2. Nf3 d6) 2. Nf3 Nc6 (2... Nf6 3. Nxe5) 3. Bb5 a6';
+const sampleEval = '[0.0, 0.2, 0.1, [-0.1, 0.0, -0.2], 0.3, 0.25, [0.05, -0.4], 0.4, 0.35]';
+
 
 export default function MoveListMockPage() {
     const [pgnInput, setPgnInput] = useState('');
@@ -104,6 +107,37 @@ export default function MoveListMockPage() {
                         Test `updatePgn(pgn)`, `colorMoves(evalArray, userColor)` and `startLoadingAnimation()` directly from UI or console.
                     </p>
 
+                    <div style={{
+                        marginBottom: 16,
+                        background: '#121925',
+                        border: '1px solid #2b3447',
+                        borderRadius: 10,
+                        padding: 12,
+                        color: '#c7d2e8',
+                    }}>
+                        <div style={{ marginBottom: 8, fontWeight: 700 }}>Sample to copy/paste</div>
+                        <div style={{ marginBottom: 10 }}>
+                            <div style={{ fontSize: 13, color: '#9fb0cf', marginBottom: 4 }}>PGN</div>
+                            <code style={{ display: 'block', whiteSpace: 'pre-wrap', userSelect: 'all' }}>{samplePgn}</code>
+                        </div>
+                        <div>
+                            <div style={{ fontSize: 13, color: '#9fb0cf', marginBottom: 4 }}>Eval array</div>
+                            <code style={{ display: 'block', whiteSpace: 'pre-wrap', userSelect: 'all' }}>{sampleEval}</code>
+                        </div>
+                        <div style={{ marginTop: 10 }}>
+                            <button
+                                type="button"
+                                style={{ ...primaryBtnStyle, background: '#3a445c', border: '1px solid #586684' }}
+                                onClick={() => {
+                                    setPgnInput(samplePgn);
+                                    setEvalInput(sampleEval);
+                                }}
+                            >
+                                Fill Inputs With Sample
+                            </button>
+                        </div>
+                    </div>
+
                     <div style={{ display: 'grid', gap: 12, marginBottom: 16 }}>
                         <label style={{ display: 'grid', gap: 6 }}>
                             <span>PGN input</span>
@@ -123,6 +157,13 @@ export default function MoveListMockPage() {
                         </label>
                         <div>
                             <button type="button" onClick={handleUpdatePgn} style={primaryBtnStyle}>Update PGN</button>
+                            <button
+                                type="button"
+                                onClick={startLoadingAnimation}
+                                style={{ ...primaryBtnStyle, marginLeft: 8, background: '#3a445c', border: '1px solid #586684' }}
+                            >
+                                Show Loading
+                            </button>
                         </div>
 
                         <label style={{ display: 'grid', gap: 6 }}>
