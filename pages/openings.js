@@ -6,21 +6,28 @@ import { getDatabaseMove } from '../lib/moveGeneration';
 
 export default function Openings() {
 
-  const [fen, setFen] = useState(freestyleNumberToFEN(1))
+  const [startFen, setStartFen] = useState(freestyleNumberToFEN(1))
+  const [currentFen, setCurrentFen] = useState(freestyleNumberToFEN(1))
   const [orientation, setOrientation] = useState('white')
+
+  const handlePositionChange = (newFen) => {
+    console.log("Position changed, newFen: " + newFen)
+    setCurrentFen(newFen)
+  }
 
   const handleNewPosition = () => {
     const randomNumber = Math.floor(Math.random() * 960);
     const newFen = freestyleNumberToFEN(randomNumber);
     const randomColor = Math.random() < 0.5 ? 'white' : 'black';
 
-    setFen(newFen)
+    setStartFen(newFen)
+    setCurrentFen(newFen)
     setOrientation(randomColor)
-    console.log('New FEN generated: ' + fen);
+    console.log('New Start FEN generated: ' + startFen);
   };
 
   const handleGetDatabaseMove = async () => {
-    await getDatabaseMove(fen, 1500)
+    await getDatabaseMove(currentFen, 1500)
   }
 
   return (
@@ -40,7 +47,7 @@ export default function Openings() {
           </h2>
 
           <div className="chessboard-container">
-            <ChessBoard fen={fen} orientation={orientation} />
+            <ChessBoard fen={startFen} orientation={orientation} onPositionChange={handlePositionChange} />
             <Button onClick={handleNewPosition}>
               New position
             </Button>

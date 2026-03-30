@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Chessground } from 'chessground';
 import { Chess } from 'chess.js';
 
-export default function ChessBoard({ fen, orientation }) {
+export default function ChessBoard({ fen, orientation, onPositionChange }) {
   const containerRef = useRef(null);
   const gameRef = useRef(new Chess(fen, { chess960: true }));
   const orientationRef = useRef(orientation)
@@ -37,13 +37,20 @@ export default function ChessBoard({ fen, orientation }) {
         events: {
           after: (orig, dest) => {
             const move = gameRef.current.move({ from: orig, to: dest });
-            // TODO: send to database or somewhere
+            // Notify parent
+            if (onPositionChange) {
+              console.log("Callback exists, calling with:", gameRef.current.fen());
+              onPositionChange(gameRef.current.fen());
+            }
+            else {
+              console.log("No callback function provided.")
+            }
             cg.set({
               fen: gameRef.current.fen(),
               orientation: orientationRef.current,
               movable: { dests: toDests(gameRef.current) }
             });
-            console.log("Move made: " + move)
+            console.log("Move made: " + move.san)
           }
         }
       }
