@@ -3,6 +3,7 @@ import ChessBoard from '../components/Chessboard';
 import Button from '../components/Button.js'
 import { freestyleNumberToFEN } from '../lib/freestyleUtils';
 import { getDatabaseMove } from '../lib/moveGeneration';
+import { getStockfishMove } from '../lib/stockfishUtils';
 
 export default function Openings() {
 
@@ -27,7 +28,13 @@ export default function Openings() {
   };
 
   const handleGetDatabaseMove = async () => {
-    await getDatabaseMove(currentFen, 1500)
+    const move = await getDatabaseMove(currentFen, 1500)
+    console.log("Database returned move: " + move)
+  }
+
+  const handleGetStockfishMove = async () => {
+    const move = await getStockfishMove(currentFen, 1500)
+    console.log("Database returned move: " + move)
   }
 
   return (
@@ -53,6 +60,9 @@ export default function Openings() {
             </Button>
             <Button onClick={handleGetDatabaseMove}>
               Get Database Move
+            </Button>
+            <Button onClick={handleGetStockfishMove}>
+              Get Stockfish Move
             </Button>
           </div>
         </section>

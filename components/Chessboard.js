@@ -39,11 +39,7 @@ export default function ChessBoard({ fen, orientation, onPositionChange }) {
             const move = gameRef.current.move({ from: orig, to: dest });
             // Notify parent
             if (onPositionChange) {
-              console.log("Callback exists, calling with:", gameRef.current.fen());
               onPositionChange(gameRef.current.fen());
-            }
-            else {
-              console.log("No callback function provided.")
             }
             cg.set({
               fen: gameRef.current.fen(),
