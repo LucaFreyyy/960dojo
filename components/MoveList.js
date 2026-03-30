@@ -83,12 +83,21 @@ function getLineByPath(mainline, variationPath) {
     return line;
 }
 
-export function buildEvalTemplate(line) {
-    const out = [];
+function getParentSelectionFromVariationPath(variationPath) {
+    if (!variationPath.length) return null;
+    const parentPath = variationPath.slice(0, -1);
+    const [anchorMoveRaw] = String(variationPath[variationPath.length - 1]).split(':');
+    const anchorIndex = Number(anchorMoveRaw);
+    if (Number.isNaN(anchorIndex)) return { index: -1, variationPath: [] };
+    return { index: anchorIndex, variationPath: parentPath };
+}
+
+export function buildEvalTemplate(line, includeInitial = true) {
+    const out = includeInitial ? ['x'] : [];
     for (const node of line) {
         out.push('x');
         for (const variation of node.variations) {
-            out.push(buildEvalTemplate(variation));
+            out.push(buildEvalTemplate(variation, false));
         }
     }
     return out;
@@ -165,7 +174,7 @@ export default function MoveList({
         const map = new Map();
 
         function walk(line, evalLine, path) {
-            let evalCursor = 0;
+            let evalCursor = path.length === 0 ? 1 : 0;
             for (let i = 0; i < line.length; i += 1) {
                 const node = line[i];
                 const key = `${path.join('|') || 'main'}:${i}`;
@@ -179,16 +188,30 @@ export default function MoveList({
             }
         }
 
-        if (hasValidEvalData) walk(tree, evalData, []);
+        if (hasValidEvalData) {
+            map.set('main:initial', evalData[0]);
+            walk(tree, evalData, []);
+        }
         return map;
     }, [evalData, hasValidEvalData, tree]);
 
     const currentSelectedEval = useMemo(() => {
-        if (!hasValidEvalData || selection.index < 0) return null;
+        if (!hasValidEvalData) return null;
+        if (selection.index < 0) {
+            if (selection.variationPath.length === 0) {
+                const initialEval = pathToEval.get('main:initial');
+                return isFiniteNumber(initialEval) ? initialEval : null;
+            }
+            return null;
+        }
         const key = `${selection.variationPath.join('|') || 'main'}:${selection.index}`;
         const value = pathToEval.get(key);
         return isFiniteNumber(value) ? value : null;
     }, [hasValidEvalData, pathToEval, selection]);
+    const currentSelectedEvalColor = useMemo(() => {
+        if (!isFiniteNumber(currentSelectedEval)) return '#d0d7e5';
+        return colorFromEval(currentSelectedEval, userColor);
+    }, [currentSelectedEval, userColor]);
 
     const goToInitial = useCallback(() => {
         setSelection({ index: -1, variationPath: [] });
@@ -202,15 +225,23 @@ export default function MoveList({
         setSelection((prev) => {
             const line = getLineByPath(tree, prev.variationPath);
             if (prev.index < line.length - 1) return { ...prev, index: prev.index + 1 };
-            if (prev.variationPath.length > 0) return { index: Math.max(-1, tree.length - 1), variationPath: [] };
+            if (prev.variationPath.length > 0) return prev;
             return prev;
         });
     }, [tree]);
 
     const goPrev = useCallback(() => {
         setSelection((prev) => {
-            if (prev.index > -1) return { ...prev, index: prev.index - 1 };
-            if (prev.variationPath.length > 0) return { index: -1, variationPath: [] };
+            if (prev.index > 0) return { ...prev, index: prev.index - 1 };
+            if (prev.index === 0 && prev.variationPath.length > 0) {
+                const parentSelection = getParentSelectionFromVariationPath(prev.variationPath);
+                return parentSelection || { index: -1, variationPath: [] };
+            }
+            if (prev.index === -1 && prev.variationPath.length > 0) {
+                const parentSelection = getParentSelectionFromVariationPath(prev.variationPath);
+                return parentSelection || { index: -1, variationPath: [] };
+            }
+            if (prev.index === 0) return { ...prev, index: -1 };
             return prev;
         });
     }, []);
@@ -229,51 +260,116 @@ export default function MoveList({
         return () => window.removeEventListener('keydown', onKeyDown);
     }, [goNext, goPrev]);
 
-    function renderLine(line, path = [], moveNoStart = 1) {
+    function renderMoveButton(node, index, path, prefix = '', fullWidth = false) {
+        if (!node) return null;
+        const key = `${path.join('|') || 'main'}:${index}`;
+        const selected = selection.index === index
+            && selection.variationPath.length === path.length
+            && selection.variationPath.every((x, idx) => x === path[idx]);
+        const evalValue = hasValidEvalData ? pathToEval.get(key) : null;
+        const color = selected ? '#101010' : hasValidEvalData ? colorFromEval(evalValue, userColor) : '#e6e6e6';
+        const background = selected ? '#f6d94d' : 'transparent';
+
+        return (
+            <button
+                type="button"
+                onClick={() => setSelection({ index, variationPath: clonePath(path) })}
+                style={{
+                    border: 'none',
+                    background,
+                    color,
+                    borderRadius: 6,
+                    padding: fullWidth ? '6px 8px' : '2px 6px',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                    textAlign: 'left',
+                    width: fullWidth ? '100%' : 'auto',
+                    display: fullWidth ? 'block' : 'inline-block',
+                }}
+            >
+                {prefix}
+                {node.san}
+            </button>
+        );
+    }
+
+    function renderVariationLine(line, path, moveNoStart = 1) {
         let moveNo = moveNoStart;
         return (
             <span>
                 {line.map((node, i) => {
-                    const key = `${path.join('|') || 'main'}:${i}`;
-                    const selected = selection.index === i
-                        && selection.variationPath.length === path.length
-                        && selection.variationPath.every((x, idx) => x === path[idx]);
-                    const evalValue = hasValidEvalData ? pathToEval.get(key) : null;
-                    const color = selected ? '#101010' : hasValidEvalData ? colorFromEval(evalValue, userColor) : '#e6e6e6';
-                    const background = selected ? '#f6d94d' : 'transparent';
                     const showMoveNo = (i % 2) === 0;
                     const moveLabel = showMoveNo ? `${moveNo}. ` : '';
                     if (!showMoveNo) moveNo += 1;
+                    const segmentPath = [...path];
 
                     return (
-                        <span key={key}>
-                            <button
-                                type="button"
-                                onClick={() => setSelection({ index: i, variationPath: clonePath(path) })}
-                                style={{
-                                    border: 'none',
-                                    background,
-                                    color,
-                                    borderRadius: 6,
-                                    padding: '2px 6px',
-                                    marginRight: 4,
-                                    cursor: 'pointer',
-                                    fontWeight: 600,
-                                }}
-                            >
-                                {moveLabel}
-                                {node.san}
-                            </button>
+                        <span key={`${segmentPath.join('|') || 'main'}:${i}`}>
+                            {renderMoveButton(node, i, segmentPath, moveLabel)}
+                            <span style={{ marginRight: 4 }} />
                             {node.variations.map((variation, vIdx) => (
-                                <span key={`${key}-var-${vIdx}`} style={{ color: '#b8b8b8', marginRight: 6 }}>
-                                    ( {renderLine(variation, [...path, `${i}:${vIdx}`], moveNo)} )
+                                <span key={`${segmentPath.join('|')}:${i}:var-${vIdx}`} style={{ color: '#a9b4c9', marginLeft: 4 }}>
+                                    ( {renderVariationLine(variation, [...segmentPath, `${i}:${vIdx}`], moveNo)} )
                                 </span>
                             ))}
+                            <span style={{ marginRight: 6 }} />
                         </span>
                     );
                 })}
             </span>
         );
+    }
+
+    function renderMainlineRows() {
+        const rows = [];
+        for (let i = 0; i < tree.length; i += 2) {
+            const whiteNode = tree[i];
+            const blackNode = tree[i + 1];
+            const moveNumber = Math.floor(i / 2) + 1;
+
+            rows.push(
+                <div
+                    key={`main-row-${i}`}
+                    style={{
+                        display: 'grid',
+                        gridTemplateColumns: '44px 1fr 1fr',
+                        gap: 8,
+                        alignItems: 'center',
+                        padding: '4px 0',
+                        borderBottom: '1px solid #1f2533',
+                    }}
+                >
+                    <div style={{ color: '#93a3bf', fontWeight: 600 }}>{moveNumber}.</div>
+                    <div>{renderMoveButton(whiteNode, i, [], '', true)}</div>
+                    <div>{renderMoveButton(blackNode, i + 1, [], '', true)}</div>
+                </div>
+            );
+
+            const whiteVariations = whiteNode?.variations || [];
+            const blackVariations = blackNode?.variations || [];
+            const combined = [
+                ...whiteVariations.map((line, vIdx) => ({ line, path: [`${i}:${vIdx}`], moveNo: moveNumber })),
+                ...blackVariations.map((line, vIdx) => ({ line, path: [`${i + 1}:${vIdx}`], moveNo: moveNumber + 1 })),
+            ];
+
+            for (let v = 0; v < combined.length; v += 1) {
+                const variation = combined[v];
+                rows.push(
+                    <div
+                        key={`main-row-${i}-var-${v}`}
+                        style={{
+                            padding: '6px 10px 8px 54px',
+                            color: '#a9b4c9',
+                            fontSize: 14,
+                            borderBottom: '1px dashed #1b2230',
+                        }}
+                    >
+                        ( {renderVariationLine(variation.line, variation.path, variation.moveNo)} )
+                    </div>
+                );
+            }
+        }
+        return rows;
     }
 
     return (
@@ -298,28 +394,24 @@ export default function MoveList({
                 background: '#0f131a',
                 padding: 12,
                 lineHeight: 1.9,
-                position: 'relative',
             }}>
-                {loading ? (
-                    <div style={{
-                        position: 'absolute',
-                        inset: 0,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        background: 'rgba(10, 12, 17, 0.72)',
-                        borderRadius: 10,
-                    }}>
-                        <div className="spinner" />
-                    </div>
-                ) : null}
-                {tree.length > 0 ? renderLine(tree) : <span style={{ color: '#aab3c2' }}>Paste a PGN and click Update PGN.</span>}
+                {tree.length > 0 ? renderMainlineRows() : <span style={{ color: '#aab3c2' }}>Paste a PGN and click Update PGN.</span>}
             </div>
+            {loading ? (
+                <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 10, color: '#9fb0cf', fontSize: 13 }}>
+                    <div className="spinner" />
+                    Loading move list...
+                </div>
+            ) : null}
 
-            <div style={{ marginTop: 12, color: '#d0d7e5', fontSize: 14 }}>
-                <strong>Selected move eval:</strong>{' '}
-                {currentSelectedEval === null ? 'N/A (initial position or no valid eval format)' : currentSelectedEval}
-            </div>
+            {isFiniteNumber(currentSelectedEval) ? (
+                <div style={{ marginTop: 12, color: '#d0d7e5', fontSize: 14 }}>
+                    <strong>Eval:</strong>{' '}
+                    <span style={{ color: currentSelectedEvalColor, fontWeight: 700 }}>
+                        {currentSelectedEval}
+                    </span>
+                </div>
+            ) : null}
 
             <style jsx>{`
                 .ml-btn {
