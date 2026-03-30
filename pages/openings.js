@@ -2,6 +2,7 @@ import { useState } from 'react'
 import ChessBoard from '../components/Chessboard';
 import Button from '../components/Button.js'
 import { freestyleNumberToFEN } from '../lib/freestyleUtils';
+import { getDatabaseMove } from '../lib/moveGeneration';
 
 export default function Openings() {
 
@@ -17,6 +18,10 @@ export default function Openings() {
     setOrientation(randomColor)
     console.log('New FEN generated: ' + fen);
   };
+
+  const handleGetDatabaseMove = async () => {
+    await getDatabaseMove(fen, 1500)
+  }
 
   return (
     <>
@@ -38,6 +43,9 @@ export default function Openings() {
             <ChessBoard fen={fen} orientation={orientation} />
             <Button onClick={handleNewPosition}>
               New position
+            </Button>
+            <Button onClick={handleGetDatabaseMove}>
+              Get Database Move
             </Button>
           </div>
         </section>
