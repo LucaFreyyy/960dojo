@@ -39,6 +39,22 @@ function parseSanMovesFromPgn(pgn) {
   return out;
 }
 
+function extractPuzzleStartPlyFromPgn(pgn) {
+  if (typeof pgn !== 'string') return null;
+  const body = pgn
+    .split('\n')
+    .filter((line) => !line.startsWith('['))
+    .join(' ')
+    .trim();
+  const m = body.match(/(\d+)\.(\.\.)?/);
+  if (!m) return null;
+  const fullmove = Number(m[1]);
+  if (!Number.isFinite(fullmove) || fullmove < 1) return null;
+  const isBlackMove = m[2] === '..';
+  // 1-based halfmove index at puzzle start.
+  return isBlackMove ? (2 * (fullmove - 1) + 2) : (2 * (fullmove - 1) + 1);
+}
+
 function parseDifficulty(difficulty) {
   if (difficulty === 'easy') return { min: -300, max: -100 };
   if (difficulty === 'hard') return { min: 100, max: 300 };
@@ -188,6 +204,7 @@ export default async function handler(req, res) {
 
     const startFen = extractPgnTag(chosen.pgn, 'FEN');
     const puzzleLine = parseSanMovesFromPgn(chosen.pgn);
+    const puzzleStartPly = extractPuzzleStartPlyFromPgn(chosen.pgn);
     if (!startFen || !puzzleLine.length) {
       return res.status(500).json({ error: 'Invalid tactic PGN: missing FEN tag or moves' });
     }
@@ -202,6 +219,7 @@ export default async function handler(req, res) {
         startFen,
         puzzleLine,
         linkToGame: extractPgnTag(chosen.pgn, 'Site'),
+        puzzleStartPly,
       },
       userRating,
       userFinishedCount,

@@ -1,5 +1,6 @@
 import Head from 'next/head';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
 import { Chess } from 'chess.js';
 import { useSupabaseSession } from '../lib/SessionContext';
 import Chessboard from '../components/Chessboard';
@@ -66,6 +67,13 @@ function buildPgnFromSan(startFen, mainlineSans, failedVariation = null) {
 
 function getVariationKey(path) {
   return `${(path || []).join('|')}:0`;
+}
+
+function lichessUrlAtPly(url, ply) {
+  if (typeof url !== 'string' || !url) return null;
+  const p = Number(ply);
+  const hashPly = Number.isFinite(p) && p >= 1 ? Math.floor(p) : 0;
+  return `${url.split('#')[0]}#${hashPly}`;
 }
 
 export default function TacticsPage() {
@@ -427,7 +435,10 @@ export default function TacticsPage() {
     } catch {}
   }
 
-  const puzzleLink = tactic?.linkToGame || null;
+  const puzzleLink = useMemo(
+    () => lichessUrlAtPly(tactic?.linkToGame, tactic?.puzzleStartPly),
+    [tactic?.linkToGame, tactic?.puzzleStartPly]
+  );
 
   return (
     <>
@@ -442,6 +453,39 @@ export default function TacticsPage() {
 
         {error ? <div style={{ color: '#ef4444', marginBottom: 10 }}>{error}</div> : null}
         {infoMessage ? <div style={{ color: '#93c5fd', marginBottom: 10 }}>{infoMessage}</div> : null}
+        {!userId ? (
+          <div
+            style={{
+              marginBottom: 14,
+              padding: '0.9rem 1rem',
+              borderRadius: 12,
+              border: '1px solid #334155',
+              background: '#0f172a',
+              color: '#e2e8f0',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 12,
+              flexWrap: 'wrap',
+            }}
+          >
+            <span style={{ fontWeight: 700 }}>Log in to play puzzles</span>
+            <Link
+              href="/login"
+              style={{
+                display: 'inline-block',
+                padding: '0.5rem 0.9rem',
+                borderRadius: 10,
+                background: '#2563eb',
+                color: '#fff',
+                textDecoration: 'none',
+                fontWeight: 800,
+              }}
+            >
+              Log in
+            </Link>
+          </div>
+        ) : null}
 
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(340px, 600px) minmax(320px, 1fr)', gap: 18 }}>
           <section>
