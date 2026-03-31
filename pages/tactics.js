@@ -154,16 +154,11 @@ export default function TacticsPage() {
   const liveBrowseIndex = finished ? Math.max(-1, lineForDisplay.length - 1) : Math.max(-1, playedSans.length - 1);
   const isBrowsingLive = browsePosition.index === liveBrowseIndex && (browsePosition.variationPath?.length || 0) === 0;
   const moveListSelectedPosition = useMemo(
-    () => (
-      finished
-        ? browsePosition
-        : { index: Math.max(-1, playedSans.length - 1), variationPath: [] }
-    ),
-    [finished, browsePosition, playedSans.length]
+    () => browsePosition,
+    [browsePosition]
   );
 
   const handleBrowsePositionChanged = useCallback((index, variationPath) => {
-    if (!finished) return;
     setBrowsePosition((prev) => {
       const nextPath = Array.isArray(variationPath) ? variationPath : [];
       const sameIndex = prev.index === index;
@@ -172,16 +167,18 @@ export default function TacticsPage() {
       if (sameIndex && samePath) return prev;
       return { index, variationPath: nextPath };
     });
-  }, [finished]);
+  }, []);
 
   const displayedFen = useMemo(() => {
-    if (!finished) return currentFen || startFen;
+    if (!finished) {
+      return fenByIndex[Math.max(0, browsePosition.index + 1)] || currentFen || startFen;
+    }
     if (browsePosition.variationPath?.length) {
       const key = getVariationKey(browsePosition.variationPath);
       return failedVariationFenByKey.get(key) || fenByIndex[Math.max(0, browsePosition.index + 1)] || currentFen;
     }
     return fenByIndex[Math.max(0, browsePosition.index + 1)] || currentFen;
-  }, [finished, isBrowsingLive, currentFen, startFen, browsePosition, fenByIndex, failedVariationFenByKey]);
+  }, [finished, currentFen, startFen, browsePosition, fenByIndex, failedVariationFenByKey]);
 
   useEffect(() => { playedSansRef.current = playedSans; }, [playedSans]);
   useEffect(() => { solutionSansRef.current = solutionSans; }, [solutionSans]);
