@@ -152,6 +152,8 @@ export default function MoveList({
     userColor,
     loading,
     onBrowsePositionChanged,
+    selectedPosition = null,
+    resetSelectionOnPgnChange = true,
 }) {
     const tree = useMemo(() => parsePgnTree(pgn), [pgn]);
     const template = useMemo(() => buildEvalTemplate(tree), [tree]);
@@ -163,8 +165,22 @@ export default function MoveList({
     const [selection, setSelection] = useState({ index: -1, variationPath: [] });
 
     useEffect(() => {
+        if (!resetSelectionOnPgnChange) return;
         setSelection({ index: -1, variationPath: [] });
-    }, [pgn]);
+    }, [pgn, resetSelectionOnPgnChange]);
+
+    useEffect(() => {
+        if (!selectedPosition) return;
+        const nextIndex = Number.isInteger(selectedPosition.index) ? selectedPosition.index : -1;
+        const nextPath = Array.isArray(selectedPosition.variationPath) ? selectedPosition.variationPath : [];
+        setSelection((prev) => {
+            const sameIndex = prev.index === nextIndex;
+            const samePath = prev.variationPath.length === nextPath.length
+                && prev.variationPath.every((x, i) => x === nextPath[i]);
+            if (sameIndex && samePath) return prev;
+            return { index: nextIndex, variationPath: [...nextPath] };
+        });
+    }, [selectedPosition]);
 
     useEffect(() => {
         onBrowsePositionChanged(selection.index, clonePath(selection.variationPath));

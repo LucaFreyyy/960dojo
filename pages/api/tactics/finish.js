@@ -113,10 +113,10 @@ export default async function handler(req, res) {
     });
     if (ratingInsertErr) return res.status(500).json({ error: ratingInsertErr.message });
 
-    // Likes/dislikes: disLikes = [won&liked, lost&liked, won&disliked, lost&disliked]
+    // Likes/dislikes: disLikes = [win+like, win+dislike, loss+like, loss+dislike]
     let disLikes = parseDislikesArray(tacticRow.disLikes);
-    if (liked === true) disLikes[solved ? 0 : 1] += 1;
-    if (liked === false) disLikes[solved ? 2 : 3] += 1;
+    if (liked === true) disLikes[solved ? 0 : 2] += 1;
+    if (liked === false) disLikes[solved ? 1 : 3] += 1;
 
     const tacticUpdate = {
       rating: newTacticRating,
@@ -134,6 +134,8 @@ export default async function handler(req, res) {
       userRating: newUserRating,
       tacticRating: newTacticRating,
       delta,
+      userFinishedCount: (userFinishedCount || 0) + 1,
+      tacticTimesPlayed: tacticTimesPlayed + 1,
     });
   } catch (e) {
     console.error('[api/tactics/finish] error:', e);

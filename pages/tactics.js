@@ -1,7 +1,13 @@
 import Head from 'next/head';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Chess } from 'chess.js';
 import { useSupabaseSession } from '../lib/SessionContext';
+import Chessboard from '../components/Chessboard';
+import MoveList from '../components/MoveList';
+import DifficultySelector from '../components/DifficultySelector';
+import PostTacticDisplay from '../components/PostTacticDisplay';
+import RatingDisplay from '../components/RatingDisplay';
+
 async function hashEmail(email) {
   const encoder = new TextEncoder();
   const data = encoder.encode(email);
@@ -9,83 +15,51 @@ async function hashEmail(email) {
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
 }
-function pieceToAsset(piece) {
-  if (!piece) return null;
-  const color = piece.color === 'w' ? 'w' : 'b';
-  const map = { p: 'P', n: 'N', b: 'B', r: 'R', q: 'Q', k: 'K' };
-  return `/legacy-site/pieces/${color}_${map[piece.type]}.svg`;
-}
-function parseLine(raw) {
-  if (Array.isArray(raw)) return raw.map(String).filter(Boolean);
-  if (typeof raw === 'string') return raw.split(/[\s,]+/).map((s) => s.trim()).filter(Boolean);
-  return [];
-}
 
 function normalizeSan(san) {
   if (typeof san !== 'string') return '';
-  return san
-    .replace(/[?!]+/g, '')
-    .replace(/[+#]+/g, '')
-    .replace(/^0-0-0$/i, 'O-O-O')
-    .replace(/^0-0$/i, 'O-O')
+  return san.replace(/[?!]+/g, '').replace(/[+#]+/g, '').replace(/^0-0-0$/i, 'O-O-O').replace(/^0-0$/i, 'O-O').trim();
+}
+
+function parsePgnMoves(rawPgn) {
+  if (typeof rawPgn !== 'string') return [];
+  const body = rawPgn
+    .split('\n')
+    .filter((line) => !line.startsWith('['))
+    .join(' ')
+    .replace(/\{[^}]*\}/g, ' ')
+    .replace(/\([^)]*\)/g, ' ')
+    .replace(/\$\d+/g, ' ')
+    .replace(/\b1-0\b|\b0-1\b|\b1\/2-1\/2\b|\*/g, ' ')
+    .replace(/\s+/g, ' ')
     .trim();
+  return body
+    .split(' ')
+    .map((t) => t.replace(/^\d+\.(\.\.)?/, '').replace(/^\d+\.\.\./, '').trim())
+    .filter((t) => t && !/^\d+$/.test(t));
 }
 
-function playSanOnBoard(chess, san) {
-  const target = normalizeSan(san);
-  const verbose = chess.moves({ verbose: true });
-  const isKingCastle = target === 'O-O';
-  const isQueenCastle = target === 'O-O-O';
-  const match =
-    verbose.find((m) => normalizeSan(m.san) === target) ||
-    (isKingCastle ? verbose.find((m) => String(m.flags || '').includes('k')) : null) ||
-    (isQueenCastle ? verbose.find((m) => String(m.flags || '').includes('q')) : null) ||
-    ((isKingCastle || isQueenCastle) ? verbose.find((m) => normalizeSan(m.san).startsWith(target)) : null);
-  if (match) return chess.move({ from: match.from, to: match.to, promotion: match.promotion });
-  return chess.move(san, { sloppy: true });
+function buildPgnFromSan(startFen, mainlineSans, failedVariation = null) {
+  const game = new Chess(startFen, { chess960: true });
+  const tokens = [];
+
+  for (let i = 0; i < mainlineSans.length; i += 1) {
+    const san = mainlineSans[i];
+    const moveNo = game.moveNumber();
+    if (game.turn() === 'w') tokens.push(`${moveNo}. ${san}`);
+    else tokens.push(`${moveNo}... ${san}`);
+
+    if (failedVariation && failedVariation.anchorIndex === i) {
+      tokens.push(`(${moveNo}${game.turn() === 'w' ? '.' : '...'} ${failedVariation.san})`);
+    }
+    try { game.move(san); } catch { break; }
+  }
+
+  return tokens.join(' ');
 }
 
-function lichessGameUrlAtPly(linkToGame, ply) {
-  if (typeof linkToGame !== 'string' || !linkToGame) return null;
-  const p = Number(ply);
-  // Keep consistent with backend: moveNrStart is treated as 1-based halfmove index.
-  const safePly = Number.isFinite(p) && p >= 1 ? Math.floor(p) - 1 : 0;
-  return linkToGame.split('#')[0] + `#${safePly}`;
-}
-
-function squareFromDisplay({ r, f, flip }) {
-  const files = 'abcdefgh';
-  if (!flip) return `${files[f]}${8 - r}`;
-  return `${files[7 - f]}${r + 1}`;
-}
-
-function displayFromSquare({ square, flip }) {
-  const files = 'abcdefgh';
-  const f = files.indexOf(square[0]);
-  const rank = Number(square[1]);
-  if (!flip) return { r: 8 - rank, f };
-  return { r: rank - 1, f: 7 - f };
-}
-
-function drawArrow(ctx, x1, y1, x2, y2, color) {
-  const headLen = 14;
-  const dx = x2 - x1;
-  const dy = y2 - y1;
-  const angle = Math.atan2(dy, dx);
-  ctx.strokeStyle = color;
-  ctx.fillStyle = color;
-  ctx.lineWidth = 6;
-  ctx.lineCap = 'round';
-  ctx.beginPath();
-  ctx.moveTo(x1, y1);
-  ctx.lineTo(x2, y2);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(x2, y2);
-  ctx.lineTo(x2 - headLen * Math.cos(angle - Math.PI / 6), y2 - headLen * Math.sin(angle - Math.PI / 6));
-  ctx.lineTo(x2 - headLen * Math.cos(angle + Math.PI / 6), y2 - headLen * Math.sin(angle + Math.PI / 6));
-  ctx.closePath();
-  ctx.fill();
+function getVariationKey(path) {
+  return `${(path || []).join('|')}:0`;
 }
 
 export default function TacticsPage() {
@@ -94,496 +68,374 @@ export default function TacticsPage() {
   const [difficulty, setDifficulty] = useState('middle');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [userRating, setUserRating] = useState(1500);
+
   const [tactic, setTactic] = useState(null);
-  const [tacticRating, setTacticRating] = useState(null);
-  const [puzzleLineSan, setPuzzleLineSan] = useState([]);
-  const [chess, setChess] = useState(null);
-  const [selected, setSelected] = useState(null);
-  const [legalTargets, setLegalTargets] = useState([]);
-  const [lastMove, setLastMove] = useState(null);
-  const [plyIndex, setPlyIndex] = useState(0);
-  const [movesSanPlayed, setMovesSanPlayed] = useState([]);
-  const [fenHistory, setFenHistory] = useState([]);
-  const [viewIndex, setViewIndex] = useState(0);
+  const [solutionSans, setSolutionSans] = useState([]);
+  const [startFen, setStartFen] = useState(null);
+  const [orientation, setOrientation] = useState('white');
+
+  const [userRating, setUserRating] = useState(1500);
+  const [puzzleRating, setPuzzleRating] = useState(null);
+  const [userDelta, setUserDelta] = useState(null);
+  const [puzzleDelta, setPuzzleDelta] = useState(null);
+  const [userFinishedCount, setUserFinishedCount] = useState(0);
+  const [tacticTimesPlayed, setTacticTimesPlayed] = useState(0);
+
+  const [playedSans, setPlayedSans] = useState([]);
+  const [currentFen, setCurrentFen] = useState(null);
+  const [lastMove, setLastMove] = useState(undefined);
+
   const [finished, setFinished] = useState(false);
   const [solved, setSolved] = useState(false);
-  const [ratingDelta, setRatingDelta] = useState(null);
-  const [gameLinkAtStart, setGameLinkAtStart] = useState(null);
-  const [likeChoice, setLikeChoice] = useState(null); // true | false | null
-  const [playerColor, setPlayerColor] = useState('white'); // orientation: side to move at puzzle start
-  const [dragFrom, setDragFrom] = useState(null);
-  const [highlights, setHighlights] = useState(() => ({})); // square -> 'y' | 'b'
-  const [arrows, setArrows] = useState([]); // {from,to,color}
-  const [arrowStart, setArrowStart] = useState(null);
-  const [arrowCtrl, setArrowCtrl] = useState(false);
-  const [arrowHover, setArrowHover] = useState(null);
+  const [failedVariation, setFailedVariation] = useState(null);
+  const [likeChoice, setLikeChoice] = useState(null);
 
-  const boardRef = useRef(null);
-  const flip = playerColor === 'black';
+  const [browsePosition, setBrowsePosition] = useState({ index: -1, variationPath: [] });
+  const [waitingForReply, setWaitingForReply] = useState(false);
+  const replyTimerRef = useRef(null);
+  const playedSansRef = useRef([]);
+  const solutionSansRef = useRef([]);
+  const currentFenRef = useRef(null);
+  const loadingRef = useRef(false);
+  const finishedRef = useRef(false);
+  const waitingForReplyRef = useRef(false);
+  const isBrowsingLiveRef = useRef(true);
+  const lastProcessedMoveRef = useRef('');
 
-  useEffect(() => {
-    const canvas = document.getElementById('tactics-arrow-layer');
-    const container = boardRef.current;
-    if (!canvas || !container) return;
-    const rect = container.getBoundingClientRect();
-    canvas.width = Math.max(1, Math.floor(rect.width));
-    canvas.height = Math.max(1, Math.floor(rect.height));
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    const center = (sq) => {
-      const { r, f } = displayFromSquare({ square: sq, flip });
-      const size = canvas.width / 8;
-      return { x: (f + 0.5) * size, y: (r + 0.5) * size };
-    };
-
-    for (const a of arrows) {
-      const p1 = center(a.from);
-      const p2 = center(a.to);
-      drawArrow(ctx, p1.x, p1.y, p2.x, p2.y, a.color || '#f59e0b');
-    }
-
-    if (arrowStart && arrowHover && arrowStart !== arrowHover) {
-      const p1 = center(arrowStart);
-      const p2 = center(arrowHover);
-      drawArrow(ctx, p1.x, p1.y, p2.x, p2.y, arrowCtrl ? '#60a5fa' : '#f59e0b');
-    }
-  }, [arrows, arrowStart, arrowHover, arrowCtrl, flip]);
-
-  useEffect(() => {
-    // Resize/redraw arrows on resize
-    const onResize = () => {
-      // trigger redraw by updating hover to itself
-      setArrowHover((h) => h);
-    };
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
   useEffect(() => {
     if (!session?.user?.email) return setUserId(null);
     hashEmail(session.user.email).then(setUserId).catch(() => setUserId(null));
   }, [session]);
-  const board = useMemo(() => (chess ? chess.board() : []), [chess, chess?.fen()]);
-  const displayFen = useMemo(() => {
-    if (!chess) return null;
-    if (!finished) return chess.fen();
-    return fenHistory[viewIndex] || chess.fen();
-  }, [chess, finished, fenHistory, viewIndex]);
 
-  const displayChess = useMemo(() => {
-    if (!displayFen) return null;
-    return new Chess(displayFen, { chess960: true });
-  }, [displayFen]);
+  const lineForDisplay = useMemo(() => (finished ? solutionSans : playedSans), [finished, solutionSans, playedSans]);
 
-  const displayBoard = useMemo(() => (displayChess ? displayChess.board() : []), [displayChess, displayChess?.fen()]);
+  const moveListPgn = useMemo(() => {
+    if (!startFen) return '';
+    return buildPgnFromSan(startFen, lineForDisplay, finished && !solved ? failedVariation : null);
+  }, [startFen, lineForDisplay, finished, solved, failedVariation]);
 
-  useEffect(() => {
+  const fenByIndex = useMemo(() => {
+    if (!startFen) return [''];
+    const game = new Chess(startFen, { chess960: true });
+    const fens = [game.fen()];
+    for (const san of lineForDisplay) {
+      try {
+        const mv = game.move(san, { sloppy: true });
+        if (!mv) break;
+        fens.push(game.fen());
+      } catch {
+        break;
+      }
+    }
+    return fens;
+  }, [startFen, lineForDisplay]);
+
+  const failedVariationFenByKey = useMemo(() => {
+    const map = new Map();
+    if (!startFen || !failedVariation) return map;
+    const game = new Chess(startFen, { chess960: true });
+    const anchorHalfmoveCount = Math.max(0, failedVariation.anchorIndex + 1);
+    for (let i = 0; i < anchorHalfmoveCount && i < lineForDisplay.length; i += 1) {
+      try { game.move(lineForDisplay[i], { sloppy: true }); } catch {}
+    }
+    try {
+      const mv = game.move(failedVariation.san, { sloppy: true });
+      if (mv) map.set(getVariationKey(failedVariation.path), game.fen());
+    } catch {}
+    return map;
+  }, [startFen, failedVariation, lineForDisplay]);
+
+  const liveBrowseIndex = finished ? Math.max(-1, lineForDisplay.length - 1) : Math.max(-1, playedSans.length - 1);
+  const isBrowsingLive = browsePosition.index === liveBrowseIndex && (browsePosition.variationPath?.length || 0) === 0;
+  const moveListSelectedPosition = useMemo(
+    () => (
+      finished
+        ? browsePosition
+        : { index: Math.max(-1, playedSans.length - 1), variationPath: [] }
+    ),
+    [finished, browsePosition, playedSans.length]
+  );
+
+  const handleBrowsePositionChanged = useCallback((index, variationPath) => {
     if (!finished) return;
-    const onKeyDown = (e) => {
-      if (e.key === 'ArrowLeft') setViewIndex((v) => Math.max(0, v - 1));
-      if (e.key === 'ArrowRight') setViewIndex((v) => Math.min((fenHistory?.length || 1) - 1, v + 1));
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [finished, fenHistory?.length]);
-  function resetUiForNewPuzzle() {
-    setError('');
-    setFinished(false);
-    setSolved(false);
-    setRatingDelta(null);
-    setGameLinkAtStart(null);
-    setLikeChoice(null);
-    setSelected(null);
-    setLegalTargets([]);
-    setLastMove(null);
-    setMovesSanPlayed([]);
-    setPlyIndex(0);
-    setFenHistory([]);
-    setViewIndex(0);
-    setPlayerColor('white');
-    setDragFrom(null);
-    setHighlights({});
-    setArrows([]);
-    setArrowStart(null);
-    setArrowCtrl(false);
-    setArrowHover(null);
-  }
-  async function loadNext() {
+    setBrowsePosition((prev) => {
+      const nextPath = Array.isArray(variationPath) ? variationPath : [];
+      const sameIndex = prev.index === index;
+      const samePath = prev.variationPath.length === nextPath.length
+        && prev.variationPath.every((x, i) => x === nextPath[i]);
+      if (sameIndex && samePath) return prev;
+      return { index, variationPath: nextPath };
+    });
+  }, [finished]);
+
+  const displayedFen = useMemo(() => {
+    if (!finished) return currentFen || startFen;
+    if (browsePosition.variationPath?.length) {
+      const key = getVariationKey(browsePosition.variationPath);
+      return failedVariationFenByKey.get(key) || fenByIndex[Math.max(0, browsePosition.index + 1)] || currentFen;
+    }
+    return fenByIndex[Math.max(0, browsePosition.index + 1)] || currentFen;
+  }, [finished, isBrowsingLive, currentFen, startFen, browsePosition, fenByIndex, failedVariationFenByKey]);
+
+  useEffect(() => { playedSansRef.current = playedSans; }, [playedSans]);
+  useEffect(() => { solutionSansRef.current = solutionSans; }, [solutionSans]);
+  useEffect(() => { currentFenRef.current = currentFen; }, [currentFen]);
+  useEffect(() => { loadingRef.current = loading; }, [loading]);
+  useEffect(() => { finishedRef.current = finished; }, [finished]);
+  useEffect(() => { waitingForReplyRef.current = waitingForReply; }, [waitingForReply]);
+  useEffect(() => { isBrowsingLiveRef.current = isBrowsingLive; }, [isBrowsingLive]);
+
+  async function loadNextPuzzle() {
+    if (replyTimerRef.current) {
+      clearTimeout(replyTimerRef.current);
+      replyTimerRef.current = null;
+    }
+    setWaitingForReply(false);
     if (!userId) {
-      setError('Log in to play tactics rated.');
+      setError('Log in to play tactics.');
       return;
     }
     setLoading(true);
-    resetUiForNewPuzzle();
+    setError('');
+    setFinished(false);
+    setSolved(false);
+    setLikeChoice(null);
+    setFailedVariation(null);
+    setPlayedSans([]);
+    setBrowsePosition({ index: -1, variationPath: [] });
+    setLastMove(undefined);
+    setUserDelta(null);
+    setPuzzleDelta(null);
+
     try {
-      const res = await fetch(
-        `/api/tactics/next?userId=${encodeURIComponent(userId)}&difficulty=${encodeURIComponent(difficulty)}`
-      );
+      const res = await fetch(`/api/tactics/next?userId=${encodeURIComponent(userId)}&difficulty=${encodeURIComponent(difficulty)}`);
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || 'Failed to load tactic');
+      if (!res.ok) throw new Error(data?.error || 'Failed to load puzzle');
 
-      const nextTactic = data?.tactic;
-      const startFen = nextTactic?.startFen;
-      const line = nextTactic?.puzzleLine;
-      if (!startFen || typeof startFen !== 'string') {
-        setChess(null);
-        setTactic(nextTactic || null);
-        setTacticRating(nextTactic?.rating ?? null);
-        setUserRating(data.userRating ?? 1500);
-        setPuzzleLineSan([]);
-        throw new Error('Failed to compute Chess960 start position for this tactic.');
-      }
+      const nextTactic = data?.tactic || null;
+      const parsedLine = Array.isArray(nextTactic?.puzzleLine)
+        ? nextTactic.puzzleLine
+        : parsePgnMoves(nextTactic?.pgn || '');
+      const nextFen = nextTactic?.startFen || null;
+      if (!nextFen || !parsedLine.length) throw new Error('Puzzle data incomplete (missing start position or moves).');
 
-      if (!Array.isArray(line) || !line.length) {
-        setChess(null);
-        setTactic(nextTactic || null);
-        setTacticRating(nextTactic?.rating ?? null);
-        setUserRating(data.userRating ?? 1500);
-        setPuzzleLineSan([]);
-        throw new Error('Tactic is missing puzzleLine moves.');
-      }
+      const game = new Chess(nextFen, { chess960: true });
+      // Puzzle lines are stored as: opponent move first, then user move, etc.
+      // So we immediately play the first move before user interaction starts.
+      const firstMove = game.move(parsedLine[0], { sloppy: true });
+      if (!firstMove) throw new Error('Invalid puzzle line: first (opponent) move is illegal from startFen.');
 
-      setUserRating(data.userRating ?? 1500);
+      setOrientation(game.turn() === 'b' ? 'black' : 'white');
+      setCurrentFen(game.fen());
+      setPlayedSans([firstMove.san]);
+      setLastMove([firstMove.from, firstMove.to]);
+      setBrowsePosition({ index: 0, variationPath: [] });
+      setStartFen(nextFen);
+      setSolutionSans(parsedLine);
       setTactic(nextTactic);
-      setTacticRating(nextTactic?.rating ?? null);
-      setPuzzleLineSan(parseLine(line));
-      const c = new Chess(startFen, { chess960: true });
-      setChess(c);
-      setFenHistory([c.fen()]);
-      setViewIndex(0);
-      setPlayerColor(c.turn() === 'b' ? 'black' : 'white');
-      setGameLinkAtStart(lichessGameUrlAtPly(nextTactic?.linkToGame, nextTactic?.moveNrStart));
+      setUserRating(data?.userRating ?? 1500);
+      setPuzzleRating(nextTactic?.rating ?? null);
+      setUserFinishedCount(data?.userFinishedCount ?? 0);
+      setTacticTimesPlayed(data?.tacticTimesPlayed ?? 0);
     } catch (e) {
-      setError(e?.message || 'Error');
+      setError(e?.message || 'Failed to load puzzle');
     } finally {
       setLoading(false);
     }
   }
+
   useEffect(() => {
     if (!userId) return;
-    loadNext();
+    loadNextPuzzle();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId]);
-  function computeLegalTargets(from) {
-    if (!chess) return [];
-    return chess.moves({ square: from, verbose: true }).map((m) => m.to);
-  }
-  async function finishPuzzle(didSolve) {
-    if (!tactic) return;
+  }, [userId, difficulty]);
+
+  async function finishPuzzle(didSolve, opts = {}) {
+    const { freezeFen = null } = opts;
+    if (replyTimerRef.current) {
+      clearTimeout(replyTimerRef.current);
+      replyTimerRef.current = null;
+    }
+    setWaitingForReply(false);
     setFinished(true);
     setSolved(didSolve);
+    if (didSolve) {
+      setBrowsePosition({ index: solutionSansRef.current.length - 1, variationPath: [] });
+    } else {
+      setBrowsePosition({ index: Math.max(-1, playedSansRef.current.length - 1), variationPath: [] });
+    }
+    if (!didSolve && freezeFen) {
+      setCurrentFen(freezeFen);
+    } else if (startFen) {
+      const game = new Chess(startFen, { chess960: true });
+      for (const san of solutionSansRef.current) {
+        try { game.move(san, { sloppy: true }); } catch {}
+      }
+      setCurrentFen(game.fen());
+    }
+
     try {
       const res = await fetch('/api/tactics/finish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, tacticId: tactic.id, solved: didSolve, liked: likeChoice }),
+        body: JSON.stringify({
+          userId,
+          tacticId: tactic?.id,
+          solved: didSolve,
+          liked: null,
+        }),
       });
       const data = await res.json();
-      if (res.ok) {
-        setUserRating(data.userRating ?? userRating);
-        setTacticRating(data.tacticRating ?? tacticRating);
-        setRatingDelta(data.delta ?? null);
-      }
-    } catch {}
-    try {
+      if (!res.ok) return;
+      setUserDelta(data?.delta ?? null);
+      setPuzzleDelta(
+        Number.isFinite(puzzleRating) && Number.isFinite(data?.tacticRating)
+          ? data.tacticRating - puzzleRating
+          : null
+      );
+      setUserRating(data?.userRating ?? userRating);
+      setPuzzleRating(data?.tacticRating ?? puzzleRating);
+      setUserFinishedCount(data?.userFinishedCount ?? userFinishedCount);
+      setTacticTimesPlayed(data?.tacticTimesPlayed ?? tacticTimesPlayed);
     } catch {}
   }
-  function attemptMove(from, to) {
-    if (!chess || finished || loading) return;
-    const mv = chess.move({ from, to, promotion: 'q' });
-    if (!mv) return;
 
-    setChess(new Chess(chess.fen(), { chess960: true }));
-    setSelected(null);
-    setLegalTargets([]);
-    setLastMove({ from, to });
-    setMovesSanPlayed((prev) => [...prev, mv.san]);
-    setFenHistory((prev) => [...prev, chess.fen()]);
-    if (finished) return;
+  async function onBoardMove({ from, to, san, newFen }) {
+    if (loadingRef.current || finishedRef.current || !isBrowsingLiveRef.current || waitingForReplyRef.current) return;
+    if (newFen && newFen === currentFenRef.current) return;
 
-    const expected = puzzleLineSan[plyIndex];
-    if (!expected || normalizeSan(expected) !== normalizeSan(mv.san)) {
-      finishPuzzle(false);
+    const moveKey = `${from}-${to}-${san}-${newFen}`;
+    if (lastProcessedMoveRef.current === moveKey) return;
+    lastProcessedMoveRef.current = moveKey;
+
+    const played = playedSansRef.current;
+    const solution = solutionSansRef.current;
+    const expected = solution[played.length];
+
+    if (!expected || normalizeSan(expected) !== normalizeSan(san)) {
+      const anchorIndex = Math.max(0, played.length - 1);
+      const anchorPath = [`${anchorIndex}:${0}`];
+      setFailedVariation({ san, anchorIndex, path: anchorPath });
+      await finishPuzzle(false, { freezeFen: newFen });
       return;
     }
 
-    const nextPly = plyIndex + 1;
-    setPlyIndex(nextPly);
-    const reply = puzzleLineSan[nextPly];
+    const newPlayed = [...played, san];
+    setPlayedSans(newPlayed);
+    setCurrentFen(newFen);
+    setLastMove([from, to]);
+    setBrowsePosition({ index: newPlayed.length - 1, variationPath: [] });
+
+    const reply = solution[newPlayed.length];
     if (!reply) {
-      finishPuzzle(true);
+      await finishPuzzle(true);
       return;
     }
-    setTimeout(() => {
-      const rmove = playSanOnBoard(chess, reply);
-      if (!rmove) return finishPuzzle(true);
-      setChess(new Chess(chess.fen(), { chess960: true }));
-      setLastMove({ from: rmove.from, to: rmove.to });
-      setMovesSanPlayed((prev) => [...prev, rmove.san]);
-      setFenHistory((prev) => [...prev, chess.fen()]);
-      setPlyIndex((prev) => prev + 1);
-      if (!puzzleLineSan[nextPly + 1]) finishPuzzle(true);
-    }, 250);
+
+    setWaitingForReply(true);
+    replyTimerRef.current = setTimeout(async () => {
+      const game = new Chess(newFen, { chess960: true });
+      const rm = game.move(reply, { sloppy: true });
+      if (!rm) {
+        replyTimerRef.current = null;
+        setWaitingForReply(false);
+        await finishPuzzle(true);
+        return;
+      }
+      const afterReply = game.fen();
+      const afterPlayed = [...newPlayed, rm.san];
+      setPlayedSans(afterPlayed);
+      setCurrentFen(afterReply);
+      setLastMove([rm.from, rm.to]);
+      setBrowsePosition({ index: afterPlayed.length - 1, variationPath: [] });
+      replyTimerRef.current = null;
+      setWaitingForReply(false);
+      if (!solution[afterPlayed.length]) await finishPuzzle(true);
+    }, 220);
   }
 
-  async function onSquareClick(square) {
-    if (!chess || finished || loading) return;
-    if (!selected) {
-      const p = chess.get(square);
-      if (!p) return;
-      setSelected(square);
-      setLegalTargets(computeLegalTargets(square));
-      return;
-    }
-    if (square === selected) {
-      setSelected(null);
-      setLegalTargets([]);
-      return;
-    }
-    if (!legalTargets.includes(square)) {
-      const p = chess.get(square);
-      if (!p) return;
-      setSelected(square);
-      setLegalTargets(computeLegalTargets(square));
-      return;
-    }
-    const from = selected;
-    const to = square;
-    attemptMove(from, to);
+  async function submitFeedback(nextLike) {
+    if (!tactic?.id || !finished || likeChoice === nextLike) return;
+    const prevLike = likeChoice;
+    setLikeChoice(nextLike);
+    try {
+      await fetch('/api/tactics/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          tacticId: tactic.id,
+          solved,
+          liked: nextLike,
+          prevLiked: prevLike,
+        }),
+      });
+    } catch {}
   }
+
+  const puzzleLink = tactic?.linkToGame || null;
+
   return (
     <>
       <Head>
         <title>Tactics - 960 Dojo</title>
       </Head>
-      <main className="tactics-page" style={{ maxWidth: 1100, margin: '0 auto', padding: '1.5rem 1rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
+      <main style={{ maxWidth: 1180, margin: '0 auto', padding: '1.25rem 1rem 2rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
           <h1 style={{ margin: 0 }}>Tactics</h1>
-          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
-            <span style={{ background: '#111827', color: '#e5e7eb', padding: '0.45rem 0.75rem', borderRadius: 10 }}>
-              User: {userRating}
-              {typeof ratingDelta === 'number' ? ` (${ratingDelta >= 0 ? '+' : ''}${ratingDelta})` : ''}
-            </span>
-            <span style={{ background: '#111827', color: '#e5e7eb', padding: '0.45rem 0.75rem', borderRadius: 10 }}>
-              Puzzle: {tacticRating ?? '—'}
-            </span>
-          </div>
+          <DifficultySelector value={difficulty} onChange={setDifficulty} disabled={loading} />
         </div>
-        <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem', flexWrap: 'wrap' }}>
-          {['easy', 'middle', 'hard'].map((d) => (
-            <button
-              key={d}
-              onClick={() => setDifficulty(d)}
-              disabled={loading}
-              style={{
-                padding: '0.5rem 0.9rem',
-                borderRadius: 10,
-                border: 'none',
-                cursor: 'pointer',
-                background: difficulty === d ? '#3b82f6' : '#1f2937',
-                color: difficulty === d ? 'white' : '#e5e7eb',
-                fontWeight: 700,
-              }}
-            >
-              {d}
-            </button>
-          ))}
-          <button
-            onClick={loadNext}
-            disabled={loading || !userId}
-            style={{
-              marginLeft: 'auto',
-              padding: '0.6rem 1rem',
-              borderRadius: 10,
-              border: 'none',
-              cursor: 'pointer',
-              background: '#10b981',
-              color: 'white',
-              fontWeight: 800,
-            }}
-          >
-            Next puzzle
-          </button>
-        </div>
-        {error ? <div style={{ marginTop: '1rem', color: '#ef4444', fontWeight: 600 }}>{error}</div> : null}
-        {!userId ? <div style={{ marginTop: '1rem', color: '#6b7280' }}>Log in to play tactics rated.</div> : null}
-        {tactic?.startFen ? (
-          <div style={{ marginTop: '0.75rem', color: '#6b7280', fontSize: '0.9rem', wordBreak: 'break-word' }}>
-            Tactic #{tactic.id} · moveNrStart: {tactic.moveNrStart ?? '—'} · startFEN: {tactic.startFen} · link: {tactic.linkToGame}
-          </div>
-        ) : null}
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 600px) 1fr', gap: '2rem', marginTop: '1.25rem' }}>
-          <section className="chessboard-container" style={{ maxWidth: 600 }} ref={boardRef}>
-            <div className="chessboard">
-              {Array.from({ length: 8 }).map((_, r) => {
-                const rr = flip ? 7 - r : r;
-                const row = displayBoard[rr] || [];
-                return (
-                  <div className="chessboard-row" key={r}>
-                    {Array.from({ length: 8 }).map((_, f) => {
-                      const ff = flip ? 7 - f : f;
-                      const square = squareFromDisplay({ r, f, flip });
-                      const isLight = (r + f) % 2 === 0;
-                      const piece = row[ff];
-                      const isSelected = selected === square;
-                      const isTarget = legalTargets.includes(square);
-                      const isLast = lastMove && (lastMove.from === square || lastMove.to === square);
-                      const hl = highlights?.[square];
-                      const cls = [
-                        'chessboard-square',
-                        isLight ? 'light' : 'dark',
-                        isSelected || isTarget ? 'highlighted' : '',
-                        isLast ? 'last-move' : '',
-                      ]
-                        .filter(Boolean)
-                        .join(' ');
-                      return (
-                        <div
-                          key={`${r}-${f}`}
-                          className={cls}
-                          onClick={() => onSquareClick(square)}
-                          onDragOver={(e) => e.preventDefault()}
-                          onDrop={(e) => {
-                            e.preventDefault();
-                            if (dragFrom) attemptMove(dragFrom, square);
-                            setDragFrom(null);
-                          }}
-                          onContextMenu={(e) => e.preventDefault()}
-                          onMouseDown={(e) => {
-                            if (e.button !== 2) return;
-                            setArrowStart(square);
-                            setArrowHover(square);
-                            setArrowCtrl(!!e.ctrlKey);
-                          }}
-                          onMouseEnter={() => {
-                            if (!arrowStart) return;
-                            setArrowHover(square);
-                          }}
-                          onMouseUp={(e) => {
-                            if (e.button !== 2) return;
-                            if (!arrowStart) return;
-                            const from = arrowStart;
-                            const to = square;
-                            const color = arrowCtrl ? '#60a5fa' : '#f59e0b';
-                            if (from === to) {
-                              setHighlights((prev) => {
-                                const next = { ...(prev || {}) };
-                                const cur = next[from];
-                                const want = arrowCtrl ? 'b' : 'y';
-                                if (cur === want) delete next[from];
-                                else next[from] = want;
-                                return next;
-                              });
-                            } else {
-                              setArrows((prev) => [...prev, { from, to, color }]);
-                            }
-                            setArrowStart(null);
-                            setArrowHover(null);
-                            setArrowCtrl(false);
-                          }}
-                          role="button"
-                          tabIndex={0}
-                          aria-label={square}
-                          style={
-                            hl
-                              ? {
-                                  boxShadow:
-                                    hl === 'b'
-                                      ? 'inset 0 0 0 4px rgba(96,165,250,0.7)'
-                                      : 'inset 0 0 0 4px rgba(245,158,11,0.7)',
-                                }
-                              : undefined
-                          }
-                        >
-                          {piece ? (
-                            <img
-                              className="chessboard-piece"
-                              alt=""
-                              src={pieceToAsset(piece)}
-                              draggable={!finished}
-                              onDragStart={() => setDragFrom(square)}
-                              onDragEnd={() => setDragFrom(null)}
-                            />
-                          ) : null}
-                        </div>
-                      );
-                    })}
-                  </div>
-                );
-              })}
-            </div>
-            <canvas
-              id="tactics-arrow-layer"
-              style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 20 }}
-            />
-          </section>
-          <section style={{ minWidth: 260 }}>
-            <div style={{ background: '#0b1220', color: '#e5e7eb', padding: '1rem', borderRadius: 12 }}>
-              <div style={{ fontWeight: 800, marginBottom: '0.5rem' }}>Status</div>
-              <div style={{ color: '#cbd5e1' }}>
-                {loading ? 'Loading puzzle…' : finished ? (solved ? 'Solved' : 'Failed') : 'Your move'}
-              </div>
-              <div style={{ marginTop: '0.75rem', color: '#cbd5e1' }}>
-                Progress: {plyIndex}/{puzzleLineSan.length || 0}
-              </div>
-            </div>
-            {finished ? (
-              <div style={{ marginTop: '1rem', background: '#111827', color: '#e5e7eb', padding: '1rem', borderRadius: 12 }}>
-                {gameLinkAtStart ? (
-                  <button
-                    onClick={() => window.open(gameLinkAtStart, '_blank')}
-                    style={{
-                      width: '100%',
-                      padding: '0.6rem 0.9rem',
-                      borderRadius: 10,
-                      border: 'none',
-                      cursor: 'pointer',
-                      background: '#10b981',
-                      color: 'white',
-                      fontWeight: 900,
-                      marginBottom: '0.75rem',
-                    }}
-                  >
-                    Open game at puzzle start
-                  </button>
-                ) : null}
-                {/* Lichess Analysis button removed; use "Open game at puzzle start" above */}
-                <div style={{ display: 'flex', gap: '0.6rem', marginTop: '0.75rem' }}>
-                  <button
-                    onClick={() => setLikeChoice(true)}
-                    style={{ flex: 1, padding: '0.55rem 0.9rem', borderRadius: 10, border: 'none', cursor: 'pointer', background: likeChoice === true ? '#10b981' : '#1f2937', color: 'white', fontWeight: 800 }}
-                  >
-                    👍
-                  </button>
-                  <button
-                    onClick={() => setLikeChoice(false)}
-                    style={{ flex: 1, padding: '0.55rem 0.9rem', borderRadius: 10, border: 'none', cursor: 'pointer', background: likeChoice === false ? '#ef4444' : '#1f2937', color: 'white', fontWeight: 800 }}
-                  >
-                    👎
-                  </button>
-                </div>
 
-                <div style={{ display: 'flex', gap: '0.6rem', marginTop: '0.75rem' }}>
-                  <button
-                    onClick={() => setViewIndex((v) => Math.max(0, v - 1))}
-                    style={{ flex: 1, padding: '0.55rem 0.9rem', borderRadius: 10, border: 'none', cursor: 'pointer', background: '#1f2937', color: 'white', fontWeight: 800 }}
-                  >
-                    ◀ Prev
-                  </button>
-                  <button
-                    onClick={() => setViewIndex((v) => Math.min((fenHistory.length || 1) - 1, v + 1))}
-                    style={{ flex: 1, padding: '0.55rem 0.9rem', borderRadius: 10, border: 'none', cursor: 'pointer', background: '#1f2937', color: 'white', fontWeight: 800 }}
-                  >
-                    Next ▶
-                  </button>
-                </div>
-                <div style={{ marginTop: '0.5rem', color: '#9ca3af', fontSize: '0.85rem' }}>
-                  Tip: use ← / → to browse moves.
-                </div>
-              </div>
-            ) : null}
+        {error ? <div style={{ color: '#ef4444', marginBottom: 10 }}>{error}</div> : null}
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(340px, 600px) minmax(320px, 1fr)', gap: 18 }}>
+          <section>
+            <RatingDisplay
+              label="Puzzle"
+              rating={puzzleRating}
+              delta={puzzleDelta}
+              provisional={(tacticTimesPlayed || 0) < 10}
+            />
+            <div style={{ marginTop: 8 }}>
+              <Chessboard
+                fen={displayedFen || currentFen || startFen}
+                orientation={orientation}
+                onMove={onBoardMove}
+                disabled={finished || loading || waitingForReply || !isBrowsingLive}
+                lastMove={lastMove}
+              />
+            </div>
+            <div style={{ marginTop: 8 }}>
+              <RatingDisplay
+                label="You"
+                rating={userRating}
+                delta={userDelta}
+                provisional={(userFinishedCount || 0) < 10}
+              />
+            </div>
+          </section>
+
+          <section>
+            <MoveList
+              pgn={moveListPgn}
+              evalData={[]}
+              userColor={orientation}
+              loading={loading}
+              selectedPosition={moveListSelectedPosition}
+              resetSelectionOnPgnChange={false}
+              onBrowsePositionChanged={handleBrowsePositionChanged}
+            />
+            <PostTacticDisplay
+              visible={finished}
+              solved={solved}
+              likeChoice={likeChoice}
+              lichessUrl={puzzleLink}
+              onLike={() => submitFeedback(true)}
+              onDislike={() => submitFeedback(false)}
+              onOpenInLichess={() => window.open(puzzleLink, '_blank')}
+              onNextPuzzle={loadNextPuzzle}
+              disabled={loading}
+            />
           </section>
         </div>
       </main>
@@ -591,8 +443,7 @@ export default function TacticsPage() {
   );
 }
 
-// This page depends on authenticated client state and browser interactions (drag/drop, right-click),
-// so we opt out of static prerendering to avoid build-time execution issues.
 export async function getServerSideProps() {
   return { props: {} };
 }
+
