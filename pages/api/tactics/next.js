@@ -50,6 +50,45 @@ function inDifficultyBand(tacticRating, userRating, difficulty) {
   return tacticRating >= userRating + min && tacticRating <= userRating + max;
 }
 
+function inAnyBand(tacticRating, userRating) {
+  return (
+    inDifficultyBand(tacticRating, userRating, 'easy')
+    || inDifficultyBand(tacticRating, userRating, 'middle')
+    || inDifficultyBand(tacticRating, userRating, 'hard')
+  );
+}
+
+async function chooseNewTactic({ userRating, difficulty, finishedIds, unfinishedIds }) {
+  const { min, max } = parseDifficulty(difficulty);
+  const minRating = userRating + min;
+  const maxRating = userRating + max;
+
+  const { data: inBand, error: inBandErr } = await supabaseAdmin
+    .from('Tactic')
+    .select('id, rating, pgn, numTimesPlayed, disLikes')
+    .gte('rating', minRating)
+    .lte('rating', maxRating);
+  if (inBandErr) throw new Error(inBandErr.message);
+
+  const freshInBand = (inBand || []).filter((t) => !finishedIds.has(t.id) && !unfinishedIds.has(t.id));
+  if (freshInBand.length) {
+    return { tactic: freshInBand[Math.floor(Math.random() * freshInBand.length)], usedFallback: false };
+  }
+
+  // Fallback: closest non-finished, non-unfinished puzzle.
+  const { data: allTactics, error: allErr } = await supabaseAdmin
+    .from('Tactic')
+    .select('id, rating, pgn, numTimesPlayed, disLikes');
+  if (allErr) throw new Error(allErr.message);
+
+  const candidates = (allTactics || []).filter((t) => !finishedIds.has(t.id) && !unfinishedIds.has(t.id));
+  if (!candidates.length) return { tactic: null, usedFallback: false };
+  const closest = candidates
+    .map((t) => ({ t, diff: Math.abs((t.rating ?? 1500) - userRating) }))
+    .sort((a, b) => a.diff - b.diff)[0].t;
+  return { tactic: closest, usedFallback: true };
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end();
   const { userId, difficulty = 'middle' } = req.query || {};
@@ -82,80 +121,69 @@ export default async function handler(req, res) {
       .eq('userId', userId);
     if (userRowsErr) return res.status(500).json({ error: userRowsErr.message });
 
-    const { min, max } = parseDifficulty(difficulty);
-    const minRating = userRating + min;
-    const maxRating = userRating + max;
+    const unfinishedRows = (userRows || []).filter((r) => !r.finished);
+    const unfinishedIds = unfinishedRows.map((r) => r.tacticId);
 
-    const { data: bandTactics, error: bandErr } = await supabaseAdmin
-      .from('Tactic')
-      .select('id, rating, pgn, numTimesPlayed, disLikes')
-      .gte('rating', minRating)
-      .lte('rating', maxRating);
-    if (bandErr) return res.status(500).json({ error: bandErr.message });
-
-    let chosen = null;
-    const bandUnfinished = (bandTactics || []).filter((t) => !finishedIds.has(t.id));
-
-    if (!userRows?.length) {
-      const { data: allForInit, error: initErr } = await supabaseAdmin
+    let unfinishedTactics = [];
+    if (unfinishedIds.length) {
+      const { data: unfinishedTacticsRows, error: unfinishedTacticsErr } = await supabaseAdmin
         .from('Tactic')
-        .select('id, rating, pgn, numTimesPlayed, disLikes');
-      if (initErr) return res.status(500).json({ error: initErr.message });
-
-      const pool = (allForInit || []).slice();
-      const picked = [];
-      for (const level of ['easy', 'middle', 'hard']) {
-        const candidates = pool.filter((t) => inDifficultyBand(t.rating ?? 1500, userRating, level));
-        const selected = candidates.length ? candidates[Math.floor(Math.random() * candidates.length)] : null;
-        if (selected) {
-          picked.push(selected);
-          const idx = pool.findIndex((p) => p.id === selected.id);
-          if (idx >= 0) pool.splice(idx, 1);
-        }
-      }
-      if (picked.length) {
-        const inserts = picked.map((t) => ({
-          id: crypto.randomUUID(),
-          userId,
-          tacticId: t.id,
-          solved: false,
-          finished: null,
-        }));
-        const { error: insErr } = await supabaseAdmin.from('UserTactic').insert(inserts);
-        if (insErr) return res.status(500).json({ error: insErr.message });
-      }
+        .select('id, rating, pgn, numTimesPlayed, disLikes')
+        .in('id', unfinishedIds);
+      if (unfinishedTacticsErr) return res.status(500).json({ error: unfinishedTacticsErr.message });
+      unfinishedTactics = unfinishedTacticsRows || [];
     }
 
-    if (bandUnfinished.length) {
-      chosen = bandUnfinished[Math.floor(Math.random() * bandUnfinished.length)];
-    } else {
-      const { data: allTactics, error: allErr } = await supabaseAdmin
-        .from('Tactic')
-        .select('id, rating, pgn, numTimesPlayed, disLikes');
-      if (allErr) return res.status(500).json({ error: allErr.message });
-      const unfinished = (allTactics || []).filter((t) => !finishedIds.has(t.id));
-      if (!unfinished.length) return res.status(404).json({ error: 'No unfinished tactics' });
-      chosen = unfinished
-        .map((t) => ({ t, diff: Math.abs((t.rating ?? 1500) - userRating) }))
-        .sort((a, b) => a.diff - b.diff)[0].t;
+    const tacticById = new Map(unfinishedTactics.map((t) => [t.id, t]));
+    let activeUnfinished = unfinishedRows
+      .map((r) => ({ rowId: r.id, tactic: tacticById.get(r.tacticId) }))
+      .filter((x) => x.tactic);
+
+    // Drop stale unfinished puzzles that no longer fit any difficulty band.
+    const stale = activeUnfinished.filter((x) => !inAnyBand(x.tactic.rating ?? 1500, userRating));
+    if (stale.length) {
+      const staleRowIds = stale.map((x) => x.rowId);
+      const { error: staleDeleteErr } = await supabaseAdmin.from('UserTactic').delete().in('id', staleRowIds);
+      if (staleDeleteErr) return res.status(500).json({ error: staleDeleteErr.message });
+      activeUnfinished = activeUnfinished.filter((x) => !staleRowIds.includes(x.rowId));
     }
 
-    const { data: existingProgress, error: progressErr } = await supabaseAdmin
-      .from('UserTactic')
-      .select('id')
-      .eq('userId', userId)
-      .eq('tacticId', chosen.id)
-      .maybeSingle();
-    if (progressErr) return res.status(500).json({ error: progressErr.message });
-    if (!existingProgress) {
-      const { error: insertErr } = await supabaseAdmin.from('UserTactic').insert({
+    // Reuse unfinished puzzle for this difficulty if in range.
+    let chosen = activeUnfinished
+      .map((x) => x.tactic)
+      .find((t) => inDifficultyBand(t.rating ?? 1500, userRating, difficulty));
+    let infoMessage = null;
+
+    // No unfinished in range => allocate one and persist immediately.
+    if (!chosen) {
+      const activeUnfinishedIds = new Set(activeUnfinished.map((x) => x.tactic.id));
+      const next = await chooseNewTactic({
+        userRating,
+        difficulty,
+        finishedIds,
+        unfinishedIds: activeUnfinishedIds,
+      });
+      if (!next?.tactic) return res.status(404).json({ error: 'No available tactics' });
+      if (next.usedFallback) {
+        infoMessage = `No more puzzles available in ${difficulty} range. Loaded closest puzzle instead.`;
+      }
+
+      // Keep unfinished rows bounded.
+      if (activeUnfinished.length >= 3) {
+        const removeRowId = activeUnfinished[0].rowId;
+        const { error: rmErr } = await supabaseAdmin.from('UserTactic').delete().eq('id', removeRowId);
+        if (rmErr) return res.status(500).json({ error: rmErr.message });
+      }
+
+      const { error: insErr } = await supabaseAdmin.from('UserTactic').insert({
         id: crypto.randomUUID(),
         userId,
-        tacticId: chosen.id,
+        tacticId: next.tactic.id,
         solved: false,
         finished: null,
       });
-      if (insertErr) return res.status(500).json({ error: insertErr.message });
+      if (insErr) return res.status(500).json({ error: insErr.message });
+      chosen = next.tactic;
     }
 
     const startFen = extractPgnTag(chosen.pgn, 'FEN');
@@ -178,6 +206,7 @@ export default async function handler(req, res) {
       userRating,
       userFinishedCount,
       tacticTimesPlayed: Number.isFinite(chosen?.numTimesPlayed) ? chosen.numTimesPlayed : 0,
+      infoMessage,
     });
   } catch (e) {
     console.error('[api/tactics/next] error:', e);

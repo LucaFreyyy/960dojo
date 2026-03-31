@@ -74,6 +74,7 @@ export default function TacticsPage() {
   const [difficulty, setDifficulty] = useState('middle');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [infoMessage, setInfoMessage] = useState('');
 
   const [tactic, setTactic] = useState(null);
   const [solutionSans, setSolutionSans] = useState([]);
@@ -200,6 +201,7 @@ export default function TacticsPage() {
     }
     setLoading(true);
     setError('');
+    setInfoMessage('');
     setFinished(false);
     setSolved(false);
     setLikeChoice(null);
@@ -241,6 +243,7 @@ export default function TacticsPage() {
       setPuzzleRating(nextTactic?.rating ?? null);
       setUserFinishedCount(data?.userFinishedCount ?? 0);
       setTacticTimesPlayed(data?.tacticTimesPlayed ?? 0);
+      setInfoMessage(data?.infoMessage || '');
       tlog('loadNextPuzzle:ready', {
         tacticId: nextTactic?.id,
         solutionLen: parsedLine.length,
@@ -438,6 +441,7 @@ export default function TacticsPage() {
         </div>
 
         {error ? <div style={{ color: '#ef4444', marginBottom: 10 }}>{error}</div> : null}
+        {infoMessage ? <div style={{ color: '#93c5fd', marginBottom: 10 }}>{infoMessage}</div> : null}
 
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(340px, 600px) minmax(320px, 1fr)', gap: 18 }}>
           <section>
