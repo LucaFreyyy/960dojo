@@ -13,6 +13,7 @@ export default function ChessBoard({ fen, orientation, onPositionChange }) {
   const toDests = (game) => {
     const dests = new Map();
     const moves = game.moves({ verbose: true });
+    console.log('Castling moves:', moves.filter(m => m.flags.includes('k') || m.flags.includes('q')));
 
     moves.forEach(move => {
       if (!dests.has(move.from)) {
@@ -30,13 +31,18 @@ export default function ChessBoard({ fen, orientation, onPositionChange }) {
     const cg = Chessground(containerRef.current, {
       fen: fen,
       orientation: orientation,
+      animation: {
+        enabled: false,
+      },
       movable: {
         free: false,
         color: 'both',
+        rookCastle: true,
         dests: toDests(gameRef.current),
         events: {
           after: (orig, dest) => {
-            const move = gameRef.current.move({ from: orig, to: dest });
+            console.log("Orig, dest: ", orig, dest)
+            const move = gameRef.current.move({ from: orig, to: dest, promotion: "q" });
             // Notify parent
             if (onPositionChange) {
               onPositionChange(gameRef.current.fen());
@@ -44,7 +50,7 @@ export default function ChessBoard({ fen, orientation, onPositionChange }) {
             cg.set({
               fen: gameRef.current.fen(),
               orientation: orientationRef.current,
-              movable: { dests: toDests(gameRef.current) }
+              movable: { dests: toDests(gameRef.current) },
             });
             console.log("Move made: " + move.san)
           }
