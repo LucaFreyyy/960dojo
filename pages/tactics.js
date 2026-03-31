@@ -8,6 +8,12 @@ import DifficultySelector from '../components/DifficultySelector';
 import PostTacticDisplay from '../components/PostTacticDisplay';
 import RatingDisplay from '../components/RatingDisplay';
 
+const TACTICS_DEBUG = true;
+function tlog(...args) {
+  if (!TACTICS_DEBUG) return;
+  console.log('[tactics]', ...args);
+}
+
 async function hashEmail(email) {
   const encoder = new TextEncoder();
   const data = encoder.encode(email);
@@ -208,6 +214,7 @@ export default function TacticsPage() {
     setPuzzleDelta(null);
 
     try {
+      tlog('loadNextPuzzle:start', { userId, difficulty });
       const res = await fetch(`/api/tactics/next?userId=${encodeURIComponent(userId)}&difficulty=${encodeURIComponent(difficulty)}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || 'Failed to load puzzle');
@@ -237,7 +244,14 @@ export default function TacticsPage() {
       setPuzzleRating(nextTactic?.rating ?? null);
       setUserFinishedCount(data?.userFinishedCount ?? 0);
       setTacticTimesPlayed(data?.tacticTimesPlayed ?? 0);
+      tlog('loadNextPuzzle:ready', {
+        tacticId: nextTactic?.id,
+        solutionLen: parsedLine.length,
+        firstOpponentMove: parsedLine[0],
+        fenAfterFirst: game.fen(),
+      });
     } catch (e) {
+      tlog('loadNextPuzzle:error', e?.message || e);
       setError(e?.message || 'Failed to load puzzle');
     } finally {
       setLoading(false);
@@ -252,6 +266,12 @@ export default function TacticsPage() {
 
   async function finishPuzzle(didSolve, opts = {}) {
     const { freezeFen = null } = opts;
+    tlog('finishPuzzle', {
+      didSolve,
+      freezeFen,
+      playedLen: playedSansRef.current.length,
+      solutionLen: solutionSansRef.current.length,
+    });
     if (replyTimerRef.current) {
       clearTimeout(replyTimerRef.current);
       replyTimerRef.current = null;
@@ -297,25 +317,55 @@ export default function TacticsPage() {
       setPuzzleRating(data?.tacticRating ?? puzzleRating);
       setUserFinishedCount(data?.userFinishedCount ?? userFinishedCount);
       setTacticTimesPlayed(data?.tacticTimesPlayed ?? tacticTimesPlayed);
+      tlog('finishPuzzle:rating', {
+        delta: data?.delta,
+        userRating: data?.userRating,
+        tacticRating: data?.tacticRating,
+      });
     } catch {}
   }
 
   async function onBoardMove({ from, to, san, newFen }) {
-    if (loadingRef.current || finishedRef.current || !isBrowsingLiveRef.current || waitingForReplyRef.current) return;
-    if (newFen && newFen === currentFenRef.current) return;
+    if (loadingRef.current || finishedRef.current || !isBrowsingLiveRef.current || waitingForReplyRef.current) {
+      tlog('onBoardMove:ignored-lock', {
+        from, to, san,
+        loading: loadingRef.current,
+        finished: finishedRef.current,
+        browsingLive: isBrowsingLiveRef.current,
+        waiting: waitingForReplyRef.current,
+      });
+      return;
+    }
+    if (newFen && newFen === currentFenRef.current) {
+      tlog('onBoardMove:ignored-same-fen', { from, to, san });
+      return;
+    }
 
     const moveKey = `${from}-${to}-${san}-${newFen}`;
-    if (lastProcessedMoveRef.current === moveKey) return;
+    if (lastProcessedMoveRef.current === moveKey) {
+      tlog('onBoardMove:ignored-duplicate', { moveKey });
+      return;
+    }
     lastProcessedMoveRef.current = moveKey;
 
     const played = playedSansRef.current;
     const solution = solutionSansRef.current;
     const expected = solution[played.length];
+    tlog('onBoardMove:validate', {
+      from,
+      to,
+      playedLen: played.length,
+      san,
+      expected,
+      sanNorm: normalizeSan(san),
+      expectedNorm: normalizeSan(expected),
+    });
 
     if (!expected || normalizeSan(expected) !== normalizeSan(san)) {
       const anchorIndex = Math.max(0, played.length - 1);
       const anchorPath = [`${anchorIndex}:${0}`];
       setFailedVariation({ san, anchorIndex, path: anchorPath });
+      tlog('onBoardMove:fail', { san, expected, anchorIndex, freezeFen: newFen });
       await finishPuzzle(false, { freezeFen: newFen });
       return;
     }
@@ -328,17 +378,20 @@ export default function TacticsPage() {
 
     const reply = solution[newPlayed.length];
     if (!reply) {
+      tlog('onBoardMove:solved-no-reply', { finalMove: san, playedLen: newPlayed.length });
       await finishPuzzle(true);
       return;
     }
 
     setWaitingForReply(true);
+    tlog('onBoardMove:reply-scheduled', { reply, afterPlayedLen: newPlayed.length });
     replyTimerRef.current = setTimeout(async () => {
       const game = new Chess(newFen, { chess960: true });
       const rm = game.move(reply, { sloppy: true });
       if (!rm) {
         replyTimerRef.current = null;
         setWaitingForReply(false);
+        tlog('onBoardMove:reply-illegal-mark-solved', { reply });
         await finishPuzzle(true);
         return;
       }
@@ -350,6 +403,7 @@ export default function TacticsPage() {
       setBrowsePosition({ index: afterPlayed.length - 1, variationPath: [] });
       replyTimerRef.current = null;
       setWaitingForReply(false);
+      tlog('onBoardMove:reply-played', { replySan: rm.san, afterPlayedLen: afterPlayed.length });
       if (!solution[afterPlayed.length]) await finishPuzzle(true);
     }, 220);
   }

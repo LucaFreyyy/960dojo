@@ -10,9 +10,9 @@ function expectedScore(playerRating, oppRating) {
 }
 
 function kFactor({ gamesPlayed, baseK }) {
-  // First 10 finished tactics => bigger rating changes.
-  const gp = Math.max(0, Math.min(10, gamesPlayed || 0));
-  const multiplier = 2 - gp / 10; // 2.0 -> 1.0
+  // Strongly provisional: first 20 puzzles have significantly larger swings.
+  const gp = Math.max(0, Math.min(20, gamesPlayed || 0));
+  const multiplier = 5 - (4 * gp) / 20; // 5.0 -> 1.0
   return Math.round(baseK * multiplier);
 }
 

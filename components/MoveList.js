@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 export function stripPgn(raw) {
     return (raw || '')
@@ -163,6 +163,7 @@ export default function MoveList({
     );
 
     const [selection, setSelection] = useState({ index: -1, variationPath: [] });
+    const suppressNextBrowseCallbackRef = useRef(false);
 
     useEffect(() => {
         if (!resetSelectionOnPgnChange) return;
@@ -178,11 +179,16 @@ export default function MoveList({
             const samePath = prev.variationPath.length === nextPath.length
                 && prev.variationPath.every((x, i) => x === nextPath[i]);
             if (sameIndex && samePath) return prev;
+            suppressNextBrowseCallbackRef.current = true;
             return { index: nextIndex, variationPath: [...nextPath] };
         });
     }, [selectedPosition]);
 
     useEffect(() => {
+        if (suppressNextBrowseCallbackRef.current) {
+            suppressNextBrowseCallbackRef.current = false;
+            return;
+        }
         onBrowsePositionChanged(selection.index, clonePath(selection.variationPath));
     }, [onBrowsePositionChanged, selection]);
 
