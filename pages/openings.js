@@ -2,7 +2,7 @@ import { useState } from 'react'
 import ChessBoard from '../components/Chessboard';
 import Button from '../components/Button.js'
 import { freestyleNumberToFEN } from '../lib/freestyleUtils';
-import { getDatabaseMove } from '../lib/moveGeneration';
+import { getDatabaseMove, getMove } from '../lib/moveGeneration';
 import { getStockfishMove } from '../lib/stockfishUtils';
 
 export default function Openings() {
@@ -37,6 +37,11 @@ export default function Openings() {
     console.log("Stockfish returned move: " + move)
   }
 
+  const handleGetMove = async () => {
+    const move = await getMove(currentFen, 1500)
+    console.log("Returned move: " + move)
+  }
+
   return (
     <>
       <main>
@@ -63,6 +68,9 @@ export default function Openings() {
             </Button>
             <Button onClick={handleGetStockfishMove}>
               Get Stockfish Move
+            </Button>
+            <Button onClick={handleGetMove}>
+              Get Move
             </Button>
           </div>
         </section>
