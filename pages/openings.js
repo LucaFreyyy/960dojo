@@ -34,7 +34,7 @@ export default function Openings() {
 
   const handleGetStockfishMove = async () => {
     const move = await getStockfishMove(currentFen, 1500)
-    console.log("Database returned move: " + move)
+    console.log("Stockfish returned move: " + move)
   }
 
   return (
