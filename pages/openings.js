@@ -33,8 +33,12 @@ export default function Openings() {
   }
 
   const handleGetStockfishMove = async () => {
-    const move = await getStockfishMove(currentFen, 1500)
-    console.log("Stockfish returned move: " + move)
+    const result = await getStockfishMove(currentFen, 1500);
+    if (result) {
+      console.log("Stockfish returned move:", result.san);
+    } else {
+      console.log("Stockfish returned: null");
+    }
   }
 
   const handleGetMove = async () => {
