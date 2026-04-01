@@ -4,12 +4,17 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import Link from 'next/link';
 import { ESTABLISHED_RATING_MIN_ENTRIES } from '../lib/ratingConstants';
+import { useSupabaseSession } from '../lib/SessionContext';
+import { hashEmail } from '../lib/hashEmail';
 
 export default function LeaderboardPage() {
+    const session = useSupabaseSession();
+    const [viewerUserId, setViewerUserId] = useState(null);
     const [activeCategory, setActiveCategory] = useState('openings');
     const [leaderboardData, setLeaderboardData] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [lastUpdated, setLastUpdated] = useState(null);
+    /** null = guest; placed = on full sorted board; not_placed = logged in but not established / no row */
+    const [viewerSummary, setViewerSummary] = useState(null);
 
     const categories = [
         { id: 'bullet', label: 'Bullet' },
@@ -21,84 +26,124 @@ export default function LeaderboardPage() {
     ];
 
     useEffect(() => {
-        fetchLeaderboard();
-    }, [activeCategory]);
-
-    async function fetchLeaderboard() {
-        try {
-            setLoading(true);
-            
-            const { data: ratingsData, error: ratingsError } = await supabase
-                .from('Rating')
-                .select('userId, type, value, createdAt')
-                .eq('type', activeCategory)
-                .order('createdAt', { ascending: false });
-
-            if (ratingsError) {
-                console.error('Error fetching ratings:', ratingsError);
-                return;
-            }
-
-            const entryCountByUser = {};
-            ratingsData?.forEach((row) => {
-                entryCountByUser[row.userId] = (entryCountByUser[row.userId] || 0) + 1;
-            });
-
-            const userLatestRatings = {};
-            ratingsData?.forEach((rating) => {
-                if (!userLatestRatings[rating.userId]
-                    || new Date(rating.createdAt) > new Date(userLatestRatings[rating.userId].createdAt)) {
-                    userLatestRatings[rating.userId] = rating;
-                }
-            });
-
-            const userIds = Object.keys(userLatestRatings).filter(
-                (uid) => (entryCountByUser[uid] || 0) >= ESTABLISHED_RATING_MIN_ENTRIES
-            );
-            if (userIds.length === 0) {
-                setLeaderboardData([]);
-                setLoading(false);
-                return;
-            }
-
-            const { data: usersData, error: usersError } = await supabase
-                .from('User')
-                .select('id, name')
-                .in('id', userIds);
-
-            if (usersError) {
-                console.error('Error fetching users:', usersError);
-                return;
-            }
-
-            // Combine user data with ratings
-            const combinedData = userIds
-                .map(userId => {
-                    const user = usersData.find(u => u.id === userId);
-                    const rating = userLatestRatings[userId];
-                    return {
-                        id: userId,
-                        name: user?.name || 'Unknown Player',
-                        rating: rating?.value || 0,
-                        createdAt: rating?.createdAt
-                    };
-                })
-                .filter(item => item.rating > 0)
-                .sort((a, b) => b.rating - a.rating)
-                .slice(0, 50)
-                .map((item, index) => ({
-                    ...item,
-                    rank: index + 1
-                }));
-
-            setLeaderboardData(combinedData);
-            setLastUpdated(new Date());
-        } catch (error) {
-            console.error('Error:', error);
-        } finally {
-            setLoading(false);
+        if (!session?.user?.email) {
+            setViewerUserId(null);
+            setViewerSummary(null);
+            return;
         }
-    }
+        let cancelled = false;
+        hashEmail(session.user.email)
+            .then((id) => {
+                if (!cancelled) setViewerUserId(id);
+            })
+            .catch(() => {
+                if (!cancelled) setViewerUserId(null);
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [session]);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        async function fetchLeaderboard() {
+            try {
+                setLoading(true);
+
+                const { data: ratingsData, error: ratingsError } = await supabase
+                    .from('Rating')
+                    .select('userId, type, value, createdAt')
+                    .eq('type', activeCategory)
+                    .order('createdAt', { ascending: false });
+
+                if (ratingsError) {
+                    console.error('Error fetching ratings:', ratingsError);
+                    return;
+                }
+
+                const entryCountByUser = {};
+                ratingsData?.forEach((row) => {
+                    entryCountByUser[row.userId] = (entryCountByUser[row.userId] || 0) + 1;
+                });
+
+                const userLatestRatings = {};
+                ratingsData?.forEach((rating) => {
+                    if (!userLatestRatings[rating.userId]
+                        || new Date(rating.createdAt) > new Date(userLatestRatings[rating.userId].createdAt)) {
+                        userLatestRatings[rating.userId] = rating;
+                    }
+                });
+
+                const userIds = Object.keys(userLatestRatings).filter(
+                    (uid) => (entryCountByUser[uid] || 0) >= ESTABLISHED_RATING_MIN_ENTRIES
+                );
+                if (userIds.length === 0) {
+                    if (!cancelled) {
+                        setLeaderboardData([]);
+                        setViewerSummary(
+                            viewerUserId ? { kind: 'not_placed' } : null
+                        );
+                    }
+                    return;
+                }
+
+                const { data: usersData, error: usersError } = await supabase
+                    .from('User')
+                    .select('id, name')
+                    .in('id', userIds);
+
+                if (usersError) {
+                    console.error('Error fetching users:', usersError);
+                    return;
+                }
+
+                const sortedAll = userIds
+                    .map((userId) => {
+                        const user = usersData.find((u) => u.id === userId);
+                        const rating = userLatestRatings[userId];
+                        return {
+                            id: userId,
+                            name: user?.name || 'Unknown Player',
+                            rating: rating?.value || 0,
+                            createdAt: rating?.createdAt
+                        };
+                    })
+                    .filter((item) => item.rating > 0)
+                    .sort((a, b) => b.rating - a.rating)
+                    .map((item, index) => ({
+                        ...item,
+                        rank: index + 1
+                    }));
+
+                const top50 = sortedAll.slice(0, 50);
+
+                let nextViewerSummary = null;
+                if (viewerUserId) {
+                    const me = sortedAll.find((p) => p.id === viewerUserId);
+                    nextViewerSummary = me
+                        ? { kind: 'placed', rank: me.rank, rating: me.rating }
+                        : { kind: 'not_placed' };
+                }
+
+                if (!cancelled) {
+                    setLeaderboardData(top50);
+                    setViewerSummary(nextViewerSummary);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            } finally {
+                if (!cancelled) {
+                    setLoading(false);
+                }
+            }
+        }
+
+        fetchLeaderboard();
+        return () => {
+            cancelled = true;
+        };
+    }, [activeCategory, viewerUserId]);
 
     function getCategoryTitle() {
         const category = categories.find(c => c.id === activeCategory);
@@ -137,6 +182,41 @@ export default function LeaderboardPage() {
                     </span>
                 </div>
 
+                {viewerSummary ? (
+                    <div
+                        className={
+                            viewerSummary.kind === 'placed'
+                                ? 'leaderboard-you-banner leaderboard-you-banner--placed'
+                                : 'leaderboard-you-banner leaderboard-you-banner--muted'
+                        }
+                    >
+                        {viewerSummary.kind === 'placed' ? (
+                            <p className="leaderboard-you-banner__text">
+                                Your rank in{' '}
+                                <span className="leaderboard-you-banner__cat">
+                                    {categories.find((c) => c.id === activeCategory)?.label}
+                                </span>
+                                :{' '}
+                                <strong className="leaderboard-you-banner__rank">#{viewerSummary.rank}</strong>
+                                <span className="leaderboard-you-banner__dot"> · </span>
+                                rating{' '}
+                                <strong>{viewerSummary.rating}</strong>
+                                {viewerSummary.rank > 50 ? (
+                                    <span className="leaderboard-you-banner__note">
+                                        {' '}
+                                        (outside top 50 shown below)
+                                    </span>
+                                ) : null}
+                            </p>
+                        ) : (
+                            <p className="leaderboard-you-banner__text">
+                                You are not on this leaderboard yet. Play at least{' '}
+                                {ESTABLISHED_RATING_MIN_ENTRIES} rated games in this category to qualify.
+                            </p>
+                        )}
+                    </div>
+                ) : null}
+
                 <div className="leaderboard-panel">
                     {loading ? (
                         <div className="leaderboard-state">
@@ -164,7 +244,14 @@ export default function LeaderboardPage() {
                                     </thead>
                                     <tbody>
                                         {leaderboardData.map((player) => (
-                                            <tr key={player.id}>
+                                            <tr
+                                                key={player.id}
+                                                className={
+                                                    viewerUserId && player.id === viewerUserId
+                                                        ? 'leaderboard-table__row--you'
+                                                        : ''
+                                                }
+                                            >
                                                 <td className="leaderboard-table__rank-cell">
                                                     #{player.rank}
                                                 </td>

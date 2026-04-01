@@ -61,6 +61,12 @@ export default function HomePage() {
                 <small>{label}</small>
               </Link>
             ))}
+            <Link
+              href="/play?time=custom"
+              className="time-box"
+            >
+              Custom
+            </Link>
           </div>
         </section>
       </main>
