@@ -2,11 +2,7 @@ import Button from './Button';
 
 export function NextPuzzleBtn({ onClick, disabled = false }) {
   return (
-    <Button
-      onClick={onClick}
-      disabled={disabled}
-      style={{ width: '100%', background: '#10b981', border: '1px solid #059669', color: '#fff', fontWeight: 800 }}
-    >
+    <Button onClick={onClick} disabled={disabled} variant="tactic-next" className="btn--block">
       Next Puzzle
     </Button>
   );
@@ -14,11 +10,7 @@ export function NextPuzzleBtn({ onClick, disabled = false }) {
 
 export function OpenInLichessBtn({ onClick, disabled = false }) {
   return (
-    <Button
-      onClick={onClick}
-      disabled={disabled}
-      style={{ width: '100%', background: '#2563eb', border: '1px solid #1d4ed8', color: '#fff', fontWeight: 800 }}
-    >
+    <Button onClick={onClick} disabled={disabled} variant="tactic-lichess" className="btn--block">
       Open In Lichess
     </Button>
   );
@@ -29,15 +21,10 @@ export function ThumbsUpBtn({ onClick, active = false, disabled = false }) {
     <Button
       onClick={onClick}
       disabled={disabled}
-      style={{
-        flex: 1,
-        background: active ? '#16a34a' : '#1f2937',
-        border: '1px solid #334155',
-        color: '#fff',
-        fontWeight: 800,
-      }}
+      variant="thumb"
+      className={`btn--thumb btn--thumb-up ${active ? 'btn--thumb-up-active' : ''}`.trim()}
     >
-      👍
+      Up
     </Button>
   );
 }
@@ -47,15 +34,10 @@ export function ThumbsDownBtn({ onClick, active = false, disabled = false }) {
     <Button
       onClick={onClick}
       disabled={disabled}
-      style={{
-        flex: 1,
-        background: active ? '#dc2626' : '#1f2937',
-        border: '1px solid #334155',
-        color: '#fff',
-        fontWeight: 800,
-      }}
+      variant="thumb"
+      className={`btn--thumb ${active ? 'btn--thumb-down-active' : ''}`.trim()}
     >
-      👎
+      Down
     </Button>
   );
 }
@@ -74,17 +56,16 @@ export default function PostTacticDisplay({
   if (!visible) return null;
 
   return (
-    <div style={{ marginTop: 12, background: '#111827', borderRadius: 12, padding: '0.9rem', color: '#e5e7eb' }}>
-      <div style={{ fontWeight: 800, marginBottom: 10 }}>{solved ? 'Solved' : 'Failed'}</div>
+    <div className="post-tactic">
+      <div className="post-tactic__title">{solved ? 'Solved' : 'Failed'}</div>
       {lichessUrl ? <OpenInLichessBtn onClick={onOpenInLichess} disabled={disabled} /> : null}
-      <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+      <div className="post-tactic__thumbs">
         <ThumbsUpBtn onClick={onLike} active={likeChoice === true} disabled={disabled} />
         <ThumbsDownBtn onClick={onDislike} active={likeChoice === false} disabled={disabled} />
       </div>
-      <div style={{ marginTop: 10 }}>
+      <div className="post-tactic__lichess-note">
         <NextPuzzleBtn onClick={onNextPuzzle} disabled={disabled} />
       </div>
     </div>
   );
 }
-

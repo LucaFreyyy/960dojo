@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import Button from '../components/Button';
 import AuthField from '../components/AuthField';
+import SectionTitle from '../components/SectionTitle';
 import { supabase } from '../lib/supabase';
 
 export default function ChangePasswordPage() {
@@ -48,25 +49,10 @@ export default function ChangePasswordPage() {
       <Head>
         <title>Change Password - 960 Dojo</title>
       </Head>
-      <main style={{ maxWidth: 760, margin: '0 auto', padding: '1.25rem 1rem 2rem' }}>
-        <section className="practice" style={{ margin: '0 0 0.75rem', textAlign: 'center' }}>
-          <h2 style={{ marginTop: 0 }}>Change Password</h2>
-        </section>
-        <div
-          style={{
-            maxWidth: 460,
-            margin: '0 auto',
-            background: '#111827',
-            border: '1px solid #334155',
-            borderRadius: 14,
-            padding: '1.15rem',
-            boxShadow: '0 8px 30px rgba(0,0,0,0.25)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 12,
-          }}
-        >
-          <p style={{ margin: 0, color: '#94a3b8', fontSize: 13 }}>
+      <main className="page-shell page-shell--narrow">
+        <SectionTitle title="Change Password" />
+        <div className="auth-card auth-card--wide changepassword-card">
+          <p className="intro-lead">
             Enter a new password for your account.
           </p>
           <AuthField
@@ -92,16 +78,17 @@ export default function ChangePasswordPage() {
               if (e.key === 'Enter') submit();
             }}
           />
-          {error ? <div style={{ color: '#f87171', fontSize: 13, fontWeight: 700 }}>{error}</div> : null}
-          {info ? <div style={{ color: '#93c5fd', fontSize: 13, fontWeight: 700 }}>{info}</div> : null}
+          {error ? <div className="alert alert--error">{error}</div> : null}
+          {info ? <div className="alert alert--info">{info}</div> : null}
           <Button
             onClick={submit}
             disabled={!ready || busy}
-            style={{ width: '100%', background: '#2563eb', color: '#fff', border: '1px solid #1d4ed8', fontWeight: 800 }}
+            variant="primary"
+            className="btn--block"
           >
             Update password
           </Button>
-          <Link href="/login" style={{ color: '#93c5fd', textDecoration: 'none', fontWeight: 700, fontSize: 14 }}>
+          <Link href="/login" className="link">
             Back to sign in
           </Link>
         </div>
@@ -109,4 +96,3 @@ export default function ChangePasswordPage() {
     </>
   );
 }
-

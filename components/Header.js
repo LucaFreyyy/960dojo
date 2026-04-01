@@ -21,7 +21,7 @@ export default function Header() {
                 <img
                     src="/960_logo_red.png"
                     alt="960 Dojo Logo"
-                    style={{ width: '4.5rem', height: '3.5rem' }}
+                    className="logo-img"
                 />
                 <h1 className="logo-text">960 DOJO</h1>
             </Link>

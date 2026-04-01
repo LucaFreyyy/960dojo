@@ -2,19 +2,14 @@ export default function SectionTitle({
   title,
   onClick,
   titleText,
-  sectionClassName = 'practice',
-  sectionStyle = {},
-  headingStyle = {},
+  sectionClassName = '',
+  headingClassName = '',
 }) {
   const text = titleText || title || '';
   return (
-    <section className={sectionClassName} style={{ margin: '0 0 0.75rem', textAlign: 'center', ...sectionStyle }}>
+    <section className={`section-title ${sectionClassName}`.trim()}>
       <h2
-        style={{
-          marginTop: 0,
-          ...(onClick ? { cursor: 'pointer', userSelect: 'none' } : {}),
-          ...headingStyle,
-        }}
+        className={`section-title__heading ${onClick ? 'section-title__heading--clickable' : ''} ${headingClassName}`.trim()}
         onClick={onClick}
       >
         {text}
@@ -22,4 +17,3 @@ export default function SectionTitle({
     </section>
   );
 }
-

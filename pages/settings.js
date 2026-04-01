@@ -7,11 +7,11 @@ export default function SettingsPage() {
             <Head>
                 <title>Settings - 960 Dojo</title>
             </Head>
-            <main style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '4rem' }}>
-                <h1 style={{ fontSize: '2.5rem', fontWeight: 'bold', marginBottom: '1.5rem', textAlign: 'center' }}>
+            <main className="page-shell--center">
+                <h1 className="page-title">
                     Settings Coming Soon!
                 </h1>
-                <p style={{ fontSize: '1.25rem', marginBottom: '2rem', textAlign: 'center', maxWidth: '600px' }}>
+                <p className="page-lead">
                     Help accelerate development with a boost of caffeine!
                 </p>
                 <a

@@ -101,20 +101,9 @@ export default function LoginPage() {
             <Head>
                 <title>{forgotMode ? 'Forgot Password' : isSignUp ? 'Create Account' : 'Sign In'} - 960 Dojo</title>
             </Head>
-            <main style={{ maxWidth: 460, margin: '8vh auto', padding: '0 1rem' }}>
-                <div
-                    style={{
-                        background: '#111827',
-                        border: '1px solid #334155',
-                        borderRadius: 14,
-                        padding: '1.1rem',
-                        boxShadow: '0 8px 30px rgba(0,0,0,0.25)',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 12,
-                    }}
-                >
-                    <h2 style={{ margin: 0, color: '#e2e8f0' }}>
+            <main className="page-shell--auth">
+                <div className="auth-card auth-card--wide">
+                    <h2 className="auth-card-title">
                         {forgotMode ? 'Forgot Password' : isSignUp ? 'Create Account' : 'Sign In'}
                     </h2>
 
@@ -134,7 +123,8 @@ export default function LoginPage() {
                             <Button
                                 onClick={handleForgotPassword}
                                 disabled={busy}
-                                style={{ width: '100%', background: '#2563eb', color: '#fff', border: '1px solid #1d4ed8', fontWeight: 800 }}
+                                variant="primary"
+                                className="btn--block"
                             >
                                 Send reset link
                             </Button>
@@ -178,7 +168,8 @@ export default function LoginPage() {
                             <Button
                                 onClick={handleSubmit}
                                 disabled={busy}
-                                style={{ width: '100%', background: '#2563eb', color: '#fff', border: '1px solid #1d4ed8', fontWeight: 800 }}
+                                variant="primary"
+                                className="btn--block"
                             >
                                 Sign Up
                             </Button>
@@ -210,25 +201,26 @@ export default function LoginPage() {
                             <Button
                                 onClick={handleSubmit}
                                 disabled={busy}
-                                style={{ width: '100%', background: '#2563eb', color: '#fff', border: '1px solid #1d4ed8', fontWeight: 800 }}
+                                variant="primary"
+                                className="btn--block"
                             >
                                 Sign In
                             </Button>
                         </>
                     )}
 
-                    {error ? <div style={{ color: '#f87171', fontSize: 13, fontWeight: 700 }}>{error}</div> : null}
-                    {info ? <div style={{ color: '#93c5fd', fontSize: 13, fontWeight: 700 }}>{info}</div> : null}
+                    {error ? <div className="alert alert--error">{error}</div> : null}
+                    {info ? <div className="alert alert--info">{info}</div> : null}
 
                     {!forgotMode ? (
                         <button
                             type="button"
+                            className="link-button"
                             onClick={() => {
                                 setIsSignUp((v) => !v);
                                 setError('');
                                 setInfo('');
                             }}
-                            style={{ background: 'none', border: 'none', color: '#93c5fd', cursor: 'pointer', textAlign: 'left', padding: 0 }}
                         >
                             {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
                         </button>
@@ -236,12 +228,12 @@ export default function LoginPage() {
 
                     <button
                         type="button"
+                        className="link-button"
                         onClick={() => {
                             setForgotMode((v) => !v);
                             setError('');
                             setInfo('');
                         }}
-                        style={{ background: 'none', border: 'none', color: '#93c5fd', cursor: 'pointer', textAlign: 'left', padding: 0 }}
                     >
                         {forgotMode ? 'Back to sign in' : 'Forgot password?'}
                     </button>

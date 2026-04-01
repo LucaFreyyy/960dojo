@@ -19,45 +19,37 @@ export default function ModeSelector({
       type="button"
       disabled={!!lock}
       onClick={onClick}
-      style={{
-        padding: '8px 14px',
-        borderRadius: 10,
-        border: `1px solid ${active ? '#f6d94d' : '#334155'}`,
-        background: active ? '#2a2618' : '#151821',
-        color: lock ? '#64748b' : active ? '#f6d94d' : '#cbd5e1',
-        fontWeight: 700,
-        cursor: lock ? 'not-allowed' : 'pointer',
-      }}
+      className={`mode-chip ${active ? 'mode-chip--active' : ''} ${lock ? 'mode-chip--locked' : ''}`.trim()}
     >
       {label}
     </button>
   );
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <div style={{ color: '#94a3b8', fontWeight: 700, fontSize: 13 }}>Mode</div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+    <div className="mode-block">
+      <div className="panel-label">Mode</div>
+      <div className="chip-row">
         {btn(mode === 'ranked', () => onModeChange('ranked'), 'Ranked', rankedLocked)}
         {btn(mode === 'training', () => onModeChange('training'), 'Training', false)}
       </div>
       {rankedLocked ? (
-        <div style={{ color: '#64748b', fontSize: 12 }}>Log in to play ranked openings.</div>
+        <div className="hint">Log in to play ranked openings.</div>
       ) : null}
       {mode === 'ranked' && rankedForcedRandomHint ? (
-        <div style={{ color: '#94a3b8', fontSize: 12 }}>{rankedForcedRandomHint}</div>
+        <div className="hint">{rankedForcedRandomHint}</div>
       ) : null}
 
       {mode === 'training' ? (
         <>
-          <div style={{ color: '#94a3b8', fontWeight: 700, fontSize: 13, marginTop: 4 }}>Your color</div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          <div className="panel-label panel-label--spaced">Your color</div>
+          <div className="chip-row">
             {btn(colorChoice === 'white', () => onColorChange('white'), 'White', false)}
             {btn(colorChoice === 'black', () => onColorChange('black'), 'Black', false)}
             {btn(colorChoice === 'random', () => onColorChange('random'), 'Random', false)}
           </div>
         </>
       ) : (
-        <div style={{ color: '#64748b', fontSize: 12 }}>Color is random in ranked mode.</div>
+        <div className="hint">Color is random in ranked mode.</div>
       )}
     </div>
   );

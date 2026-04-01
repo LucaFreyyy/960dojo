@@ -79,7 +79,7 @@ export default function ProfileHeader({ user, editable = true }) {
             <div className="profile-info">
                 <div className="profile-name-row">
                     <label>Name {editable && (
-                        <button onClick={() => handleEdit('name')} className='edit-button'>✏️</button>
+                        <button type="button" onClick={() => handleEdit('name')} className='edit-button'>Edit</button>
                     )}</label>
                     {editingField === 'name' ? (
                         editable ? (
@@ -102,7 +102,7 @@ export default function ProfileHeader({ user, editable = true }) {
 
                 <div className="profile-bio-row">
                     <label>Bio {editable && (
-                        <button onClick={() => handleEdit('bio')} className='edit-button'>✏️</button>
+                        <button type="button" onClick={() => handleEdit('bio')} className='edit-button'>Edit</button>
                     )}</label>
                     {editingField === 'bio' ? (
                         editable ? (
@@ -115,7 +115,6 @@ export default function ProfileHeader({ user, editable = true }) {
                                 onKeyDown={handleBioKeyDown}
                                 onBlur={() => setEditingField(null)}
                                 rows={1}
-                                style={{ resize: 'none', overflow: 'hidden' }}
                                 autoFocus
                             />
                         ) : (

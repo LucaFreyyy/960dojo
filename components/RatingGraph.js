@@ -63,15 +63,7 @@ export default function RatingGraph({ userId, format }) {
                             tickLine={{ stroke: '#334155' }}
                             width={44}
                         />
-                        <Tooltip
-                            contentStyle={{
-                                background: '#0f172a',
-                                border: '1px solid #334155',
-                                borderRadius: 10,
-                                color: '#e2e8f0',
-                            }}
-                            labelStyle={{ color: '#93c5fd', fontWeight: 700 }}
-                        />
+                        <Tooltip />
                         <Area
                             type="monotone"
                             dataKey="rating"

@@ -47,10 +47,7 @@ export default function ChessBoard({
     const cg = Chessground(containerRef.current, {
       fen: fen,
       orientation: orientation,
-      // Chessground's built-in castling helper assumes standard rooks (a/h files).
-      // In Chess960 it can desync pieces, so we disable it and rely on FEN updates.
       autoCastle: false,
-      // Chessground doesn't derive turn from a full FEN string; keep it in sync explicitly.
       turnColor: turnColorFromFen(fen),
       movable: {
         free: false,
@@ -90,9 +87,9 @@ export default function ChessBoard({
               },
               lastMove: [orig, dest],
             });
-          }
-        }
-      }
+          },
+        },
+      },
     });
     setGround(cg);
   }, [fen, ground, orientation, disabled, movableColor]);
@@ -102,17 +99,14 @@ export default function ChessBoard({
     try { ground.destroy(); } catch {}
   }, [ground]);
 
-  // FEN got updated: Setup new game
   useEffect(() => {
     if (!ground || !fen) return;
 
-    // Create new position from FEN
     const newPosition = createPosition(fen);
     if (!newPosition) return;
 
     positionRef.current = newPosition;
 
-    // Update ground instance (visu)
     ground.set({
       fen: fen,
       turnColor: turnColorFromFen(fen),
@@ -124,7 +118,6 @@ export default function ChessBoard({
     });
   }, [fen, ground, disabled, lastMove, movableColor]);
 
-  // orientation got updated: Flip the board
   useEffect(() => {
     if (!ground) return;
 
@@ -141,25 +134,11 @@ export default function ChessBoard({
 
   if (!fen) {
     return (
-      <div
-        style={{
-          width: '100%',
-          maxWidth: '560px',
-          aspectRatio: '1 / 1',
-          background: '#0f131a',
-          border: '1px solid #2f3644',
-          borderRadius: 12,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: '#9fb0cf',
-          fontWeight: 700,
-        }}
-      >
+      <div className="chessboard-placeholder">
         Loading board...
       </div>
     );
   }
 
-  return <div ref={containerRef} style={{ width: '100%', maxWidth: '560px', aspectRatio: '1 / 1' }} />;
-};
+  return <div ref={containerRef} className="chessboard-root" />;
+}

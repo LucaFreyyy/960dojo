@@ -707,19 +707,11 @@ export default function OpeningsPage() {
       <Head>
         <title>Openings - 960 Dojo</title>
       </Head>
-      <main style={{ maxWidth: 1180, margin: '0 auto', padding: '1.25rem 1rem 2rem' }}>
+      <main className="page-shell openings-page">
         <SectionTitle title="Openings" onClick={() => window.location.reload()} />
 
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: '560px minmax(420px, 1fr)',
-            gap: 20,
-            alignItems: 'start',
-            transform: 'translateX(clamp(0px, 0vw, 0px))',
-          }}
-        >
-          <div style={{ width: 560, maxWidth: '100%', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div className="openings-layout">
+          <div className="openings-col-board">
             <PositionDisplay value={openingNr} editable={false} />
             <Chessboard
               fen={displayedFen}
@@ -737,7 +729,7 @@ export default function OpeningsPage() {
             />
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
+          <div className="openings-col-side">
             {showSetup ? (
               <>
                 <ModeSelector
@@ -760,31 +752,23 @@ export default function OpeningsPage() {
                 />
                 <StartBtn onClick={startGame} disabled={gameMode === 'ranked' && !userId} />
                 {!rankedMode ? (
-                  <label style={{ display: 'flex', flexDirection: 'column', gap: 6, color: '#94a3b8', fontSize: 13 }}>
+                  <label className="training-rating-field">
                     Training rating (used for Lichess explorer + Stockfish)
                     <input
                       type="number"
                       value={trainingRating}
                       onChange={(e) => setTrainingRating(Number(e.target.value) || 1500)}
-                      style={{
-                        padding: '8px 10px',
-                        borderRadius: 8,
-                        border: '1px solid #334155',
-                        background: '#0f131a',
-                        color: '#e2e8f0',
-                        fontWeight: 700,
-                      }}
                     />
                   </label>
                 ) : null}
                 {infoMessage ? (
-                  <div style={{ color: '#fbbf24', fontSize: 13, fontWeight: 600 }}>{infoMessage}</div>
+                  <div className="text-warn">{infoMessage}</div>
                 ) : null}
               </>
             ) : (
               <>
                 {openingsLichessUrl ? (
-                  <div style={{ maxWidth: 280 }}>
+                  <div className="narrow-action">
                     <OpenInLichessBtn onClick={() => window.open(openingsLichessUrl, '_blank')} />
                   </div>
                 ) : null}
@@ -799,7 +783,7 @@ export default function OpeningsPage() {
                   resetSelectionOnPgnChange={false}
                 />
                 {phase === 'done' ? (
-                  <div style={{ maxWidth: 280 }}>
+                  <div className="narrow-action">
                     <PlayAgainBtn onClick={playAgain} disabled={gameMode === 'ranked' && !userId} />
                   </div>
                 ) : null}

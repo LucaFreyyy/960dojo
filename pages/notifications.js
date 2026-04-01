@@ -63,47 +63,28 @@ export default function NotificationsPage() {
       <Head>
         <title>Notifications - 960 Dojo</title>
       </Head>
-      <main style={{ maxWidth: 980, margin: '0 auto', padding: '1.25rem 1rem 2rem' }}>
+      <main className="page-shell page-shell--notifications">
         <SectionTitle title="Notifications" />
         {!userId ? (
-          <div style={{ color: '#e2e8f0' }}>Please log in to view notifications.</div>
+          <div className="text-muted">Please log in to view notifications.</div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div className="notifications-stack">
             {requests.length === 0 ? (
-              <div style={{ color: '#94a3b8' }}>No pending friend requests.</div>
+              <div className="text-muted">No pending friend requests.</div>
             ) : (
               requests.map((r) => (
-                <div
-                  key={r.id}
-                  style={{
-                    border: '1px solid #334155',
-                    borderRadius: 12,
-                    background: '#111827',
-                    padding: '0.85rem 0.95rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: 12,
-                    flexWrap: 'wrap',
-                  }}
-                >
-                  <div style={{ color: '#e2e8f0' }}>
-                    <Link href={`/profile/${r.requesterId}`} style={{ color: '#93c5fd', textDecoration: 'none', fontWeight: 700 }}>
+                <div key={r.id} className="notification-card">
+                  <div className="notification-card__text">
+                    <Link href={`/profile/${r.requesterId}`} className="notification-card__link">
                       {r.requesterName}
                     </Link>{' '}
                     sent you a friend request.
                   </div>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <Button
-                      onClick={() => acceptRequest(r.id)}
-                      style={{ background: '#16a34a', border: '1px solid #15803d', color: '#fff', fontWeight: 800 }}
-                    >
+                  <div className="notification-card__actions">
+                    <Button onClick={() => acceptRequest(r.id)} variant="success">
                       Accept
                     </Button>
-                    <Button
-                      onClick={() => declineRequest(r.id)}
-                      style={{ background: '#b91c1c', border: '1px solid #991b1b', color: '#fff', fontWeight: 800 }}
-                    >
+                    <Button onClick={() => declineRequest(r.id)} variant="danger">
                       Decline
                     </Button>
                   </div>
@@ -116,4 +97,3 @@ export default function NotificationsPage() {
     </>
   );
 }
-

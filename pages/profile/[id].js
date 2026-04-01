@@ -106,18 +106,18 @@ export default function ProfilePage() {
                         actionSlot={
                             viewerId && viewerId !== id ? (
                                 friendship?.status === 'accepted' ? (
-                                    <Button disabled style={{ background: '#14532d', border: '1px solid #166534', color: '#e6ffed' }}>
+                                    <Button disabled variant="success">
                                         Friends
                                     </Button>
                                 ) : friendship?.status === 'pending' ? (
-                                    <Button disabled style={{ background: '#334155', color: '#e2e8f0' }}>
+                                    <Button disabled variant="muted">
                                         Request pending
                                     </Button>
                                 ) : (
                                     <Button
                                         onClick={requestFriend}
                                         disabled={requestingFriend}
-                                        style={{ background: '#2563eb', color: '#fff', border: '1px solid #1d4ed8' }}
+                                        variant="primary"
                                     >
                                         {requestingFriend ? 'Sending...' : 'Add friend'}
                                     </Button>
@@ -128,29 +128,13 @@ export default function ProfilePage() {
                 )}
                 {friendRequestMessage ? (
                     <div
-                        style={{
-                            maxWidth: 560,
-                            margin: '0.75rem auto 0',
-                            borderRadius: 10,
-                            padding: '0.65rem 0.8rem',
-                            fontWeight: 700,
-                            fontSize: 13,
-                            border: friendRequestMessageType === 'success'
-                                ? '1px solid #15803d'
+                        className={`friend-request-banner ${
+                            friendRequestMessageType === 'success'
+                                ? 'friend-request-banner--success'
                                 : friendRequestMessageType === 'error'
-                                    ? '1px solid #991b1b'
-                                    : '1px solid #334155',
-                            color: friendRequestMessageType === 'success'
-                                ? '#86efac'
-                                : friendRequestMessageType === 'error'
-                                    ? '#fca5a5'
-                                    : '#cbd5e1',
-                            background: friendRequestMessageType === 'success'
-                                ? 'rgba(22, 163, 74, 0.12)'
-                                : friendRequestMessageType === 'error'
-                                    ? 'rgba(185, 28, 28, 0.14)'
-                                    : 'rgba(51, 65, 85, 0.2)',
-                        }}
+                                    ? 'friend-request-banner--error'
+                                    : 'friend-request-banner--info'
+                        }`.trim()}
                     >
                         {friendRequestMessage}
                     </div>

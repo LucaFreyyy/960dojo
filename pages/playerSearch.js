@@ -1,5 +1,4 @@
 import Head from 'next/head';
-import { FaCoffee } from 'react-icons/fa';
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import Link from 'next/link';
@@ -51,83 +50,53 @@ export default function ProfileSearchPage() {
             <Head>
                 <title>Profile Search - 960 Dojo</title>
             </Head>
-            <main style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '4rem', padding: '0 1rem' }}>
-                <h1 style={{ fontSize: '2.5rem', fontWeight: 'bold', marginBottom: '1.5rem', textAlign: 'center' }}>
+            <main className="page-shell--center player-search-page">
+                <h1 className="player-search-title">
                     Profile Search
                 </h1>
 
-                {/* Search Input */}
-                <div style={{ width: '100%', maxWidth: '500px', marginBottom: '2rem' }}>
+                <div className="player-search-field-wrap">
                     <input
                         type="text"
                         placeholder="Search for a player by name..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        style={{
-                            width: '100%',
-                            padding: '12px 16px',
-                            fontSize: '1rem',
-                            border: '2px solid #e2e8f0',
-                            borderRadius: '8px',
-                            outline: 'none',
-                            transition: 'border-color 0.2s',
-                        }}
-                        onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
-                        onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
+                        className="player-search-input"
                     />
                 </div>
 
-                {/* Results */}
-                <div style={{ width: '100%', maxWidth: '600px', marginBottom: '2rem' }}>
+                <div className="player-search-results">
                     {loading && (
-                        <p style={{ textAlign: 'center', color: '#6b7280' }}>Loading users...</p>
+                        <p className="player-search-hint">Loading users...</p>
                     )}
-                    
+
                     {!loading && searchTerm && filteredUsers.length === 0 && (
-                        <p style={{ textAlign: 'center', color: '#6b7280' }}>
-                            No players found matching "{searchTerm}"
+                        <p className="player-search-hint">
+                            No players found matching &quot;{searchTerm}&quot;
                         </p>
                     )}
-                    
+
                     {!loading && filteredUsers.length > 0 && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                        <div className="player-search-list">
                             {filteredUsers.map((user) => (
                                 <Link
                                     key={user.id}
                                     href={`/profile/${user.id}`}
-                                    style={{
-                                        display: 'block',
-                                        padding: '1rem',
-                                        backgroundColor: 'white',
-                                        border: '1px solid #e2e8f0',
-                                        borderRadius: '8px',
-                                        textDecoration: 'none',
-                                        color: '#1f2937',
-                                        transition: 'all 0.2s',
-                                        cursor: 'pointer',
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        e.target.style.backgroundColor = '#f9fafb';
-                                        e.target.style.borderColor = '#3b82f6';
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.target.style.backgroundColor = 'white';
-                                        e.target.style.borderColor = '#e2e8f0';
-                                    }}
+                                    className="player-search-card"
                                 >
-                                    <div style={{ fontWeight: '500', marginBottom: '0.25rem' }}>
+                                    <div className="player-search-card__name">
                                         {user.name}
                                     </div>
-                                    <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                                    <div className="player-search-card__meta">
                                         View profile →
                                     </div>
                                 </Link>
                             ))}
                         </div>
                     )}
-                    
+
                     {!loading && !searchTerm && (
-                        <p style={{ textAlign: 'center', color: '#6b7280' }}>
+                        <p className="player-search-hint">
                             Enter a name to search for players
                         </p>
                     )}

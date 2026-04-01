@@ -19,7 +19,7 @@ export default function ProfileBody({
         checkUsernameAvailable={checkUsernameAvailable}
         onNameUpdated={onNameUpdated}
       />
-      {actionSlot ? <div style={{ display: 'flex', justifyContent: 'center', margin: '6px 0 8px' }}>{actionSlot}</div> : null}
+      {actionSlot ? <div className="profile-action-slot">{actionSlot}</div> : null}
       <hr className="separating-line" />
       <FriendsList friends={friends} />
       <hr className="separating-line" />
@@ -27,4 +27,3 @@ export default function ProfileBody({
     </>
   );
 }
-

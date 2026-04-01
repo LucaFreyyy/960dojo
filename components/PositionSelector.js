@@ -32,7 +32,6 @@ function sameSquareColorOnBackRank(a, b) {
   const ia = CHESS960_FILES.indexOf(a);
   const ib = CHESS960_FILES.indexOf(b);
   if (ia < 0 || ib < 0) return false;
-  // On rank 1/8, equal parity => same color square.
   return (ia % 2) === (ib % 2);
 }
 
@@ -125,7 +124,6 @@ const PositionSelector = forwardRef(function PositionSelector(
   const numberEditable = !rankedMode && positionMode === 'number';
   const showFixed = !rankedMode && positionMode === 'fixed';
 
-  // Setup preview: keep opening number in sync even before pressing Start.
   useEffect(() => {
     if (minimal) return;
     if (positionMode === 'number' && !rankedMode) return;
@@ -135,9 +133,9 @@ const PositionSelector = forwardRef(function PositionSelector(
   if (minimal) return null;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <div style={{ color: '#94a3b8', fontWeight: 700, fontSize: 13 }}>Starting position</div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+    <div className="position-selector">
+      <div className="panel-label">Starting position</div>
+      <div className="chip-row">
         {POSITION_MODES.map(({ key, label }) => {
           const active = positionMode === key;
           const lockRanked = rankedMode && key !== 'random';
@@ -147,15 +145,7 @@ const PositionSelector = forwardRef(function PositionSelector(
               type="button"
               disabled={disabled || lockRanked}
               onClick={() => trySetMode(key)}
-              style={{
-                padding: '8px 12px',
-                borderRadius: 10,
-                border: `1px solid ${active ? '#38bdf8' : '#334155'}`,
-                background: active ? '#0c1a22' : '#151821',
-                color: lockRanked ? '#475569' : active ? '#7dd3fc' : '#cbd5e1',
-                fontWeight: 700,
-                cursor: disabled || lockRanked ? 'not-allowed' : 'pointer',
-              }}
+              className={`pos-mode-btn ${active ? 'pos-mode-btn--active' : ''}`.trim()}
             >
               {label}
             </button>
@@ -164,20 +154,14 @@ const PositionSelector = forwardRef(function PositionSelector(
       </div>
 
       {showFixed ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
-            <span style={{ color: '#94a3b8', fontSize: 13 }}>Piece</span>
+        <div className="stack stack--gap-md">
+          <div className="chip-row chip-row--center">
+            <span className="hint">Piece</span>
             <select
               value={fixedPiece}
               disabled={disabled}
               onChange={(e) => setFixedPiece(e.target.value)}
-              style={{
-                padding: '6px 10px',
-                borderRadius: 8,
-                background: '#111827',
-                color: '#e2e8f0',
-                border: '1px solid #334155',
-              }}
+              className="file-select"
             >
               {PIECE_OPTIONS.map((p) => (
                 <option key={p.key} value={p.key}>
@@ -186,8 +170,8 @@ const PositionSelector = forwardRef(function PositionSelector(
               ))}
             </select>
           </div>
-          <div style={{ color: '#94a3b8', fontSize: 12 }}>Files (all must match)</div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          <div className="hint">Files (all must match)</div>
+          <div className="chip-row">
             {CHESS960_FILES.map((f) => {
               const on = fixedFiles.has(f);
               const size = fixedFiles.size;
@@ -210,17 +194,7 @@ const PositionSelector = forwardRef(function PositionSelector(
                   type="button"
                   disabled={disabled || blocked}
                   onClick={() => toggleFile(f)}
-                  style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: 8,
-                    border: `1px solid ${on ? '#f6d94d' : '#334155'}`,
-                    background: on ? '#2a2618' : blocked ? '#0b0f14' : '#0f131a',
-                    color: on ? '#f6d94d' : blocked ? '#475569' : '#94a3b8',
-                    fontWeight: 800,
-                    cursor: disabled || blocked ? 'not-allowed' : 'pointer',
-                    opacity: blocked ? 0.65 : 1,
-                  }}
+                  className={`file-letter-btn ${on ? 'file-letter-btn--on' : ''} ${blocked ? 'file-letter-btn--blocked' : ''}`.trim()}
                 >
                   {f}
                 </button>

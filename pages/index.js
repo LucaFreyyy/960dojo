@@ -29,17 +29,16 @@ export default function HomePage() {
 
       <main>
         <section className="practice">
-          <SectionTitle title="Practice" sectionClassName="practice" sectionStyle={{ margin: 0 }} headingStyle={{ margin: '2rem 0 1rem' }} />
+          <SectionTitle title="Practice" sectionClassName="practice" headingClassName="section-title__heading--home" />
           <div className="practice-grid">
             <Link className="practice-box" href="/tactics">
-              <h3>Tactics 💥</h3>
+              <h3>Tactics</h3>
               <p className="practice-desc">
                 <span className="emphasis">Improve</span> your <span className="emphasis">chess960 pattern recognition</span> with puzzles generated from real games.
               </p>
-              <p className="tiny-note">no puzzles generated yet</p>
             </Link>
             <Link className="practice-box" href="/openings">
-              <h3>Openings 🧭</h3>
+              <h3>Openings</h3>
               <div className="practice-desc">
                 <p><span className="emphasis">Pick</span> a starting <span className="emphasis">position</span></p>
                 <p><span className="emphasis">Play</span> against the <span className="emphasis">lichess database</span> and <span className="emphasis">Stockfish</span> at <span className="emphasis">your level</span></p>
@@ -50,7 +49,7 @@ export default function HomePage() {
         </section>
 
         <section className="play">
-          <SectionTitle title="Play" sectionClassName="play" sectionStyle={{ margin: 0 }} headingStyle={{ margin: '2rem 0 1rem' }} />
+          <SectionTitle title="Play" sectionClassName="play" headingClassName="section-title__heading--home" />
           <div className="time-grid">
             {timeControls.map(({ time, label }) => (
               <Link

@@ -42,52 +42,25 @@ function getParentSelectionFromVariationPath(variationPath) {
     return { index: anchorIndex, variationPath: parentPath };
 }
 
-function colorFromEval(evalValue, userColor) {
-    if (!isFiniteNumber(evalValue)) return '#d0d0d0';
+function lossToneClass(lossCp) {
+    if (!Number.isFinite(lossCp)) return 'move-btn--tone-neutral';
+    if (lossCp < 50) return 'move-btn--tone-best';
+    if (lossCp < 150) return 'move-btn--tone-mid';
+    if (lossCp < 300) return 'move-btn--tone-bad';
+    return 'move-btn--tone-worst';
+}
+
+function evalSummaryClass(evalValue, userColor) {
+    if (!isFiniteNumber(evalValue)) return 'eval-summary--muted';
     if (Math.abs(evalValue) > 100) {
         const favorable = userColor === 'black' ? evalValue < 0 : evalValue > 0;
-        return favorable ? 'rgb(74, 190, 93)' : 'rgb(210, 79, 64)';
+        return favorable ? 'eval-summary--good' : 'eval-summary--bad';
     }
     let v = evalValue;
     if (userColor === 'black') v = -v;
-    const min = -5;
-    const max = 5;
-    const clamped = Math.max(min, Math.min(max, v));
-    const strength = 0.5;
-
-    if (clamped >= 0) {
-        const t = Math.pow(clamped / max, strength);
-        const r = Math.round(255 - (255 - 74) * t);
-        const g = Math.round(255 - (255 - 190) * t);
-        const b = Math.round(255 - (255 - 93) * t);
-        return `rgb(${r}, ${g}, ${b})`;
-    }
-
-    const t = Math.pow(Math.abs(clamped / min), strength);
-    const r = Math.round(255 - (255 - 210) * t);
-    const g = Math.round(255 - (255 - 79) * t);
-    const b = Math.round(255 - (255 - 64) * t);
-    return `rgb(${r}, ${g}, ${b})`;
-}
-
-function blendColor(a, b, t) {
-    const clamped = Math.max(0, Math.min(1, t));
-    const r = Math.round(a[0] + (b[0] - a[0]) * clamped);
-    const g = Math.round(a[1] + (b[1] - a[1]) * clamped);
-    const bl = Math.round(a[2] + (b[2] - a[2]) * clamped);
-    return `rgb(${r}, ${g}, ${bl})`;
-}
-
-function colorFromLossCp(lossCp) {
-    if (!Number.isFinite(lossCp)) return '#e6e6e6';
-    const effectiveLoss = Math.max(0, lossCp);
-    const clamped = Math.min(300, effectiveLoss);
-    // 0 cp loss => green, ~150 cp => yellow, >=300 cp => deep red.
-    const green = [34, 197, 94];
-    const yellow = [234, 179, 8];
-    const red = [153, 27, 27];
-    if (clamped <= 150) return blendColor(green, yellow, clamped / 150);
-    return blendColor(yellow, red, (clamped - 150) / 150);
+    if (v > 0.2) return 'eval-summary--good';
+    if (v < -0.2) return 'eval-summary--bad';
+    return 'eval-summary--equal';
 }
 
 function formatEval(evalValue) {
@@ -181,7 +154,6 @@ export default function MoveList({
                 const key = `${path.join('|') || 'main'}:${i}`;
                 map.set(key, plyStart + i);
                 for (let v = 0; v < node.variations.length; v += 1) {
-                    // Variations branch from the position after the anchor move.
                     walk(node.variations[v], [...path, `${i}:${v}`], plyStart + i + 1);
                 }
             }
@@ -223,10 +195,6 @@ export default function MoveList({
         const value = pathToEval.get(key);
         return isFiniteNumber(value) ? value : null;
     }, [hasValidEvalData, pathToEval, selection]);
-    const currentSelectedEvalColor = useMemo(() => {
-        if (!isFiniteNumber(currentSelectedEval)) return '#d0d7e5';
-        return colorFromEval(currentSelectedEval, userColor);
-    }, [currentSelectedEval, userColor]);
 
     const goToInitial = useCallback(() => {
         setSelection({ index: -1, variationPath: [] });
@@ -302,35 +270,22 @@ export default function MoveList({
             else if (lossCp > 150) annotation = '?';
             else if (lossCp >= 50) annotation = '?!';
         }
-        const color = selected ? '#101010' : hasValidEvalData ? colorFromLossCp(lossCp) : '#e6e6e6';
-        const background = selected ? '#f6d94d' : 'transparent';
+        const toneClass = selected
+            ? 'move-btn--selected'
+            : (hasValidEvalData ? lossToneClass(lossCp) : 'move-btn--tone-neutral');
 
         return (
             <button
                 type="button"
                 onClick={() => setSelection({ index, variationPath: clonePath(path) })}
-                style={{
-                    border: 'none',
-                    background,
-                    color,
-                    borderRadius: 6,
-                    padding: fullWidth ? '6px 8px' : '2px 6px',
-                    cursor: 'pointer',
-                    fontWeight: 600,
-                    textAlign: 'left',
-                    width: fullWidth ? '100%' : 'auto',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: 8,
-                }}
+                className={`move-btn ${fullWidth ? 'move-btn--full' : 'move-btn--inline'} ${toneClass}`.trim()}
             >
                 <span>
                     {prefix}
                     {node.san}
                     {annotation}
                 </span>
-                {evalText ? <span style={{ opacity: 0.92, fontWeight: 700, fontSize: 10 }}>{evalText}</span> : null}
+                {evalText ? <span className="move-btn__eval">{evalText}</span> : null}
             </button>
         );
     }
@@ -348,13 +303,13 @@ export default function MoveList({
                     return (
                         <span key={`${segmentPath.join('|') || 'main'}:${i}`}>
                             {renderMoveButton(node, i, segmentPath, moveLabel)}
-                            <span style={{ marginRight: 4 }} />
+                            <span className="move-list__spacer-sm" />
                             {node.variations.map((variation, vIdx) => (
-                                <span key={`${segmentPath.join('|')}:${i}:var-${vIdx}`} style={{ color: '#a9b4c9', marginLeft: 4 }}>
+                                <span key={`${segmentPath.join('|')}:${i}:var-${vIdx}`} className="move-list__variation-inner">
                                     ( {renderVariationLine(variation, [...segmentPath, `${i}:${vIdx}`], moveNo)} )
                                 </span>
                             ))}
-                            <span style={{ marginRight: 6 }} />
+                            <span className="move-list__spacer-md" />
                         </span>
                     );
                 })}
@@ -370,18 +325,8 @@ export default function MoveList({
             const moveNumber = Math.floor(i / 2) + 1;
 
             rows.push(
-                <div
-                    key={`main-row-${i}`}
-                    style={{
-                        display: 'grid',
-                        gridTemplateColumns: '44px 1fr 1fr',
-                        gap: 8,
-                        alignItems: 'center',
-                        padding: '4px 0',
-                        borderBottom: '1px solid #1f2533',
-                    }}
-                >
-                    <div style={{ color: '#93a3bf', fontWeight: 600 }}>{moveNumber}.</div>
+                <div key={`main-row-${i}`} className="move-list__row">
+                    <div className="move-list__num">{moveNumber}.</div>
                     <div>{renderMoveButton(whiteNode, i, [], '', true)}</div>
                     <div>{renderMoveButton(blackNode, i + 1, [], '', true)}</div>
                 </div>
@@ -397,15 +342,7 @@ export default function MoveList({
             for (let v = 0; v < combined.length; v += 1) {
                 const variation = combined[v];
                 rows.push(
-                    <div
-                        key={`main-row-${i}-var-${v}`}
-                        style={{
-                            padding: '6px 10px 8px 54px',
-                            color: '#a9b4c9',
-                            fontSize: 14,
-                            borderBottom: '1px dashed #1b2230',
-                        }}
-                    >
+                    <div key={`main-row-${i}-var-${v}`} className="move-list__variation">
                         ( {renderVariationLine(variation.line, variation.path, variation.moveNo)} )
                     </div>
                 );
@@ -414,97 +351,41 @@ export default function MoveList({
         return rows;
     }
 
+    const evalClass = evalSummaryClass(currentSelectedEval, userColor);
+
     return (
-        <div style={{
-            background: '#151821',
-            border: '1px solid #2a2f3a',
-            borderRadius: 14,
-            padding: 14,
-            boxShadow: '0 8px 30px rgba(0,0,0,0.28)',
-        }}>
-            <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+        <div className="move-list">
+            <div className="move-list__nav">
                 <button type="button" onClick={goToInitial} className="ml-btn">{'<<'}</button>
                 <button type="button" onClick={goPrev} className="ml-btn">{'<'}</button>
                 <button type="button" onClick={goNext} className="ml-btn">{'>'}</button>
                 <button type="button" onClick={goToMainlineEnd} className="ml-btn">{'>>'}</button>
             </div>
 
-            <div style={{
-                minHeight: 180,
-                borderRadius: 10,
-                border: '1px solid #2f3644',
-                background: '#0f131a',
-                padding: 12,
-                lineHeight: 1.9,
-            }}>
+            <div className="move-list__body">
                 {loading ? (
-                    <div style={{ 
-                        display: 'flex', 
-                        flexDirection: 'column',
-                        alignItems: 'center', 
-                        justifyContent: 'center',
-                        gap: 16, 
-                        color: '#9fb0cf', 
-                        fontSize: 14,
-                        minHeight: 156,
-                    }}>
-                        <div className="spinner" />
+                    <div className="move-list__loading">
+                        <div className="ml-spinner" />
                         <span>Analyzing position...</span>
                     </div>
                 ) : tree.length > 0 ? (
                     renderMainlineRows()
                 ) : (
-                    <div style={{ 
-                        display: 'flex', 
-                        flexDirection: 'column',
-                        alignItems: 'center', 
-                        justifyContent: 'center',
-                        gap: 8,
-                        color: '#6b7a94',
-                        textAlign: 'center',
-                        minHeight: 156,
-                    }}>
-                        <span style={{ fontSize: 32, opacity: 0.4 }}>♟</span>
-                        <span style={{ fontSize: 14 }}>No moves yet</span>
-                        <span style={{ fontSize: 12, opacity: 0.7 }}>Paste a PGN to get started</span>
+                    <div className="move-list__empty">
+                        <span className="move-list__empty-title">No moves yet</span>
+                        <span className="move-list__empty-hint">Paste a PGN to get started</span>
                     </div>
                 )}
             </div>
 
             {isFiniteNumber(currentSelectedEval) ? (
-                <div style={{ marginTop: 12, color: '#d0d7e5', fontSize: 14 }}>
+                <div className="move-list__eval-line">
                     <strong>Eval:</strong>{' '}
-                    <span style={{ color: currentSelectedEvalColor, fontWeight: 700 }}>
+                    <span className={`move-list__eval-strong ${evalClass}`}>
                         {formatEval(currentSelectedEval)}
                     </span>
                 </div>
             ) : null}
-
-            <style jsx>{`
-                .ml-btn {
-                    background: #202636;
-                    color: #e8edf8;
-                    border: 1px solid #3a4358;
-                    border-radius: 8px;
-                    padding: 6px 10px;
-                    font-weight: 700;
-                    cursor: pointer;
-                }
-                .ml-btn:hover {
-                    background: #2a3347;
-                }
-                .spinner {
-                    width: 28px;
-                    height: 28px;
-                    border: 3px solid #2a3a5b;
-                    border-top-color: #7ab2ff;
-                    border-radius: 50%;
-                    animation: spin 0.9s linear infinite;
-                }
-                @keyframes spin {
-                    to { transform: rotate(360deg); }
-                }
-            `}</style>
         </div>
     );
 }

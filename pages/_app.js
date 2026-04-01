@@ -1,7 +1,4 @@
-import '@/styles/globals.css';
-import '@/styles/info.css';
-import '@/styles/chessboard.css';
-import '@/styles/profile.css';
+import '@/styles/app.css';
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { SessionContext } from '../lib/SessionContext';

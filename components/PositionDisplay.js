@@ -16,18 +16,8 @@ export default function PositionDisplay({ value, editable, onChange, disabled })
   }
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 10,
-        padding: '10px 12px',
-        background: '#0f172a',
-        border: '1px solid #1e293b',
-        borderRadius: 10,
-      }}
-    >
-      <span style={{ color: '#94a3b8', fontWeight: 700, fontSize: 13 }}>Position</span>
+    <div className="position-display__wrap">
+      <span className="position-display__label">Position</span>
       {editable ? (
         <input
           type="text"
@@ -39,18 +29,10 @@ export default function PositionDisplay({ value, editable, onChange, disabled })
           onKeyDown={(e) => {
             if (e.key === 'Enter') commit(text);
           }}
-          style={{
-            width: 56,
-            padding: '6px 8px',
-            borderRadius: 8,
-            border: '1px solid #334155',
-            background: '#111827',
-            color: '#f1f5f9',
-            fontWeight: 800,
-          }}
+          className="position-display__input-inline"
         />
       ) : (
-        <span style={{ color: '#f8fafc', fontWeight: 800, fontSize: 18 }}>{value}</span>
+        <span className="position-display__value-static">{value}</span>
       )}
     </div>
   );

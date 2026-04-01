@@ -491,46 +491,21 @@ export default function TacticsPage() {
       <Head>
         <title>Tactics - 960 Dojo</title>
       </Head>
-      <main style={{ maxWidth: 1180, margin: '0 auto', padding: '1.25rem 1rem 2rem' }}>
+      <main className="page-shell tactics-page">
         <SectionTitle title="Tactics" />
 
-        {error ? <div style={{ color: '#ef4444', marginBottom: 10 }}>{error}</div> : null}
-        {infoMessage ? <div style={{ color: '#93c5fd', marginBottom: 10 }}>{infoMessage}</div> : null}
+        {error ? <div className="alert alert--error mb-sm">{error}</div> : null}
+        {infoMessage ? <div className="alert alert--info mb-sm">{infoMessage}</div> : null}
         {!userId ? (
-          <div
-            style={{
-              marginBottom: 14,
-              padding: '0.9rem 1rem',
-              borderRadius: 12,
-              border: '1px solid #334155',
-              background: '#0f172a',
-              color: '#e2e8f0',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: 12,
-              flexWrap: 'wrap',
-            }}
-          >
-            <span style={{ fontWeight: 700 }}>Log in to play puzzles</span>
-            <Link
-              href="/login"
-              style={{
-                display: 'inline-block',
-                padding: '0.5rem 0.9rem',
-                borderRadius: 10,
-                background: '#2563eb',
-                color: '#fff',
-                textDecoration: 'none',
-                fontWeight: 800,
-              }}
-            >
+          <div className="tactics-login-hint mb-md">
+            <strong>Log in to play puzzles</strong>
+            <Link href="/login" className="btn btn--primary btn--sm">
               Log in
             </Link>
           </div>
         ) : null}
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(340px, 600px) minmax(320px, 1fr)', gap: 18 }}>
+        <div className="tactics-layout">
           <section>
             <RatingDisplay
               label="Puzzle"
@@ -538,7 +513,7 @@ export default function TacticsPage() {
               delta={puzzleDelta}
               provisional={(tacticTimesPlayed || 0) < 10}
             />
-            <div style={{ marginTop: 8 }}>
+            <div className="board-stack">
               <Chessboard
                 fen={displayedFen || currentFen || startFen}
                 orientation={orientation}
@@ -547,7 +522,7 @@ export default function TacticsPage() {
                 lastMove={lastMove}
               />
             </div>
-            <div style={{ marginTop: 8 }}>
+            <div className="board-stack">
               <RatingDisplay
                 label="You"
                 rating={userRating}
@@ -558,9 +533,7 @@ export default function TacticsPage() {
           </section>
 
           <section>
-            <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'flex-start' }}>
-              <DifficultySelector value={difficulty} onChange={setDifficulty} disabled={loading} />
-            </div>
+            <DifficultySelector value={difficulty} onChange={setDifficulty} disabled={loading} />
             <MoveList
               pgn={moveListPgn}
               evalData={[]}
