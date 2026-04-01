@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import Link from 'next/link';
+import { ESTABLISHED_RATING_MIN_ENTRIES } from '../lib/ratingConstants';
 
 export default function LeaderboardPage() {
     const [activeCategory, setActiveCategory] = useState('openings');
@@ -27,7 +28,6 @@ export default function LeaderboardPage() {
         try {
             setLoading(true);
             
-            // First, get the latest rating for each user and category
             const { data: ratingsData, error: ratingsError } = await supabase
                 .from('Rating')
                 .select('userId, type, value, createdAt')
@@ -39,17 +39,22 @@ export default function LeaderboardPage() {
                 return;
             }
 
-            // Get unique latest rating per user
+            const entryCountByUser = {};
+            ratingsData?.forEach((row) => {
+                entryCountByUser[row.userId] = (entryCountByUser[row.userId] || 0) + 1;
+            });
+
             const userLatestRatings = {};
-            ratingsData?.forEach(rating => {
-                if (!userLatestRatings[rating.userId] || 
-                    new Date(rating.createdAt) > new Date(userLatestRatings[rating.userId].createdAt)) {
+            ratingsData?.forEach((rating) => {
+                if (!userLatestRatings[rating.userId]
+                    || new Date(rating.createdAt) > new Date(userLatestRatings[rating.userId].createdAt)) {
                     userLatestRatings[rating.userId] = rating;
                 }
             });
 
-            // Get user details for all users with ratings
-            const userIds = Object.keys(userLatestRatings);
+            const userIds = Object.keys(userLatestRatings).filter(
+                (uid) => (entryCountByUser[uid] || 0) >= ESTABLISHED_RATING_MIN_ENTRIES
+            );
             if (userIds.length === 0) {
                 setLeaderboardData([]);
                 setLoading(false);
@@ -139,10 +144,11 @@ export default function LeaderboardPage() {
                         </div>
                     ) : leaderboardData.length === 0 ? (
                         <div className="leaderboard-state">
-                            No players with {categories.find(c => c.id === activeCategory)?.label} ratings yet.
+                            No established players for {categories.find(c => c.id === activeCategory)?.label} yet
+                            ({ESTABLISHED_RATING_MIN_ENTRIES}+ entries needed).
                             <br />
                             <span className="leaderboard-state__hint">
-                                Start playing to appear on the leaderboard!
+                                Play more games in this category to qualify.
                             </span>
                         </div>
                     ) : (

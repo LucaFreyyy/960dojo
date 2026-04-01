@@ -1,3 +1,5 @@
+import RatingEstablishedHint from './RatingEstablishedHint';
+
 export default function RatingDisplay({ label, rating, delta = null, provisional = false }) {
   const hasDelta = typeof delta === 'number' && Number.isFinite(delta);
   const deltaText = hasDelta ? `${delta >= 0 ? '+' : ''}${delta}` : null;
@@ -11,7 +13,10 @@ export default function RatingDisplay({ label, rating, delta = null, provisional
     <div className="rating-display">
       <span className="rating-display__label">{label}</span>
       <span className="rating-display__value">
-        {Number.isFinite(rating) ? `${rating}${provisional ? '?' : ''}` : '—'}
+        <span className="rating-display__value-inner">
+          {Number.isFinite(rating) ? String(rating) : '—'}
+          {provisional ? <RatingEstablishedHint /> : null}
+        </span>
         {hasDelta ? (
           <span className={`rating-display__delta ${deltaMod}`.trim()}>({deltaText})</span>
         ) : null}

@@ -208,6 +208,12 @@
   font-weight: 600;
 }
 
+.profile-tab-rating-with-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+}
+
 .edit-button {
   all: unset;
   display: inline;

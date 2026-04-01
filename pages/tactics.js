@@ -8,6 +8,7 @@ import MoveList from '../components/MoveList';
 import DifficultySelector from '../components/DifficultySelector';
 import PostTacticDisplay from '../components/PostTacticDisplay';
 import RatingDisplay from '../components/RatingDisplay';
+import { ESTABLISHED_RATING_MIN_ENTRIES } from '../lib/ratingConstants';
 import SectionTitle from '../components/SectionTitle';
 
 const TACTICS_DEBUG = true;
@@ -531,7 +532,6 @@ export default function TacticsPage() {
               label="Puzzle"
               rating={puzzleRating}
               delta={puzzleDelta}
-              provisional={(tacticTimesPlayed || 0) < 10}
             />
             <div className="board-stack">
               <ResizableChessboard
@@ -547,7 +547,7 @@ export default function TacticsPage() {
                 label="You"
                 rating={userRating}
                 delta={userDelta}
-                provisional={(userFinishedCount || 0) < 10}
+                provisional={(userFinishedCount || 0) < ESTABLISHED_RATING_MIN_ENTRIES}
               />
             </div>
           </section>

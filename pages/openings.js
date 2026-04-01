@@ -5,6 +5,7 @@ import { useSupabaseSession } from '../lib/SessionContext';
 import ResizableChessboard from '../components/ResizableChessboard';
 import MoveList from '../components/MoveList';
 import RatingDisplay from '../components/RatingDisplay';
+import { ESTABLISHED_RATING_MIN_ENTRIES } from '../lib/ratingConstants';
 import { OpenInLichessBtn } from '../components/PostTacticDisplay';
 import SectionTitle from '../components/SectionTitle';
 import PositionSelector from '../components/PositionSelector';
@@ -84,7 +85,6 @@ export default function OpeningsPage() {
   const [trainingRating, setTrainingRating] = useState(1500);
   const [ratingDelta, setRatingDelta] = useState(null);
   const [openingsRatingCount, setOpeningsRatingCount] = useState(0);
-  const [provisional, setProvisional] = useState(true);
 
   const [moveListLoading, setMoveListLoading] = useState(false);
   const [moveListEvalData, setMoveListEvalData] = useState(null);
@@ -155,7 +155,6 @@ export default function OpeningsPage() {
       setDbRating(r);
       setTrainingRating(r);
       setOpeningsRatingCount(c);
-      setProvisional(c < 10);
       setGameMode('ranked');
     })();
   }, [userId]);
@@ -337,7 +336,6 @@ export default function OpeningsPage() {
               setTrainingRating(newRating);
               const nextCount = await countOpeningsRatings(userIdRef.current);
               setOpeningsRatingCount(nextCount);
-              setProvisional(nextCount < 10);
             }
           } catch {}
         }
@@ -725,7 +723,9 @@ export default function OpeningsPage() {
               label="Your openings rating"
               rating={rankedMode ? dbRating : trainingRating}
               delta={ratingDelta}
-              provisional={Boolean(provisional && rankedMode)}
+              provisional={
+                rankedMode && (openingsRatingCount || 0) < ESTABLISHED_RATING_MIN_ENTRIES
+              }
             />
           </div>
 
