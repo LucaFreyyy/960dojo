@@ -144,7 +144,6 @@ export default function ChessBoard({
       <div
         style={{
           width: '100%',
-          maxWidth: '560px',
           aspectRatio: '1 / 1',
           background: '#0f131a',
           border: '1px solid #2f3644',
@@ -161,5 +160,5 @@ export default function ChessBoard({
     );
   }
 
-  return <div ref={containerRef} style={{ width: '100%', maxWidth: '560px', aspectRatio: '1 / 1' }} />;
+  return <div ref={containerRef} style={{ width: '100%', aspectRatio: '1 / 1' }} />;
 };

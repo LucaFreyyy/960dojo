@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Chess } from '../lib/chessCompat';
 import { useSupabaseSession } from '../lib/SessionContext';
-import Chessboard from '../components/Chessboard';
+import ResizableChessboard from '../components/ResizableChessboard';
 import MoveList from '../components/MoveList';
 import DifficultySelector from '../components/DifficultySelector';
 import PostTacticDisplay from '../components/PostTacticDisplay';
@@ -530,7 +530,7 @@ export default function TacticsPage() {
           </div>
         ) : null}
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(340px, 600px) minmax(320px, 1fr)', gap: 18 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'auto minmax(320px, 1fr)', gap: 18 }}>
           <section>
             <RatingDisplay
               label="Puzzle"
@@ -539,7 +539,7 @@ export default function TacticsPage() {
               provisional={(tacticTimesPlayed || 0) < 10}
             />
             <div style={{ marginTop: 8 }}>
-              <Chessboard
+              <ResizableChessboard
                 fen={displayedFen || currentFen || startFen}
                 orientation={orientation}
                 onMove={onBoardMove}
