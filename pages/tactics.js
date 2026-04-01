@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Chess } from '../lib/chessCompat';
 import { useSupabaseSession } from '../lib/SessionContext';
-import Chessboard from '../components/Chessboard';
+import ResizableChessboard from '../components/ResizableChessboard';
 import MoveList from '../components/MoveList';
 import DifficultySelector from '../components/DifficultySelector';
 import PostTacticDisplay from '../components/PostTacticDisplay';
@@ -514,7 +514,7 @@ export default function TacticsPage() {
               provisional={(tacticTimesPlayed || 0) < 10}
             />
             <div className="board-stack">
-              <Chessboard
+              <ResizableChessboard
                 fen={displayedFen || currentFen || startFen}
                 orientation={orientation}
                 onMove={onBoardMove}

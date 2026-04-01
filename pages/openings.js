@@ -2,7 +2,7 @@ import Head from 'next/head';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Chess } from '../lib/chessCompat';
 import { useSupabaseSession } from '../lib/SessionContext';
-import Chessboard from '../components/Chessboard';
+import ResizableChessboard from '../components/ResizableChessboard';
 import MoveList from '../components/MoveList';
 import RatingDisplay from '../components/RatingDisplay';
 import { OpenInLichessBtn } from '../components/PostTacticDisplay';
@@ -713,9 +713,9 @@ export default function OpeningsPage() {
         <div className="openings-layout">
           <div className="openings-col-board">
             <PositionDisplay value={openingNr} editable={false} />
-            <Chessboard
+            <ResizableChessboard
               fen={displayedFen}
-              orientation={userColor === 'black' ? 'black' : 'white'}
+              orientation={phase === 'setup' && colorChoice === 'black' ? 'black' : (userColor === 'black' ? 'black' : 'white')}
               onMove={onBoardMove}
               disabled={phase !== 'playing' || opponentBusy || !userToMove || !isBrowsingLive}
               lastMove={lastMove}
