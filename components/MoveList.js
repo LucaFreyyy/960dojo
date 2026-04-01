@@ -466,7 +466,6 @@ export default function MoveList({
                     }}>
                         <span style={{ fontSize: 32, opacity: 0.4 }}>♟</span>
                         <span style={{ fontSize: 14 }}>No moves yet</span>
-                        <span style={{ fontSize: 12, opacity: 0.7 }}>Paste a PGN to get started</span>
                     </div>
                 )}
             </div>
