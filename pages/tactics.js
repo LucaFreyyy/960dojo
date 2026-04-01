@@ -219,10 +219,10 @@ export default function TacticsPage() {
     setLikeChoice(null);
     setFailedVariation(null);
     setPlayedSans([]);
-    setBrowsePosition({ index: -1, variationPath: [] });
     setLastMove(undefined);
     setUserDelta(null);
     setPuzzleDelta(null);
+    setSolutionSans([]);
 
     try {
       tlog('loadNextPuzzle:start', { userId, difficulty });

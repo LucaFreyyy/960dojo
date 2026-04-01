@@ -300,6 +300,7 @@ export default function MoveList({
                 : Math.round((evalValue - prevEval) * 100);
             if (lossCp > 250) annotation = '??';
             else if (lossCp > 150) annotation = '?';
+            else if (lossCp >= 50) annotation = '?!';
         }
         const color = selected ? '#101010' : hasValidEvalData ? colorFromLossCp(lossCp) : '#e6e6e6';
         const background = selected ? '#f6d94d' : 'transparent';
@@ -436,14 +437,39 @@ export default function MoveList({
                 padding: 12,
                 lineHeight: 1.9,
             }}>
-                {tree.length > 0 ? renderMainlineRows() : <span style={{ color: '#aab3c2' }}>Paste a PGN and click Update PGN.</span>}
+                {loading ? (
+                    <div style={{ 
+                        display: 'flex', 
+                        flexDirection: 'column',
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        gap: 16, 
+                        color: '#9fb0cf', 
+                        fontSize: 14,
+                        minHeight: 156,
+                    }}>
+                        <div className="spinner" />
+                        <span>Analyzing position...</span>
+                    </div>
+                ) : tree.length > 0 ? (
+                    renderMainlineRows()
+                ) : (
+                    <div style={{ 
+                        display: 'flex', 
+                        flexDirection: 'column',
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        gap: 8,
+                        color: '#6b7a94',
+                        textAlign: 'center',
+                        minHeight: 156,
+                    }}>
+                        <span style={{ fontSize: 32, opacity: 0.4 }}>♟</span>
+                        <span style={{ fontSize: 14 }}>No moves yet</span>
+                        <span style={{ fontSize: 12, opacity: 0.7 }}>Paste a PGN to get started</span>
+                    </div>
+                )}
             </div>
-            {loading ? (
-                <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 10, color: '#9fb0cf', fontSize: 13 }}>
-                    <div className="spinner" />
-                    Loading move list...
-                </div>
-            ) : null}
 
             {isFiniteNumber(currentSelectedEval) ? (
                 <div style={{ marginTop: 12, color: '#d0d7e5', fontSize: 14 }}>
