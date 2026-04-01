@@ -69,11 +69,14 @@ function getVariationKey(path) {
   return `${(path || []).join('|')}:0`;
 }
 
-function lichessUrlAtPly(url, ply) {
+function lichessUrlAtPly(url, ply, orientation = 'white') {
   if (typeof url !== 'string' || !url) return null;
   const p = Number(ply);
   const hashPly = Number.isFinite(p) && p >= 1 ? Math.floor(p) : 0;
-  return `${url.split('#')[0]}#${hashPly}`;
+  const base = url.split('#')[0];
+  const color = orientation === 'black' ? 'black' : 'white';
+  const sep = base.includes('?') ? '&' : '?';
+  return `${base}${sep}color=${color}#${hashPly}`;
 }
 
 export default function TacticsPage() {
@@ -436,8 +439,8 @@ export default function TacticsPage() {
   }
 
   const puzzleLink = useMemo(
-    () => lichessUrlAtPly(tactic?.linkToGame, tactic?.puzzleStartPly),
-    [tactic?.linkToGame, tactic?.puzzleStartPly]
+    () => lichessUrlAtPly(tactic?.linkToGame, tactic?.puzzleStartPly, orientation),
+    [tactic?.linkToGame, tactic?.puzzleStartPly, orientation]
   );
 
   return (

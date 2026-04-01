@@ -6,6 +6,7 @@ import { useSupabaseSession } from '../lib/SessionContext';
 import Chessboard from '../components/Chessboard';
 import MoveList from '../components/MoveList';
 import RatingDisplay from '../components/RatingDisplay';
+import { OpenInLichessBtn } from '../components/PostTacticDisplay';
 import PositionSelector from '../components/PositionSelector';
 import PositionDisplay from '../components/PositionDisplay';
 import ModeSelector from '../components/ModeSelector';
@@ -38,6 +39,22 @@ import {
 import { hashEmail } from '../lib/hashEmail';
 
 const USER_TARGET_MOVES = 11;
+
+function buildOpeningsLichessUrl({ openingNr, startFen, pgnMovetext, orientation }) {
+  if (!startFen || !pgnMovetext) return null;
+  const color = orientation === 'black' ? 'black' : 'white';
+  const pgn = [
+    '[Event "960 Dojo Openings"]',
+    '[Site "https://lichess.org"]',
+    '[Variant "Chess960"]',
+    `[FEN "${startFen}"]`,
+    '[SetUp "1"]',
+    `[Opening "Chess960 #${openingNr}"]`,
+    '',
+    pgnMovetext,
+  ].join('\n');
+  return `https://lichess.org/analysis/pgn/${encodeURIComponent(pgn)}?color=${color}`;
+}
 
 export default function OpeningsPage() {
   const session = useSupabaseSession();
@@ -152,6 +169,17 @@ export default function OpeningsPage() {
     return buildPgnFromSans(startFen, playedSans);
   }, [startFen, playedSans]);
 
+  const openingsLichessUrl = useMemo(
+    () =>
+      buildOpeningsLichessUrl({
+        openingNr,
+        startFen,
+        pgnMovetext: moveListPgn,
+        orientation: userColor,
+      }),
+    [openingNr, startFen, moveListPgn, userColor]
+  );
+
   const fenTrail = useMemo(
     () => (startFen ? computeFenTrail(startFen, playedSans) : []),
     [startFen, playedSans]
@@ -195,9 +223,8 @@ export default function OpeningsPage() {
 
   const syncEvalHistoryToDb = useCallback(async (trailWhiteCp) => {
     const id = openingRowIdRef.current;
-    const uid = userIdRef.current;
-    if (!id || !uid || !isRatedRef.current) return;
-    const payload = trailWhiteCp.map((x) => (Number.isFinite(x) ? Number(x.toFixed(2)) : 0));
+    if (!id || !isRatedRef.current) return;
+    const payload = trailWhiteCp.map((x) => (Number.isFinite(x) ? Math.round(x) : 0));
     await updateUserOpening(id, { evalHistory: payload });
   }, []);
 
@@ -253,33 +280,60 @@ export default function OpeningsPage() {
       const pgnText = buildPgnFromSans(start, sans);
       const rowId = openingRowIdRef.current;
 
-      if (rowId && isRatedRef.current && userIdRef.current) {
-        await updateUserOpening(rowId, {
-          pgn: pgnText,
-          evalHistory: trail.map((x) => (Number.isFinite(x) ? Number(x.toFixed(2)) : 0)),
-          finished: finishedAt,
-        });
+      if (isRatedRef.current) {
+        let targetRowId = rowId;
+        if (!targetRowId && userIdRef.current) {
+          const fallback = await fetchUnfinishedOpeningRow(userIdRef.current);
+          targetRowId = fallback?.id || null;
+        }
 
-        const nOpen = await countOpeningsRatings(userIdRef.current);
-        const change = computeOpeningsRatingDelta(finalCp, userColorRef.current, nOpen);
-        const newRating = Math.round(dbRatingRef.current + change);
+        const evalHistoryCp = trail.map((x) => (Number.isFinite(x) ? Math.round(x) : 0));
 
-        try {
-          const res = await fetch('/api/createOpeningRating', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: userIdRef.current, newRating }),
+        if (targetRowId) {
+          // Step 1: always stamp completion metadata even if eval payload fails.
+          const wroteDone = await updateUserOpening(targetRowId, {
+            pgn: pgnText,
+            finished: finishedAt,
           });
-          const data = await res.json();
-          if (data?.success) {
-            setRatingDelta(change);
-            setDbRating(newRating);
-            setTrainingRating(newRating);
-            const nextCount = await countOpeningsRatings(userIdRef.current);
-            setOpeningsRatingCount(nextCount);
-            setProvisional(nextCount < 10);
+          if (!wroteDone) {
+            console.warn('[openings/finalizeGame] failed to mark finished opening row', { rowId: targetRowId });
           }
-        } catch {}
+
+          // Step 2: store evalHistory. If decimal arrays are rejected by schema, fall back to integers.
+          let wroteEval = await updateUserOpening(targetRowId, { evalHistory: evalHistoryCp });
+          if (!wroteEval) {
+            // If the DB rejects the array type for any reason, don't block the completion stamp.
+            wroteEval = false;
+          }
+          if (!wroteEval) {
+            console.warn('[openings/finalizeGame] failed to persist evalHistory', { rowId: targetRowId });
+          }
+        } else {
+          console.warn('[openings/finalizeGame] missing row id for rated game');
+        }
+
+        if (userIdRef.current) {
+          const nOpen = await countOpeningsRatings(userIdRef.current);
+          const change = computeOpeningsRatingDelta(finalCp, userColorRef.current, nOpen);
+          const newRating = Math.round(dbRatingRef.current + change);
+
+          try {
+            const res = await fetch('/api/createOpeningRating', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ id: userIdRef.current, newRating }),
+            });
+            const data = await res.json();
+            if (data?.success) {
+              setRatingDelta(change);
+              setDbRating(newRating);
+              setTrainingRating(newRating);
+              const nextCount = await countOpeningsRatings(userIdRef.current);
+              setOpeningsRatingCount(nextCount);
+              setProvisional(nextCount < 10);
+            }
+          } catch {}
+        }
       }
 
       setMoveListLoading(false);
@@ -732,15 +786,22 @@ export default function OpeningsPage() {
             </div>
 
             {showMoveList ? (
-              <MoveList
-                pgn={moveListPgn}
-                evalData={moveListEvalData}
-                userColor={userColor}
-                loading={moveListLoading}
-                onBrowsePositionChanged={handleBrowsePositionChanged}
-                selectedPosition={browsePosition}
-                resetSelectionOnPgnChange={false}
-              />
+              <>
+                <MoveList
+                  pgn={moveListPgn}
+                  evalData={moveListEvalData}
+                  userColor={userColor}
+                  loading={moveListLoading}
+                  onBrowsePositionChanged={handleBrowsePositionChanged}
+                  selectedPosition={browsePosition}
+                  resetSelectionOnPgnChange={false}
+                />
+                {openingsLichessUrl ? (
+                  <div style={{ maxWidth: 280 }}>
+                    <OpenInLichessBtn onClick={() => window.open(openingsLichessUrl, '_blank')} />
+                  </div>
+                ) : null}
+              </>
             ) : null}
           </div>
         </div>
