@@ -2,6 +2,7 @@ import { supabase } from '../lib/supabase';
 import { useSupabaseSession } from '../lib/SessionContext';
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { hashEmail } from '../lib/hashEmail';
 
 function MenuSection({ title, children }) {
     return (
@@ -12,10 +13,27 @@ function MenuSection({ title, children }) {
     );
 }
 
+function DropdownNotificationsItem({ showDot, onClose }) {
+    return (
+        <Link
+            href="/notifications"
+            className={`dropdown-item${showDot ? ' dropdown-item--with-notify' : ''}`.trim()}
+            role="menuitem"
+            onClick={onClose}
+            {...(showDot ? { 'aria-label': 'Notifications — unread' } : {})}
+        >
+            <span>Notifications</span>
+            {showDot ? <span className="notification-pip" aria-hidden /> : null}
+        </Link>
+    );
+}
+
 export default function Dropdown() {
     const session = useSupabaseSession();
     const isAuthenticated = !!session;
     const [userName, setUserName] = useState('');
+    const [hasPendingNotifications, setHasPendingNotifications] = useState(false);
+    const [open, setOpen] = useState(false);
 
     useEffect(() => {
         if (!session?.user?.email) return;
@@ -39,7 +57,33 @@ export default function Dropdown() {
         fetchName();
     }, [session]);
 
-    const [open, setOpen] = useState(false);
+    useEffect(() => {
+        if (!session?.user?.email) {
+            setHasPendingNotifications(false);
+            return;
+        }
+        let cancelled = false;
+        (async () => {
+            try {
+                const uid = await hashEmail(session.user.email);
+                if (cancelled) return;
+                const { count, error } = await supabase
+                    .from('FriendRequest')
+                    .select('id', { count: 'exact', head: true })
+                    .eq('receiverId', uid)
+                    .eq('status', 'pending');
+                if (!cancelled && !error) {
+                    setHasPendingNotifications((count ?? 0) > 0);
+                }
+            } catch {
+                if (!cancelled) setHasPendingNotifications(false);
+            }
+        })();
+        return () => {
+            cancelled = true;
+        };
+    }, [session, open]);
+
     const dropdownRef = useRef(null);
 
     useEffect(() => {
@@ -58,6 +102,7 @@ export default function Dropdown() {
     };
 
     const close = () => setOpen(false);
+    const showNotifyDot = isAuthenticated && hasPendingNotifications;
 
     return (
         <div className="dropdown" ref={dropdownRef}>
@@ -86,9 +131,7 @@ export default function Dropdown() {
                                 <Link href="/profile" className="dropdown-item" role="menuitem" onClick={close}>
                                     Profile
                                 </Link>
-                                <Link href="/notifications" className="dropdown-item" role="menuitem" onClick={close}>
-                                    Notifications
-                                </Link>
+                                <DropdownNotificationsItem showDot={showNotifyDot} onClose={close} />
                                 <Link href="/settings" className="dropdown-item" role="menuitem" onClick={close}>
                                     Settings
                                 </Link>
@@ -129,9 +172,7 @@ export default function Dropdown() {
                                 <Link href="/login" className="dropdown-item" role="menuitem" onClick={close}>
                                     Sign in
                                 </Link>
-                                <Link href="/notifications" className="dropdown-item" role="menuitem" onClick={close}>
-                                    Notifications
-                                </Link>
+                                <DropdownNotificationsItem showDot={showNotifyDot} onClose={close} />
                                 <Link href="/settings" className="dropdown-item" role="menuitem" onClick={close}>
                                     Settings
                                 </Link>

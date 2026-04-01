@@ -125,7 +125,7 @@
   --white-square: #ffe4c4;
   --black-square: #6b4528;
 
-  /* Move list / eval line: green → yellow → orange → red (no blue) */
+  /* Move list / eval line: green → yellow → orange → red */
   --eval-best: #4ade80;
   --eval-mid: #facc15;
   --eval-bad: #fb923c;

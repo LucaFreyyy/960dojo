@@ -157,6 +157,26 @@ header {
   color: var(--ink);
 }
 
+.dropdown-item--with-notify {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+/* Hand-drawn style: slightly irregular, not a perfect circle */
+.notification-pip {
+  width: 10px;
+  height: 10px;
+  flex-shrink: 0;
+  background: radial-gradient(circle at 38% 36%, #ff5c5c, var(--logo-red) 65%);
+  border-radius: 55% 45% 48% 52% / 50% 52% 46% 54%;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.3),
+    inset -1px -1px 0 rgba(255, 255, 255, 0.12);
+  transform: rotate(-12deg);
+}
+
 .dropdown-section--footer {
   border-top: 1px solid var(--line);
   padding-top: 0.35rem;

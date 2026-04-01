@@ -70,7 +70,7 @@ export default function NotificationsPage() {
         ) : (
           <div className="notifications-stack">
             {requests.length === 0 ? (
-              <div className="text-muted">No pending friend requests.</div>
+              <div className="text-muted">No notifications.</div>
             ) : (
               requests.map((r) => (
                 <div key={r.id} className="notification-card">
