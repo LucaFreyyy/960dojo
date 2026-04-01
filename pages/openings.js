@@ -191,9 +191,16 @@ export default function OpeningsPage() {
     browsePosition.index === liveBrowseIndex && (browsePosition.variationPath?.length || 0) === 0;
 
   const displayedFen = useMemo(() => {
+    if (phase === 'setup') {
+      try {
+        return positionNrToStartFen(openingNr);
+      } catch {
+        return null;
+      }
+    }
     const idx = Math.max(0, browsePosition.index + 1);
     return fenByIndex[idx] || currentFen || startFen;
-  }, [browsePosition, fenByIndex, currentFen, startFen]);
+  }, [phase, openingNr, browsePosition, fenByIndex, currentFen, startFen]);
 
   /** Refs read inside `onBoardMove` must match this render (that handler runs before useEffect). */
   if (typeof window !== 'undefined') {
@@ -700,97 +707,94 @@ export default function OpeningsPage() {
         <title>Openings - 960 Dojo</title>
       </Head>
       <main style={{ maxWidth: 1180, margin: '0 auto', padding: '1.25rem 1rem 2rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
-          <h1 style={{ margin: 0, color: '#e2e8f0' }}>Openings</h1>
-        </div>
+        <section className="practice" style={{ margin: '0 0 0.75rem', textAlign: 'center' }}>
+          <h2
+            style={{ cursor: 'pointer', userSelect: 'none', marginTop: 0 }}
+            onClick={() => window.location.reload()}
+            title="Reset to setup"
+          >
+            Openings
+          </h2>
+        </section>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 360px) 1fr', gap: 20, alignItems: 'start' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div style={{ display: showSetup ? 'block' : 'none' }}>
-              <ModeSelector
-                mode={gameMode}
-                onModeChange={setGameMode}
-                colorChoice={colorChoice}
-                onColorChange={setColorChoice}
-                rankedLocked={!userId}
-                rankedForcedRandomHint={
-                  gameMode === 'ranked' ? 'Starting position is always random in ranked mode.' : ''
-                }
-              />
-            </div>
-            <PositionSelector
-              ref={positionRef}
-              minimal={!showSetup}
-              rankedMode={rankedMode}
-              openingNr={openingNr}
-              onOpeningNrChange={setOpeningNr}
-              onTrainingOnlyNotice={onTrainingNotice}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '560px minmax(420px, 1fr)',
+            gap: 20,
+            alignItems: 'start',
+            transform: 'translateX(clamp(0px, 0vw, 0px))',
+          }}
+        >
+          <div style={{ width: 560, maxWidth: '100%', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <PositionDisplay value={openingNr} editable={false} />
+            <Chessboard
+              fen={displayedFen}
+              orientation={userColor === 'black' ? 'black' : 'white'}
+              onMove={onBoardMove}
+              disabled={phase !== 'playing' || opponentBusy || !userToMove || !isBrowsingLive}
+              lastMove={lastMove}
+              movableColor={userToMove ? userColor : 'none'}
             />
-            <div style={{ display: showSetup ? 'block' : 'none' }}>
-              <StartBtn onClick={startGame} disabled={gameMode === 'ranked' && !userId} />
-            </div>
-            {!showSetup ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <PositionDisplay value={openingNr} editable={false} />
-                {phase === 'done' ? (
-                  <PlayAgainBtn onClick={playAgain} disabled={gameMode === 'ranked' && !userId} />
-                ) : null}
-              </div>
-            ) : null}
-
             <RatingDisplay
               label="Your openings rating"
               rating={rankedMode ? dbRating : trainingRating}
               delta={ratingDelta}
               provisional={Boolean(provisional && rankedMode)}
             />
-
-            {!rankedMode && showSetup ? (
-              <label style={{ display: 'flex', flexDirection: 'column', gap: 6, color: '#94a3b8', fontSize: 13 }}>
-                Training rating (used for Lichess explorer + Stockfish)
-                <input
-                  type="number"
-                  value={trainingRating}
-                  onChange={(e) => setTrainingRating(Number(e.target.value) || 1500)}
-                  style={{
-                    padding: '8px 10px',
-                    borderRadius: 8,
-                    border: '1px solid #334155',
-                    background: '#0f131a',
-                    color: '#e2e8f0',
-                    fontWeight: 700,
-                  }}
-                />
-              </label>
-            ) : null}
-
-            {infoMessage ? (
-              <div style={{ color: '#fbbf24', fontSize: 13, fontWeight: 600 }}>{infoMessage}</div>
-            ) : null}
           </div>
 
-          <div
-            style={{
-              display: 'grid',
-              gap: 16,
-              minWidth: 0,
-              alignItems: 'start',
-              gridTemplateColumns: showMoveList ? '560px minmax(420px, 1fr)' : '560px',
-            }}
-          >
-            <div style={{ width: 560, maxWidth: '100%' }}>
-              <Chessboard
-                fen={displayedFen}
-                orientation={userColor === 'black' ? 'black' : 'white'}
-                onMove={onBoardMove}
-                disabled={phase !== 'playing' || opponentBusy || !userToMove || !isBrowsingLive}
-                lastMove={lastMove}
-                movableColor={userToMove ? userColor : 'none'}
-              />
-            </div>
-
-            {showMoveList ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
+            {showSetup ? (
+              <>
+                <ModeSelector
+                  mode={gameMode}
+                  onModeChange={setGameMode}
+                  colorChoice={colorChoice}
+                  onColorChange={setColorChoice}
+                  rankedLocked={!userId}
+                  rankedForcedRandomHint={
+                    gameMode === 'ranked' ? 'Starting position is always random in ranked mode.' : ''
+                  }
+                />
+                <PositionSelector
+                  ref={positionRef}
+                  minimal={!showSetup}
+                  rankedMode={rankedMode}
+                  openingNr={openingNr}
+                  onOpeningNrChange={setOpeningNr}
+                  onTrainingOnlyNotice={onTrainingNotice}
+                />
+                <StartBtn onClick={startGame} disabled={gameMode === 'ranked' && !userId} />
+                {!rankedMode ? (
+                  <label style={{ display: 'flex', flexDirection: 'column', gap: 6, color: '#94a3b8', fontSize: 13 }}>
+                    Training rating (used for Lichess explorer + Stockfish)
+                    <input
+                      type="number"
+                      value={trainingRating}
+                      onChange={(e) => setTrainingRating(Number(e.target.value) || 1500)}
+                      style={{
+                        padding: '8px 10px',
+                        borderRadius: 8,
+                        border: '1px solid #334155',
+                        background: '#0f131a',
+                        color: '#e2e8f0',
+                        fontWeight: 700,
+                      }}
+                    />
+                  </label>
+                ) : null}
+                {infoMessage ? (
+                  <div style={{ color: '#fbbf24', fontSize: 13, fontWeight: 600 }}>{infoMessage}</div>
+                ) : null}
+              </>
+            ) : (
+              <>
+                {openingsLichessUrl ? (
+                  <div style={{ maxWidth: 280 }}>
+                    <OpenInLichessBtn onClick={() => window.open(openingsLichessUrl, '_blank')} />
+                  </div>
+                ) : null}
                 <MoveList
                   pgn={moveListPgn}
                   evalData={moveListEvalData}
@@ -801,13 +805,13 @@ export default function OpeningsPage() {
                   selectedPosition={browsePosition}
                   resetSelectionOnPgnChange={false}
                 />
-                {openingsLichessUrl ? (
+                {phase === 'done' ? (
                   <div style={{ maxWidth: 280 }}>
-                    <OpenInLichessBtn onClick={() => window.open(openingsLichessUrl, '_blank')} />
+                    <PlayAgainBtn onClick={playAgain} disabled={gameMode === 'ranked' && !userId} />
                   </div>
                 ) : null}
-              </div>
-            ) : null}
+              </>
+            )}
           </div>
         </div>
       </main>

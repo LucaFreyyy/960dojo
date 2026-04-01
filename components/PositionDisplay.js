@@ -27,7 +27,7 @@ export default function PositionDisplay({ value, editable, onChange, disabled })
         borderRadius: 10,
       }}
     >
-      <span style={{ color: '#94a3b8', fontWeight: 700, fontSize: 13 }}>Chess960 #</span>
+      <span style={{ color: '#94a3b8', fontWeight: 700, fontSize: 13 }}>Position</span>
       {editable ? (
         <input
           type="text"

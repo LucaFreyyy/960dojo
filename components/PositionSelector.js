@@ -125,6 +125,13 @@ const PositionSelector = forwardRef(function PositionSelector(
   const numberEditable = !rankedMode && positionMode === 'number';
   const showFixed = !rankedMode && positionMode === 'fixed';
 
+  // Setup preview: keep opening number in sync even before pressing Start.
+  useEffect(() => {
+    if (minimal) return;
+    if (positionMode === 'number' && !rankedMode) return;
+    generatePosition();
+  }, [minimal, rankedMode, positionMode, fixedPiece, fixedFiles, generatePosition]);
+
   if (minimal) return null;
 
   return (
@@ -223,12 +230,14 @@ const PositionSelector = forwardRef(function PositionSelector(
         </div>
       ) : null}
 
-      <PositionDisplay
-        value={openingNr}
-        editable={numberEditable && !disabled}
-        onChange={onOpeningNrChange}
-        disabled={disabled}
-      />
+      {numberEditable ? (
+        <PositionDisplay
+          value={openingNr}
+          editable={numberEditable && !disabled}
+          onChange={onOpeningNrChange}
+          disabled={disabled}
+        />
+      ) : null}
     </div>
   );
 });
