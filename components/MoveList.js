@@ -371,9 +371,24 @@ export default function MoveList({
                 ) : tree.length > 0 ? (
                     renderMainlineRows()
                 ) : (
+<<<<<<< HEAD
                     <div className="move-list__empty">
                         <span className="move-list__empty-title">No moves yet</span>
                         <span className="move-list__empty-hint">Paste a PGN to get started</span>
+=======
+                    <div style={{ 
+                        display: 'flex', 
+                        flexDirection: 'column',
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        gap: 8,
+                        color: '#6b7a94',
+                        textAlign: 'center',
+                        minHeight: 156,
+                    }}>
+                        <span style={{ fontSize: 32, opacity: 0.4 }}>♟</span>
+                        <span style={{ fontSize: 14 }}>No moves yet</span>
+>>>>>>> aebc7a1fbacc023b358e2c44645d6073979207a6
                     </div>
                 )}
             </div>
