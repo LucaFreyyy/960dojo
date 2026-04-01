@@ -136,14 +136,13 @@ const PositionSelector = forwardRef(function PositionSelector(
     <div className="position-selector">
       <div className="panel-label">Starting position</div>
       <div className="chip-row">
-        {POSITION_MODES.map(({ key, label }) => {
+        {POSITION_MODES.filter(({ key }) => !rankedMode || key === 'random').map(({ key, label }) => {
           const active = positionMode === key;
-          const lockRanked = rankedMode && key !== 'random';
           return (
             <button
               key={key}
               type="button"
-              disabled={disabled || lockRanked}
+              disabled={disabled}
               onClick={() => trySetMode(key)}
               className={`pos-mode-btn ${active ? 'pos-mode-btn--active' : ''}`.trim()}
             >

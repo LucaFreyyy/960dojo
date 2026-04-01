@@ -6,7 +6,6 @@ export default function ModeSelector({
   colorChoice,
   onColorChange,
   rankedLocked,
-  rankedForcedRandomHint,
 }) {
   useEffect(() => {
     if (rankedLocked && mode === 'ranked') {
@@ -35,9 +34,6 @@ export default function ModeSelector({
       {rankedLocked ? (
         <div className="hint">Log in to play ranked openings.</div>
       ) : null}
-      {mode === 'ranked' && rankedForcedRandomHint ? (
-        <div className="hint">{rankedForcedRandomHint}</div>
-      ) : null}
 
       {mode === 'training' ? (
         <>
@@ -48,9 +44,7 @@ export default function ModeSelector({
             {btn(colorChoice === 'random', () => onColorChange('random'), 'Random', false)}
           </div>
         </>
-      ) : (
-        <div className="hint">Color is random in ranked mode.</div>
-      )}
+      ) : null}
     </div>
   );
 }

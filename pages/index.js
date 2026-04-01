@@ -1,8 +1,7 @@
 import Head from 'next/head';
-import { useSupabaseSession } from '../lib/SessionContext';
 import Link from 'next/link';
-import ChessBoard from '../components/Chessboard';
 import SectionTitle from '../components/SectionTitle';
+import Explanation from '../components/Explanation';
 
 const timeControls = [
   { time: "1+0", label: "Bullet" },
@@ -19,8 +18,6 @@ const timeControls = [
 ];
 
 export default function HomePage() {
-  const session = useSupabaseSession();
-
   return (
     <>
       <Head>
@@ -31,20 +28,31 @@ export default function HomePage() {
         <section className="practice">
           <SectionTitle title="Practice" sectionClassName="practice" headingClassName="section-title__heading--home" />
           <div className="practice-grid">
-            <Link className="practice-box" href="/tactics">
-              <h3>Tactics</h3>
-              <p className="practice-desc">
-                <span className="emphasis">Improve</span> your <span className="emphasis">chess960 pattern recognition</span> with puzzles generated from real games.
-              </p>
-            </Link>
-            <Link className="practice-box" href="/openings">
-              <h3>Openings</h3>
-              <div className="practice-desc">
-                <p><span className="emphasis">Pick</span> a starting <span className="emphasis">position</span></p>
-                <p><span className="emphasis">Play</span> against the <span className="emphasis">lichess database</span> and <span className="emphasis">Stockfish</span> at <span className="emphasis">your level</span></p>
-                <p><span className="emphasis">Grind to gain rating</span> in ranked mode to start dominating your games from the very start</p>
+            <div className="practice-card">
+              <Link className="practice-box" href="/tactics">
+                <h3>Tactics</h3>
+              </Link>
+              <div className="practice-card__explain">
+                <Explanation label="About Tactics">
+                  <p>Improve your chess960 pattern recognition with puzzles generated from real games.</p>
+                  <p>Failed puzzles get rescheduled from time to time.</p>
+                </Explanation>
               </div>
-            </Link>
+            </div>
+            <div className="practice-card">
+              <Link className="practice-box" href="/openings">
+                <h3>Openings</h3>
+              </Link>
+              <div className="practice-card__explain">
+                <Explanation label="About Openings">
+                  <p>Select ranked or practice a type of starting position of your choice.</p>
+                  <p>
+                    Play against the lichess database, switching to Stockfish at your level when the database runs out
+                    of moves.
+                  </p>
+                </Explanation>
+              </div>
+            </div>
           </div>
         </section>
 

@@ -751,9 +751,6 @@ export default function OpeningsPage() {
                   colorChoice={colorChoice}
                   onColorChange={setColorChoice}
                   rankedLocked={!userId}
-                  rankedForcedRandomHint={
-                    gameMode === 'ranked' ? 'Starting position is always random in ranked mode.' : ''
-                  }
                 />
               </>
             ) : (

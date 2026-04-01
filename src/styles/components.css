@@ -134,6 +134,100 @@
   transform: rotate(-0.5deg);
 }
 
+/* Inline "i" tooltip (e.g. home practice cards) */
+.explanation {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.explanation__trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: transparent;
+  cursor: help;
+  font: inherit;
+  line-height: 1;
+}
+
+.explanation__i {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.38rem;
+  height: 1.38rem;
+  border-radius: 50%;
+  border: 2px solid var(--ink-muted);
+  color: var(--ink-muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+  font-style: italic;
+  font-family: Georgia, 'Times New Roman', serif;
+  box-shadow: var(--btn-sketch-ring);
+  background: var(--surface);
+  transition: color 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+}
+
+.explanation__trigger:hover .explanation__i,
+.explanation__trigger:focus-visible .explanation__i {
+  color: var(--ink);
+  border-color: var(--logo-blue);
+  background: var(--bg-hover);
+}
+
+.explanation__trigger:focus-visible {
+  outline: none;
+}
+
+.explanation__trigger:focus-visible .explanation__i {
+  box-shadow: var(--focus-ring), var(--btn-sketch-ring);
+}
+
+.explanation__tooltip {
+  position: absolute;
+  z-index: 80;
+  left: 50%;
+  bottom: calc(100% + 10px);
+  transform: translateX(-50%);
+  min-width: min(16rem, calc(100vw - 2rem));
+  max-width: min(22rem, calc(100vw - 2rem));
+  padding: 0.75rem 0.95rem;
+  background: var(--explanation-tooltip-bg);
+  border: var(--border-soft);
+  border-radius: var(--sketch-radius);
+  box-shadow: var(--box-shadow-heavy);
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--ink);
+  text-align: left;
+  font-weight: 500;
+  font-family: var(--font-ui);
+  font-style: normal;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.14s ease, visibility 0.14s;
+}
+
+.explanation:hover .explanation__tooltip,
+.explanation:focus-within .explanation__tooltip {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.explanation__tooltip-inner p {
+  margin: 0 0 0.5rem;
+}
+
+.explanation__tooltip-inner p:last-child {
+  margin-bottom: 0;
+}
+
 /* Auth */
 .auth-card {
   background: var(--surface);
@@ -1059,6 +1153,10 @@
   margin-bottom: 1.25rem;
 }
 
+.info-content p:last-child {
+  margin-bottom: 0;
+}
+
 .link {
   color: var(--text-color-link);
   text-decoration: none;
@@ -1078,6 +1176,21 @@
   margin-bottom: 1rem;
   text-align: center;
   color: var(--ink);
+}
+
+.page-title--stacked {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  line-height: 1.28;
+  max-width: 22rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.page-title--stacked span {
+  display: block;
 }
 
 .page-lead {

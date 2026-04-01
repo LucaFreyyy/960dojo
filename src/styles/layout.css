@@ -192,34 +192,34 @@ header {
   color: var(--logo-light);
 }
 
-/* Buy me a coffee (header + inline on info/play/settings) */
+/* Buy me a coffee (header + inline on settings) — default like .dropbtn: no ring until hover */
 .buy-coffee {
   display: inline-flex;
   align-items: center;
   gap: 0.55rem;
   margin-top: 0.2rem;
-  background: var(--surface);
   padding: 0.55rem 1.1rem;
   border-radius: var(--btn-radius-lg);
-  border: none;
+  border: 2px solid transparent;
+  background: transparent;
   color: var(--ink);
   text-decoration: none;
   font-weight: 600;
   font-family: var(--font-ui);
-  box-shadow: var(--btn-sketch-ring-lg), var(--sketch-shadow);
+  box-shadow: none;
   letter-spacing: 0.02em;
   cursor: pointer;
-  transition: background 0.2s, box-shadow 0.2s;
+  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .buy-coffee:hover {
-  background: var(--bg-hover);
-  box-shadow: var(--btn-sketch-ring-lg), 4px 4px 0 rgba(0, 0, 0, 0.5);
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: var(--btn-sketch-ring-lg);
   color: var(--ink);
 }
 
 .buy-coffee:focus-visible {
-  box-shadow: var(--focus-ring), var(--btn-sketch-ring-lg), var(--sketch-shadow);
+  box-shadow: var(--focus-ring), var(--btn-sketch-ring-muted);
 }
 
 .coffee-icon {
@@ -309,16 +309,32 @@ header {
   flex-wrap: wrap;
 }
 
+.practice-card {
+  position: relative;
+  width: 300px;
+  max-width: 100%;
+}
+
+.practice-card__explain {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 3;
+}
+
 .practice-box {
   display: flex;
   flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 6.5rem;
   background: var(--surface);
   border: none;
   padding: 2rem;
   border-radius: var(--btn-radius-lg);
   width: 300px;
   max-width: 100%;
-  text-align: left;
+  text-align: center;
   text-decoration: none;
   color: var(--ink);
   box-shadow: var(--btn-sketch-ring-lg), var(--sketch-shadow);
@@ -339,7 +355,7 @@ header {
   font-size: 1.65rem;
   font-family: var(--font-sketch);
   color: var(--ink);
-  margin-bottom: 0.6rem;
+  margin: 0;
   display: flex;
   align-items: center;
   gap: 0.4rem;
@@ -414,6 +430,10 @@ header {
 @media (max-width: 768px) {
   .time-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .practice-card {
+    width: 100%;
   }
 
   .practice-box {

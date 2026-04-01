@@ -27,6 +27,8 @@
   --surface: rgba(255, 255, 255, 0.06);
   --surface-raised: #2c2b2a;
   --surface-active: #333231;
+  /* Opaque panel for Explanation tooltips (readable over busy backgrounds) */
+  --explanation-tooltip-bg: #333231;
 
   --line: rgba(255, 228, 196, 0.35);
   /* Strong accents lean red */
