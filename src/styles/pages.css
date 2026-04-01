@@ -34,6 +34,19 @@
   min-width: 0;
 }
 
+.openings-col-side--playing {
+  padding-top: 28px;
+}
+
+/* After the line is finished: pull move list / actions up vs board column */
+.openings-col-side--playing.openings-col-side--done {
+  padding-top: 8px;
+}
+
+.tactics-col-side {
+  padding-top: 10px;
+}
+
 .narrow-action {
   max-width: 280px;
 }

@@ -83,6 +83,7 @@ export default function MoveList({
     onBrowsePositionChanged,
     selectedPosition = null,
     resetSelectionOnPgnChange = true,
+    className = '',
 }) {
     const tree = useMemo(() => parsePgnTree(pgn), [pgn]);
     const template = useMemo(() => buildEvalTemplate(tree), [tree]);
@@ -354,7 +355,7 @@ export default function MoveList({
     const evalClass = evalSummaryClass(currentSelectedEval, userColor);
 
     return (
-        <div className="move-list">
+        <div className={`move-list ${className}`.trim()}>
             <div className="move-list__nav">
                 <button type="button" onClick={goToInitial} className="ml-btn">{'<<'}</button>
                 <button type="button" onClick={goPrev} className="ml-btn">{'<'}</button>
@@ -363,20 +364,20 @@ export default function MoveList({
             </div>
 
             <div className="move-list__body">
-                {loading ? (
-                    <div className="move-list__loading">
-                        <div className="ml-spinner" />
-                        <span>Analyzing position...</span>
-                    </div>
-                ) : tree.length > 0 ? (
+                {tree.length > 0 ? (
                     renderMainlineRows()
                 ) : (
                     <div className="move-list__empty">
                         <span className="move-list__empty-title">No moves yet</span>
-                        <span className="move-list__empty-hint">Paste a PGN to get started</span>
                     </div>
                 )}
             </div>
+            {loading ? (
+                <div className="move-list__loading">
+                    <div className="ml-spinner" />
+                    <span>Analyzing position...</span>
+                </div>
+            ) : null}
 
             {isFiniteNumber(currentSelectedEval) ? (
                 <div className="move-list__eval-line">

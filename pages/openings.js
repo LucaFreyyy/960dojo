@@ -2,7 +2,7 @@ import Head from 'next/head';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Chess } from '../lib/chessCompat';
 import { useSupabaseSession } from '../lib/SessionContext';
-import ResizableChessboard from '../components/ResizableChessboard';
+import Chessboard from '../components/Chessboard';
 import MoveList from '../components/MoveList';
 import RatingDisplay from '../components/RatingDisplay';
 import { ESTABLISHED_RATING_MIN_ENTRIES } from '../lib/ratingConstants';
@@ -711,15 +711,18 @@ export default function OpeningsPage() {
         <div className="openings-layout">
           <div className="openings-col-board">
             <PositionDisplay value={openingNr} editable={false} />
-            <ResizableChessboard
-              fen={displayedFen}
-              orientation={phase === 'setup' && colorChoice === 'black' ? 'black' : (userColor === 'black' ? 'black' : 'white')}
-              onMove={onBoardMove}
-              disabled={phase !== 'playing' || opponentBusy || !userToMove || !isBrowsingLive}
-              lastMove={lastMove}
-              movableColor={userToMove ? userColor : 'none'}
-            />
+            <div className="training-chessboard">
+              <Chessboard
+                fen={displayedFen}
+                orientation={phase === 'setup' && colorChoice === 'black' ? 'black' : (userColor === 'black' ? 'black' : 'white')}
+                onMove={onBoardMove}
+                disabled={phase !== 'playing' || opponentBusy || !userToMove || !isBrowsingLive}
+                lastMove={lastMove}
+                movableColor={userToMove ? userColor : 'none'}
+              />
+            </div>
             <RatingDisplay
+              className="rating-display--panel"
               label="Your openings rating"
               rating={rankedMode ? dbRating : trainingRating}
               delta={ratingDelta}
@@ -729,7 +732,15 @@ export default function OpeningsPage() {
             />
           </div>
 
-          <div className="openings-col-side">
+          <div
+            className={[
+              'openings-col-side',
+              showSetup ? '' : 'openings-col-side--playing',
+              !showSetup && phase === 'done' ? 'openings-col-side--done' : '',
+            ]
+              .filter(Boolean)
+              .join(' ')}
+          >
             {showSetup ? (
               <>
                 <ModeSelector
@@ -767,7 +778,7 @@ export default function OpeningsPage() {
               </>
             ) : (
               <>
-                {openingsLichessUrl ? (
+                {phase === 'done' && openingsLichessUrl ? (
                   <div className="narrow-action">
                     <OpenInLichessBtn onClick={() => window.open(openingsLichessUrl, '_blank')} />
                   </div>

@@ -5,6 +5,11 @@
   --font-ui: 'Balsamiq Sans', cursive;
   --font-sketch: 'Balsamiq Sans', cursive;
 
+  /* Tactics / openings: fixed board square; move list scroll area is slightly shorter */
+  --training-board-size: 560px;
+  /* Openings move list body; tactics uses .move-list--tactics override */
+  --move-list-body-height: calc(var(--training-board-size) * 0.85);
+
   --logo-blue: #2ea4ff;
   --logo-red: #a22020;
   --logo-light: #f6f6f6;

@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Chess } from '../lib/chessCompat';
 import { useSupabaseSession } from '../lib/SessionContext';
-import ResizableChessboard from '../components/ResizableChessboard';
+import Chessboard from '../components/Chessboard';
 import MoveList from '../components/MoveList';
 import DifficultySelector from '../components/DifficultySelector';
 import PostTacticDisplay from '../components/PostTacticDisplay';
@@ -529,21 +529,26 @@ export default function TacticsPage() {
         <div className="tactics-layout">
           <section>
             <RatingDisplay
+              className="rating-display--panel"
               label="Puzzle"
               rating={puzzleRating}
               delta={puzzleDelta}
+              provisional={(tacticTimesPlayed || 0) < ESTABLISHED_RATING_MIN_ENTRIES}
             />
             <div className="board-stack">
-              <ResizableChessboard
-                fen={displayedFen || currentFen || startFen}
-                orientation={orientation}
-                onMove={onBoardMove}
-                disabled={finished || loading || waitingForReply || !isBrowsingLive}
-                lastMove={lastMove}
-              />
+              <div className="training-chessboard">
+                <Chessboard
+                  fen={displayedFen || currentFen || startFen}
+                  orientation={orientation}
+                  onMove={onBoardMove}
+                  disabled={finished || loading || waitingForReply || !isBrowsingLive}
+                  lastMove={lastMove}
+                />
+              </div>
             </div>
             <div className="board-stack">
               <RatingDisplay
+                className="rating-display--panel"
                 label="You"
                 rating={userRating}
                 delta={userDelta}
@@ -552,9 +557,10 @@ export default function TacticsPage() {
             </div>
           </section>
 
-          <section>
+          <section className="tactics-col-side">
             <DifficultySelector value={difficulty} onChange={setDifficulty} disabled={loading} />
             <MoveList
+              className="move-list--tactics"
               pgn={moveListPgn}
               evalData={[]}
               userColor={orientation}

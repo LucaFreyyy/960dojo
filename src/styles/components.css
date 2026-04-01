@@ -323,6 +323,13 @@
   border-radius: var(--sketch-radius);
   background: var(--surface);
   box-shadow: var(--sketch-shadow);
+  box-sizing: border-box;
+}
+
+/* Tactics / openings: same width as training board column */
+.rating-display--panel {
+  width: 100%;
+  max-width: var(--training-board-size);
 }
 
 .rating-display__label {
@@ -711,6 +718,8 @@
   border-radius: var(--sketch-radius);
   padding: 0.85rem;
   box-shadow: var(--box-shadow-heavy);
+  display: flex;
+  flex-direction: column;
 }
 
 .move-list__nav {
@@ -720,12 +729,20 @@
 }
 
 .move-list__body {
-  min-height: 180px;
+  height: var(--move-list-body-height);
+  min-height: var(--move-list-body-height);
   border-radius: var(--sketch-radius);
   border: var(--border-muted);
   background: var(--bg-deep);
   padding: 0.75rem;
   line-height: 1.9;
+  overflow-y: auto;
+}
+
+/* Tactics page only: shorter list than openings (see pages/tactics.js) */
+.move-list--tactics .move-list__body {
+  height: calc(var(--move-list-body-height) * 0.63);
+  min-height: calc(var(--move-list-body-height) * 0.63);
 }
 
 .move-list__row {
@@ -766,13 +783,15 @@
 
 .move-list__loading {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  justify-content: center;
-  gap: 1rem;
+  justify-content: flex-start;
+  gap: 0.55rem;
   color: var(--ink-muted);
   font-size: 0.88rem;
-  min-height: 156px;
+  min-height: 0;
+  margin-top: 0.55rem;
+  padding: 0 0.2rem;
 }
 
 .move-list__empty {
@@ -919,13 +938,24 @@
 /* Chessboard wrapper */
 .chessboard-root {
   width: 100%;
-  max-width: 560px;
+  max-width: var(--training-board-size);
   aspect-ratio: 1 / 1;
+}
+
+/* Fixed-size board for training pages (no resize handle) */
+.training-chessboard {
+  width: var(--training-board-size);
+  max-width: 100%;
+}
+
+.training-chessboard .chessboard-root,
+.training-chessboard .chessboard-placeholder {
+  max-width: none;
 }
 
 .chessboard-placeholder {
   width: 100%;
-  max-width: 560px;
+  max-width: var(--training-board-size);
   aspect-ratio: 1 / 1;
   background: var(--bg-deep);
   border: var(--border-muted);
