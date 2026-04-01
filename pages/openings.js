@@ -723,7 +723,7 @@ export default function OpeningsPage() {
             <PositionDisplay value={openingNr} editable={false} />
             <Chessboard
               fen={displayedFen}
-              orientation={userColor === 'black' ? 'black' : 'white'}
+              orientation={phase === 'setup' && colorChoice === 'black' ? 'black' : (userColor === 'black' ? 'black' : 'white')}
               onMove={onBoardMove}
               disabled={phase !== 'playing' || opponentBusy || !userToMove || !isBrowsingLive}
               lastMove={lastMove}
