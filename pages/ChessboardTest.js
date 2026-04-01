@@ -5,7 +5,7 @@ import { freestyleNumberToFEN } from '../lib/freestyleUtils';
 import { getDatabaseMove, getMove } from '../lib/moveGeneration';
 import { getStockfishMove } from '../lib/stockfishUtils';
 
-export default function Openings() {
+export default function ChessboardTest() {
 
   const [startFen, setStartFen] = useState(freestyleNumberToFEN(1))
   const [currentFen, setCurrentFen] = useState(freestyleNumberToFEN(1))
@@ -59,7 +59,7 @@ export default function Openings() {
             fontSize: '2.2rem',
             marginBottom: '2rem'
           }}>
-            Openings V2 🧭
+            ChessboardTest 🧭
           </h2>
 
           <div className="chessboard-container">
