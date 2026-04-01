@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Chessground } from 'chessground';
-import { createPosition, toDests, makeMove } from '../lib/chessopsUtils';
+import { createPosition, toDests, makeMove, turnColorFromFen } from '../lib/chessopsUtils';
+
+const DBG = process.env.NODE_ENV === 'development';
 
 export default function ChessBoard({
   fen,
@@ -9,13 +11,24 @@ export default function ChessBoard({
   onPositionChange,
   disabled = false,
   lastMove,
+  /** 'white' | 'black' | 'both' — who may drag pieces */
+  movableColor = 'both',
 }) {
   const containerRef = useRef(null);
   const positionRef = useRef(null);
   const orientationRef = useRef(orientation);
   const onMoveRef = useRef(onMove);
   const onPositionChangeRef = useRef(onPositionChange);
+  const movableColorRef = useRef(movableColor);
+  const disabledRef = useRef(disabled);
   const [ground, setGround] = useState(null);
+
+  useEffect(() => {
+    movableColorRef.current = movableColor;
+  }, [movableColor]);
+  useEffect(() => {
+    disabledRef.current = disabled;
+  }, [disabled]);
 
   useEffect(() => {
     onMoveRef.current = onMove;
@@ -36,7 +49,7 @@ export default function ChessBoard({
       orientation: orientation,
       movable: {
         free: false,
-        color: disabled ? 'none' : 'both',
+        color: disabled ? 'none' : movableColor,
         dests: disabled ? new Map() : toDests(positionRef.current),
         events: {
           after: (orig, dest) => {
@@ -52,7 +65,10 @@ export default function ChessBoard({
             cg.set({
               fen: newFen,
               orientation: orientationRef.current,
-              movable: { dests: toDests(positionRef.current) },
+              movable: {
+                color: disabledRef.current ? 'none' : movableColorRef.current,
+                dests: toDests(positionRef.current),
+              },
               lastMove: [orig, dest],
             });
           }
@@ -60,7 +76,7 @@ export default function ChessBoard({
       }
     });
     setGround(cg);
-  }, [fen, ground, orientation, disabled]);
+  }, [fen, ground, orientation, disabled, movableColor]);
 
   useEffect(() => () => {
     if (!ground) return;
@@ -80,13 +96,14 @@ export default function ChessBoard({
     // Update ground instance (visu)
     ground.set({
       fen: fen,
+      turnColor: turnColorFromFen(fen),
       lastMove: Array.isArray(lastMove) ? lastMove : undefined,
       movable: {
-        color: disabled ? 'none' : 'both',
+        color: disabled ? 'none' : movableColor,
         dests: disabled ? new Map() : toDests(positionRef.current),
       },
     });
-  }, [fen, ground, disabled, lastMove]);
+  }, [fen, ground, disabled, lastMove, movableColor]);
 
   // orientation got updated: Flip the board
   useEffect(() => {
@@ -95,12 +112,13 @@ export default function ChessBoard({
     orientationRef.current = orientation;
     ground.set({
       orientation: orientationRef.current,
+      turnColor: turnColorFromFen(fen),
       movable: {
-        color: disabled ? 'none' : 'both',
+        color: disabled ? 'none' : movableColor,
         dests: disabled ? new Map() : toDests(positionRef.current),
       },
     });
-  }, [orientation, ground, disabled]);
+  }, [fen, orientation, ground, disabled, movableColor]);
 
   if (!fen) {
     return (

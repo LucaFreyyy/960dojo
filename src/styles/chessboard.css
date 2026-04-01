@@ -1,4 +1,4 @@
-/* Scoped to /tactics only — legacy opening page uses the same class names */
+/* Scoped to /tactics (and shared board class names elsewhere) */
 .tactics-page .chessboard-container {
     position: relative;
     width: 100%;

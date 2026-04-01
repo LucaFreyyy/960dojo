@@ -1,4 +1,4 @@
-var STARTING_POSITIONS = {
+{
     "000": "BBQNNRKR",
     "001": "BQNBNRKR",
     "002": "BQNNRBKR",
@@ -958,5 +958,5 @@ var STARTING_POSITIONS = {
     "956": "RBKRNNBQ",
     "957": "RKRBNNBQ",
     "958": "RKRNNBBQ",
-    "959": "RKRNNQBB",
-};
+    "959": "RKRNNQBB"
+}

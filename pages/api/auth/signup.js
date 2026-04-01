@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { createRatedOpeningRow } from '../../../lib/openingsUserOpening';
 import { getRandomOpening, fetchNewTactic } from '../../../lib/userInit';
 
 async function hashEmail(email) {
@@ -56,16 +57,14 @@ export default async function handler(req, res) {
         }
 
         const { openingNr, color } = getRandomOpening();
-        await supabaseAdmin.from('UserOpening').insert({
-            id: crypto.randomUUID(),
-            userId: id,
-            openingNr,
-            color,
-            pgn: '',
-            evalCp: null,
-            finished: null,
-            evalHistory: [],
-        });
+        await supabaseAdmin.from('UserOpening').insert(
+            createRatedOpeningRow({
+                id: crypto.randomUUID(),
+                userId: id,
+                openingNr,
+                color,
+            })
+        );
     }
 
     return res.status(200).json({ success: true });

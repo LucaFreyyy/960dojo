@@ -30,14 +30,6 @@ export default function HomePage() {
         <section className="practice">
           <h2>Practice</h2>
           <div className="practice-grid">
-            <Link className="practice-box" href="/legacy">
-              <h3>Legacy Openings🧭</h3>
-              <div className="practice-desc">
-                <p><span className="emphasis">Pick</span> a starting <span className="emphasis">position</span></p>
-                <p><span className="emphasis">Play</span> against the <span className="emphasis">lichess database</span> and <span className="emphasis">Stockfish</span> at <span className="emphasis">your level</span></p>
-                <p><span className="emphasis">Grind to gain rating</span> in ranked mode to start dominating your games from the very start</p>
-              </div>
-            </Link>
             <Link className="practice-box" href="/tactics">
               <h3>Tactics 💥</h3>
               <p className="practice-desc">
@@ -46,7 +38,7 @@ export default function HomePage() {
               <p className="tiny-note">no puzzles generated yet</p>
             </Link>
             <Link className="practice-box" href="/openings">
-              <h3>Openings V2🧭</h3>
+              <h3>Openings 🧭</h3>
               <div className="practice-desc">
                 <p><span className="emphasis">Pick</span> a starting <span className="emphasis">position</span></p>
                 <p><span className="emphasis">Play</span> against the <span className="emphasis">lichess database</span> and <span className="emphasis">Stockfish</span> at <span className="emphasis">your level</span></p>
