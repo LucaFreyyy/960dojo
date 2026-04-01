@@ -201,6 +201,8 @@
     border-radius: 1rem;
     border: var(--border-soft);
     box-shadow: var(--box-shadow-soft);
+    max-width: 780px;
+    margin: 0 auto;
 }
 
 .tab-content h3 {
@@ -237,4 +239,20 @@
     opacity: 0.95;
     display: block;
     transition: background 0.3s, box-shadow 0.3s;
+}
+
+.rating-graph-container {
+    max-width: 680px;
+    margin: 0 auto 0.6rem;
+    border: 1px solid #334155;
+    border-radius: 12px;
+    padding: 0.85rem;
+    background: #0f172a;
+}
+
+.rating-graph-container h3 {
+    margin: 0 0 0.55rem;
+    font-size: 1.05rem;
+    color: #cfe6ff;
+    letter-spacing: 0.02em;
 }

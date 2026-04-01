@@ -2,6 +2,7 @@ import Head from 'next/head';
 import { useSupabaseSession } from '../lib/SessionContext';
 import Link from 'next/link';
 import ChessBoard from '../components/Chessboard';
+import SectionTitle from '../components/SectionTitle';
 
 const timeControls = [
   { time: "1+0", label: "Bullet" },
@@ -28,7 +29,7 @@ export default function HomePage() {
 
       <main>
         <section className="practice">
-          <h2>Practice</h2>
+          <SectionTitle title="Practice" sectionClassName="practice" sectionStyle={{ margin: 0 }} headingStyle={{ margin: '2rem 0 1rem' }} />
           <div className="practice-grid">
             <Link className="practice-box" href="/tactics">
               <h3>Tactics 💥</h3>
@@ -49,7 +50,7 @@ export default function HomePage() {
         </section>
 
         <section className="play">
-          <h2>Play</h2>
+          <SectionTitle title="Play" sectionClassName="play" sectionStyle={{ margin: 0 }} headingStyle={{ margin: '2rem 0 1rem' }} />
           <div className="time-grid">
             {timeControls.map(({ time, label }) => (
               <Link

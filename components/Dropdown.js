@@ -1,6 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { useSupabaseSession } from '../lib/SessionContext';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 
 export default function Dropdown() {
@@ -30,36 +30,67 @@ export default function Dropdown() {
         fetchName();
     }, [session]);
     
+    const [open, setOpen] = useState(false);
+    const dropdownRef = useRef(null);
+
+    useEffect(() => {
+        function handleClickOutside(e) {
+            if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+                setOpen(false);
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+    
     const handleSignOut = async () => {
         await supabase.auth.signOut();
         window.location.href = '/';
     };
 
     return (
-        <aside className="sidebar-nav sidebar-static">
-            <div className="sidebar-head">
-                <strong>{userName ? `♔ ${userName.split(' ')[0]}` : 'Navigation'}</strong>
-            </div>
-            <div className="sidebar-links">
-                {isAuthenticated ? (
-                    <>
-                        <Link href="/profile">👤 Profile</Link>
-                        <Link href="/leaderboard">🏆 Leaderboard</Link>
-                        <Link href="/playerSearch">🔍 Player Search</Link>
-                        <Link href="/settings">⚙️ Settings</Link>
-                        <Link href="/info">ℹ️ Info</Link>
-                        <a onClick={handleSignOut} style={{ cursor: 'pointer' }}>🚪 Sign Out</a>
-                    </>
-                ) : (
-                    <>
-                        <Link href="/leaderboard">🏆 Leaderboard</Link>
-                        <Link href="/playerSearch">🔍 Player Search</Link>
-                        <Link href="/settings">⚙️ Settings</Link>
-                        <Link href="/info">ℹ️ Info</Link>
-                        <Link href="/login">🔐 Sign In</Link>
-                    </>
-                )}
-            </div>
-        </aside>
+        <div className="dropdown" ref={dropdownRef}>
+            <button
+                className="dropbtn sidebar-toggle-btn"
+                aria-label={open ? 'Close sidebar' : 'Open sidebar'}
+                title={open ? 'Close sidebar' : 'Open sidebar'}
+                onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}
+            >
+                <span className="sidebar-toggle-icon">☰</span>
+            </button>
+            {open ? (
+                <>
+                    <div className="sidebar-backdrop" onClick={() => setOpen(false)} />
+                    <aside className="sidebar-nav sidebar-open">
+                        <div className="sidebar-head">
+                            <strong>{userName ? `♔ ${userName.split(' ')[0]}` : 'Navigation'}</strong>
+                            <button type="button" className="sidebar-close" onClick={() => setOpen(false)}>✕</button>
+                        </div>
+                        <div className="sidebar-links">
+                            {isAuthenticated ? (
+                                <>
+                                    <Link href="/notifications">🔔 Notifications</Link>
+                                    <Link href="/profile">👤 Profile</Link>
+                                    <Link href="/leaderboard">🏆 Leaderboard</Link>
+                                    <Link href="/playerSearch">🔍 Player Search</Link>
+                                    <Link href="/settings">⚙️ Settings</Link>
+                                    <Link href="/info">ℹ️ Info</Link>
+                                    <a onClick={handleSignOut} style={{ cursor: 'pointer' }}>🚪 Sign Out</a>
+                                </>
+                            ) : (
+                                <>
+                                    <Link href="/notifications">🔔 Notifications</Link>
+                                    <Link href="/leaderboard">🏆 Leaderboard</Link>
+                                    <Link href="/playerSearch">🔍 Player Search</Link>
+                                    <Link href="/settings">⚙️ Settings</Link>
+                                    <Link href="/info">ℹ️ Info</Link>
+                                    <Link href="/login">🔐 Sign In</Link>
+                                </>
+                            )}
+                        </div>
+                    </aside>
+                </>
+            ) : null}
+        </div>
     );
 }

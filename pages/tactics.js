@@ -8,6 +8,7 @@ import MoveList from '../components/MoveList';
 import DifficultySelector from '../components/DifficultySelector';
 import PostTacticDisplay from '../components/PostTacticDisplay';
 import RatingDisplay from '../components/RatingDisplay';
+import SectionTitle from '../components/SectionTitle';
 
 const TACTICS_DEBUG = true;
 function tlog(...args) {
@@ -449,10 +450,7 @@ export default function TacticsPage() {
         <title>Tactics - 960 Dojo</title>
       </Head>
       <main style={{ maxWidth: 1180, margin: '0 auto', padding: '1.25rem 1rem 2rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
-          <h1 style={{ margin: 0 }}>Tactics</h1>
-          <DifficultySelector value={difficulty} onChange={setDifficulty} disabled={loading} />
-        </div>
+        <SectionTitle title="Tactics" />
 
         {error ? <div style={{ color: '#ef4444', marginBottom: 10 }}>{error}</div> : null}
         {infoMessage ? <div style={{ color: '#93c5fd', marginBottom: 10 }}>{infoMessage}</div> : null}
@@ -518,6 +516,9 @@ export default function TacticsPage() {
           </section>
 
           <section>
+            <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'flex-start' }}>
+              <DifficultySelector value={difficulty} onChange={setDifficulty} disabled={loading} />
+            </div>
             <MoveList
               pgn={moveListPgn}
               evalData={[]}

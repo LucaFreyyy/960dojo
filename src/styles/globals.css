@@ -109,6 +109,50 @@ header {
 
 /* ====== Dropdown ====== */
 
+.dropdown {
+    position: relative;
+    display: inline-block;
+    z-index: 60;
+}
+
+.dropbtn {
+    background: linear-gradient(180deg, #132033 0%, #0f172a 100%);
+    color: #dbeafe;
+    padding: 0;
+    width: 2.45rem;
+    height: 2.45rem;
+    font-size: 1.12rem;
+    border: 1px solid #334155;
+    border-radius: 10px;
+    cursor: pointer;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
+    transition: all 0.16s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.dropbtn:hover {
+    border-color: #3b82f6;
+    color: #eff6ff;
+    transform: translateY(-1px);
+    box-shadow: 0 9px 22px rgba(37, 99, 235, 0.28);
+}
+
+.dropbtn:active {
+    transform: translateY(0);
+}
+
+.sidebar-toggle-btn {
+    position: relative;
+}
+
+.sidebar-toggle-icon {
+    line-height: 1;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+}
+
 .sidebar-nav {
     position: fixed;
     top: 0;
@@ -121,6 +165,12 @@ header {
     z-index: 80;
     display: flex;
     flex-direction: column;
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+}
+
+.sidebar-nav.sidebar-open {
+    transform: translateX(0);
 }
 
 .header-buy-coffee {
@@ -137,6 +187,16 @@ header {
     padding: 0.9rem 1rem;
     border-bottom: var(--border-soft);
     color: var(--text-color-main);
+}
+
+.sidebar-close {
+    border: var(--border-soft);
+    background: var(--bg-button);
+    color: var(--text-color-main);
+    border-radius: 8px;
+    width: 2rem;
+    height: 2rem;
+    cursor: pointer;
 }
 
 .sidebar-links {

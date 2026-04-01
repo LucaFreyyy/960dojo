@@ -6,6 +6,7 @@ import Chessboard from '../components/Chessboard';
 import MoveList from '../components/MoveList';
 import RatingDisplay from '../components/RatingDisplay';
 import { OpenInLichessBtn } from '../components/PostTacticDisplay';
+import SectionTitle from '../components/SectionTitle';
 import PositionSelector from '../components/PositionSelector';
 import PositionDisplay from '../components/PositionDisplay';
 import ModeSelector from '../components/ModeSelector';
@@ -707,15 +708,7 @@ export default function OpeningsPage() {
         <title>Openings - 960 Dojo</title>
       </Head>
       <main style={{ maxWidth: 1180, margin: '0 auto', padding: '1.25rem 1rem 2rem' }}>
-        <section className="practice" style={{ margin: '0 0 0.75rem', textAlign: 'center' }}>
-          <h2
-            style={{ cursor: 'pointer', userSelect: 'none', marginTop: 0 }}
-            onClick={() => window.location.reload()}
-            title="Reset to setup"
-          >
-            Openings
-          </h2>
-        </section>
+        <SectionTitle title="Openings" onClick={() => window.location.reload()} />
 
         <div
           style={{
