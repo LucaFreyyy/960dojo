@@ -12,7 +12,6 @@
     "@lichess-org/chessground": "^10.1.1",
     "@supabase/ssr": "^0.9.0",
     "@supabase/supabase-js": "^2.95.3",
-    "chess.js": "^1.4.0",
     "chessground": "^9.2.1",
     "chessops": "^0.14.2",
     "next": "^16.1.6",

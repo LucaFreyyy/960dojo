@@ -1,7 +1,7 @@
 import Head from 'next/head';
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Chess } from 'chess.js';
+import { Chess } from '../lib/chessCompat';
 import { useSupabaseSession } from '../lib/SessionContext';
 import Chessboard from '../components/Chessboard';
 import MoveList from '../components/MoveList';
@@ -84,7 +84,7 @@ export default function OpeningsPage() {
   const gameModeRef = useRef('training');
   const trainingRatingRef = useRef(1500);
   const dbRatingRef = useRef(1500);
-  /** Parallel to positions along the mainline; centipawns from White's POV for `UserOpening.evalHistory`. */
+  /** Parallel to positions along the mainline; pawns from White POV, or ±(100+mateIn). */
   const evalHistoryTrailRef = useRef([]);
   const evalJobsRef = useRef([]);
   const opponentBusyRef = useRef(false);
@@ -197,7 +197,7 @@ export default function OpeningsPage() {
     const id = openingRowIdRef.current;
     const uid = userIdRef.current;
     if (!id || !uid || !isRatedRef.current) return;
-    const payload = trailWhiteCp.map((x) => (Number.isFinite(x) ? Math.round(x) : 0));
+    const payload = trailWhiteCp.map((x) => (Number.isFinite(x) ? Number(x.toFixed(2)) : 0));
     await updateUserOpening(id, { evalHistory: payload });
   }, []);
 
@@ -256,7 +256,7 @@ export default function OpeningsPage() {
       if (rowId && isRatedRef.current && userIdRef.current) {
         await updateUserOpening(rowId, {
           pgn: pgnText,
-          evalHistory: trail.map((x) => (Number.isFinite(x) ? Math.round(x) : 0)),
+          evalHistory: trail.map((x) => (Number.isFinite(x) ? Number(x.toFixed(2)) : 0)),
           finished: finishedAt,
         });
 

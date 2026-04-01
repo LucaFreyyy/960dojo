@@ -44,6 +44,10 @@ function getParentSelectionFromVariationPath(variationPath) {
 
 function colorFromEval(evalValue, userColor) {
     if (!isFiniteNumber(evalValue)) return '#d0d0d0';
+    if (Math.abs(evalValue) > 100) {
+        const favorable = userColor === 'black' ? evalValue < 0 : evalValue > 0;
+        return favorable ? 'rgb(74, 190, 93)' : 'rgb(210, 79, 64)';
+    }
     let v = evalValue;
     if (userColor === 'black') v = -v;
     const min = -5;
@@ -64,6 +68,17 @@ function colorFromEval(evalValue, userColor) {
     const g = Math.round(255 - (255 - 79) * t);
     const b = Math.round(255 - (255 - 64) * t);
     return `rgb(${r}, ${g}, ${b})`;
+}
+
+function formatEval(evalValue) {
+    if (!isFiniteNumber(evalValue)) return '';
+    if (Math.abs(evalValue) > 100) {
+        const movesToMate = Math.max(0, Math.round(Math.abs(evalValue) - 100));
+        if (movesToMate <= 0) return evalValue < 0 ? '-#' : '#';
+        return evalValue < 0 ? `-#${movesToMate}` : `#${movesToMate}`;
+    }
+    const rounded = Math.round(evalValue * 100) / 100;
+    return rounded > 0 ? `+${rounded}` : `${rounded}`;
 }
 
 export default function MoveList({
@@ -350,7 +365,7 @@ export default function MoveList({
                 <div style={{ marginTop: 12, color: '#d0d7e5', fontSize: 14 }}>
                     <strong>Eval:</strong>{' '}
                     <span style={{ color: currentSelectedEvalColor, fontWeight: 700 }}>
-                        {currentSelectedEval}
+                        {formatEval(currentSelectedEval)}
                     </span>
                 </div>
             ) : null}

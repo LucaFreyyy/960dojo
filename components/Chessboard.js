@@ -47,13 +47,31 @@ export default function ChessBoard({
     const cg = Chessground(containerRef.current, {
       fen: fen,
       orientation: orientation,
+      // Chessground's built-in castling helper assumes standard rooks (a/h files).
+      // In Chess960 it can desync pieces, so we disable it and rely on FEN updates.
+      autoCastle: false,
+      // Chessground doesn't derive turn from a full FEN string; keep it in sync explicitly.
+      turnColor: turnColorFromFen(fen),
       movable: {
         free: false,
         color: disabled ? 'none' : movableColor,
         dests: disabled ? new Map() : toDests(positionRef.current),
         events: {
-          after: (orig, dest) => {
-            const { san, newFen } = makeMove(positionRef.current, orig, dest);
+          after: (orig, dest, metadata) => {
+            if (DBG && metadata?.premove) {
+              console.warn('[Chessboard] after callback with premove=true', { orig, dest });
+            }
+            let san;
+            let newFen;
+            try {
+              ({ san, newFen } = makeMove(positionRef.current, orig, dest));
+            } catch (e) {
+              console.error('[Chessboard] makeMove failed', { orig, dest, fen, err: String(e) });
+              return;
+            }
+            if (DBG && (san === 'O-O' || san === 'O-O-O')) {
+              console.log('[Chessboard] castling', { san, orig, dest, before: fen, after: newFen });
+            }
 
             if (onMoveRef.current) {
               onMoveRef.current({ from: orig, to: dest, san, newFen });
@@ -64,6 +82,7 @@ export default function ChessBoard({
 
             cg.set({
               fen: newFen,
+              turnColor: turnColorFromFen(newFen),
               orientation: orientationRef.current,
               movable: {
                 color: disabledRef.current ? 'none' : movableColorRef.current,

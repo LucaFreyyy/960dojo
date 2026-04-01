@@ -1,7 +1,7 @@
 import Head from 'next/head';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Chess } from 'chess.js';
+import { Chess } from '../lib/chessCompat';
 import { useSupabaseSession } from '../lib/SessionContext';
 import Chessboard from '../components/Chessboard';
 import MoveList from '../components/MoveList';
