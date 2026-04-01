@@ -11,6 +11,26 @@ import {
     Legend,
 } from 'recharts';
 
+const axisTickTime = (ts) => new Date(ts).toLocaleDateString();
+const tooltipTime = (ts) => new Date(ts).toLocaleString();
+
+/** ~evenly spaced tick indices for the X axis (event index, not calendar time). */
+function evenTickIndices(len, maxTicks = 7) {
+    if (len <= 0) return [];
+    if (len === 1) return [0];
+    const last = len - 1;
+    if (last < maxTicks) {
+        return Array.from({ length: len }, (_, i) => i);
+    }
+    const out = [0];
+    const step = last / (maxTicks - 1);
+    for (let k = 1; k < maxTicks - 1; k += 1) {
+        out.push(Math.round(k * step));
+    }
+    out.push(last);
+    return [...new Set(out)].sort((a, b) => a - b);
+}
+
 function mergeRatingHistories(rowsA, rowsB) {
     const a = (rowsA || []).map((r) => ({
         t: new Date(r.createdAt).getTime(),
@@ -26,11 +46,12 @@ function mergeRatingHistories(rowsA, rowsB) {
     let lastA = null;
     let lastB = null;
     const out = [];
+    let idx = 0;
     for (const e of events) {
         if (e.user === 'a') lastA = e.value;
         else lastB = e.value;
         out.push({
-            date: new Date(e.t).toLocaleDateString(),
+            idx: idx++,
             t: e.t,
             profileRating: lastA,
             viewerRating: lastB,
@@ -69,8 +90,9 @@ export default function RatingGraph({ userId, format, compareUserId, profileName
         }
 
         if (!compareUserId || compareUserId === userId) {
-            const chartData = ratings.map((r) => ({
-                date: new Date(r.createdAt).toLocaleDateString(),
+            const chartData = ratings.map((r, i) => ({
+                idx: i,
+                t: new Date(r.createdAt).getTime(),
                 rating: r.value,
             }));
             setData(chartData);
@@ -86,8 +108,9 @@ export default function RatingGraph({ userId, format, compareUserId, profileName
             .order('createdAt', { ascending: true });
 
         if (compareErr) {
-            const chartData = ratings.map((r) => ({
-                date: new Date(r.createdAt).toLocaleDateString(),
+            const chartData = ratings.map((r, i) => ({
+                idx: i,
+                t: new Date(r.createdAt).getTime(),
                 rating: r.value,
             }));
             setData(chartData);
@@ -102,6 +125,18 @@ export default function RatingGraph({ userId, format, compareUserId, profileName
 
     const hasCompareData = compareMode && data.some((d) => d.viewerRating != null);
     const hasProfileData = compareMode && data.some((d) => d.profileRating != null);
+    const xMax = Math.max(0, data.length - 1);
+    const xTicks = evenTickIndices(data.length);
+
+    const xTickFormatter = (i) => {
+        const row = data[Math.round(i)];
+        return row?.t != null ? axisTickTime(row.t) : '';
+    };
+
+    const tooltipLabelFormatter = (_, payload) => {
+        const row = payload?.[0]?.payload;
+        return row?.t != null ? tooltipTime(row.t) : '';
+    };
 
     return (
         <div className="rating-graph-container">
@@ -127,11 +162,16 @@ export default function RatingGraph({ userId, format, compareUserId, profileName
                             </defs>
                             <CartesianGrid strokeDasharray="4 6" stroke="#1f2937" />
                             <XAxis
-                                dataKey="date"
+                                dataKey="idx"
+                                type="number"
+                                domain={[0, xMax]}
+                                ticks={xTicks}
+                                allowDecimals={false}
                                 hide={data.length > 16}
                                 tick={{ fill: '#93a3bf', fontSize: 11 }}
                                 axisLine={{ stroke: '#334155' }}
                                 tickLine={{ stroke: '#334155' }}
+                                tickFormatter={xTickFormatter}
                             />
                             <YAxis
                                 domain={['dataMin - 60', 'dataMax + 60']}
@@ -140,7 +180,7 @@ export default function RatingGraph({ userId, format, compareUserId, profileName
                                 tickLine={{ stroke: '#334155' }}
                                 width={44}
                             />
-                            <Tooltip />
+                            <Tooltip labelFormatter={tooltipLabelFormatter} />
                             <Legend wrapperStyle={{ fontSize: 12 }} />
                             {hasProfileData ? (
                                 <Area
@@ -179,11 +219,16 @@ export default function RatingGraph({ userId, format, compareUserId, profileName
                             </defs>
                             <CartesianGrid strokeDasharray="4 6" stroke="#1f2937" />
                             <XAxis
-                                dataKey="date"
+                                dataKey="idx"
+                                type="number"
+                                domain={[0, xMax]}
+                                ticks={xTicks}
+                                allowDecimals={false}
                                 hide={data.length > 16}
                                 tick={{ fill: '#93a3bf', fontSize: 11 }}
                                 axisLine={{ stroke: '#334155' }}
                                 tickLine={{ stroke: '#334155' }}
+                                tickFormatter={xTickFormatter}
                             />
                             <YAxis
                                 domain={['dataMin - 60', 'dataMax + 60']}
@@ -192,7 +237,7 @@ export default function RatingGraph({ userId, format, compareUserId, profileName
                                 tickLine={{ stroke: '#334155' }}
                                 width={44}
                             />
-                            <Tooltip />
+                            <Tooltip labelFormatter={tooltipLabelFormatter} />
                             <Area
                                 type="monotone"
                                 dataKey="rating"
