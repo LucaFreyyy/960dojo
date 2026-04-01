@@ -114,7 +114,7 @@ export default function ProfileTabs({ userId, compareUserId = null, profileName 
                                 You:{' '}
                                 <span className="profile-tab-rating-with-hint">
                                     {viewerRating ?? '–'}
-                                    <RatingEstablishedHint />
+                                    {viewerProvisional ? <RatingEstablishedHint /> : null}
                                 </span>
                             </span>
                         </>
