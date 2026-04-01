@@ -889,8 +889,12 @@
 
 .move-btn--selected {
   background: var(--gold-soft);
-  color: var(--eval-on-cream) !important;
+  color: #fff;
   box-shadow: inset 0 0 0 1px var(--gold);
+}
+
+.move-btn--selected .move-btn__eval {
+  color: rgba(255, 255, 255, 0.88);
 }
 
 .move-btn--tone-neutral {
