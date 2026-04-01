@@ -1,6 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { useSupabaseSession } from '../lib/SessionContext';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
 export default function Dropdown() {
@@ -30,60 +30,36 @@ export default function Dropdown() {
         fetchName();
     }, [session]);
     
-    const [open, setOpen] = useState(false);
-    const [hovering, setHovering] = useState(false);
-    const [clickedOpen, setClickedOpen] = useState(false);
-    const dropdownRef = useRef();
-
-    useEffect(() => {
-        function handleClickOutside(e) {
-            if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-                setClickedOpen(false);
-                setOpen(false);
-            }
-        }
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
-
-    useEffect(() => {
-        setOpen(clickedOpen ? true : hovering);
-    }, [hovering, clickedOpen]);
-
     const handleSignOut = async () => {
         await supabase.auth.signOut();
         window.location.href = '/';
     };
 
     return (
-        <div className="dropdown" ref={dropdownRef}
-            onMouseEnter={() => setHovering(true)}
-            onMouseLeave={() => { setHovering(false); if (!clickedOpen) setOpen(false); }}>
-            <button className="dropbtn" onClick={(e) => { e.stopPropagation(); setClickedOpen(!clickedOpen); }}>
-                {userName ? `♔ ${userName.split(' ')[0]}` : '♟'}
-            </button>
-            {open && (
-                <div className={`dropdown-content ${open ? 'open' : ''}`}>
-                    {isAuthenticated ? (
-                        <>
-                            <Link href="/profile">👤 Profile</Link>
-                            <Link href="/leaderboard">🏆 Leaderboard</Link>
-                            <Link href="/playerSearch">🔍 Player Search</Link>
-                            <Link href="/settings">⚙️ Settings</Link>
-                            <Link href="/info">ℹ️ Info</Link>
-                            <a onClick={handleSignOut} style={{ cursor: 'pointer' }}>🚪 Sign Out</a>
-                        </>
-                    ) : (
-                        <>
-                            <Link href="/leaderboard">🏆 Leaderboard</Link>
-                            <Link href="/playerSearch">🔍 Player Search</Link>
-                            <Link href="/settings">⚙️ Settings</Link>
-                            <Link href="/info">ℹ️ Info</Link>
-                            <Link href="/login">🔐 Sign In</Link>
-                        </>
-                    )}
-                </div>
-            )}
-        </div>
+        <aside className="sidebar-nav sidebar-static">
+            <div className="sidebar-head">
+                <strong>{userName ? `♔ ${userName.split(' ')[0]}` : 'Navigation'}</strong>
+            </div>
+            <div className="sidebar-links">
+                {isAuthenticated ? (
+                    <>
+                        <Link href="/profile">👤 Profile</Link>
+                        <Link href="/leaderboard">🏆 Leaderboard</Link>
+                        <Link href="/playerSearch">🔍 Player Search</Link>
+                        <Link href="/settings">⚙️ Settings</Link>
+                        <Link href="/info">ℹ️ Info</Link>
+                        <a onClick={handleSignOut} style={{ cursor: 'pointer' }}>🚪 Sign Out</a>
+                    </>
+                ) : (
+                    <>
+                        <Link href="/leaderboard">🏆 Leaderboard</Link>
+                        <Link href="/playerSearch">🔍 Player Search</Link>
+                        <Link href="/settings">⚙️ Settings</Link>
+                        <Link href="/info">ℹ️ Info</Link>
+                        <Link href="/login">🔐 Sign In</Link>
+                    </>
+                )}
+            </div>
+        </aside>
     );
 }
