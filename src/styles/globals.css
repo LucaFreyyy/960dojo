@@ -115,107 +115,146 @@ header {
     z-index: 60;
 }
 
-.dropbtn {
-    background: linear-gradient(180deg, #132033 0%, #0f172a 100%);
-    color: #dbeafe;
-    padding: 0;
-    width: 2.45rem;
-    height: 2.45rem;
-    font-size: 1.12rem;
-    border: 1px solid #334155;
-    border-radius: 10px;
-    cursor: pointer;
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
-    transition: all 0.16s ease;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.dropbtn:hover {
-    border-color: #3b82f6;
-    color: #eff6ff;
-    transform: translateY(-1px);
-    box-shadow: 0 9px 22px rgba(37, 99, 235, 0.28);
-}
-
-.dropbtn:active {
-    transform: translateY(0);
-}
-
-.sidebar-toggle-btn {
-    position: relative;
-}
-
-.sidebar-toggle-icon {
-    line-height: 1;
-    font-weight: 800;
-    letter-spacing: 0.02em;
-}
-
-.sidebar-nav {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: min(260px, 86vw);
-    height: 100vh;
-    background: var(--bg-dropdown);
-    border-right: var(--border-soft);
-    box-shadow: var(--box-shadow-heavy);
-    z-index: 80;
-    display: flex;
-    flex-direction: column;
-    transform: translateX(-100%);
-    transition: transform 0.2s ease;
-}
-
-.sidebar-nav.sidebar-open {
-    transform: translateX(0);
-}
-
-.header-buy-coffee {
+.header-dropdown-wrap {
     position: absolute;
     right: 1rem;
     top: 50%;
     transform: translateY(-50%);
+    z-index: 60;
 }
 
-.sidebar-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0.9rem 1rem;
-    border-bottom: var(--border-soft);
+.dropbtn {
+    background: transparent;
     color: var(--text-color-main);
-}
-
-.sidebar-close {
-    border: var(--border-soft);
-    background: var(--bg-button);
-    color: var(--text-color-main);
+    padding: 0.5rem 0.7rem;
+    min-height: 2.4rem;
+    font-size: 0.98rem;
+    border: 1px solid transparent;
     border-radius: 8px;
-    width: 2rem;
-    height: 2rem;
     cursor: pointer;
+    box-shadow: none;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    font-weight: 500;
+    white-space: nowrap;
+    font-family: var(--font-main);
 }
 
-.sidebar-links {
-    padding: 0.5rem 0;
-}
-
-.sidebar-links a {
+.dropbtn:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.08);
     color: var(--text-color-main);
-    padding: 0.8rem 1.1rem;
+}
+
+.dropbtn:active {
+    background: rgba(255, 255, 255, 0.09);
+}
+
+.dropbtn-label {
+    max-width: 8.5rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dropbtn-chevron {
+    font-size: 0.72rem;
+    opacity: 0.75;
+    line-height: 1;
+}
+
+.dropdown-content {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 6px);
+    min-width: min(220px, 86vw);
+    background: var(--bg-dropdown);
+    border: var(--border-soft);
+    border-radius: 8px;
+    box-shadow: var(--box-shadow-heavy);
+    overflow: hidden;
+    padding: 0.35rem 0;
+}
+
+.dropdown-section {
+    padding: 0.25rem 0;
+}
+
+.dropdown-section + .dropdown-section {
+    border-top: 1px solid rgba(51, 51, 51, 0.65);
+}
+
+.dropdown-section-title {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: rgba(240, 240, 240, 0.45);
+    padding: 0.45rem 0.85rem 0.2rem;
+    font-family: var(--font-main);
+}
+
+.dropdown-section:first-child .dropdown-section-title {
+    padding-top: 0.2rem;
+}
+
+.dropdown-item {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    text-align: left;
+    color: var(--text-color-main);
+    padding: 0.45rem 0.85rem;
     text-decoration: none;
     font-family: var(--font-main);
-    font-size: 1rem;
-    display: block;
-    transition: background 0.2s ease;
+    font-size: 0.92rem;
+    font-weight: 500;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    transition: background 0.12s ease;
 }
 
-.sidebar-links a:hover {
-    background: var(--bg-hover);
+.dropdown-item:hover {
+    background: rgba(255, 255, 255, 0.06);
     color: var(--text-color-main);
+}
+
+.dropdown-section--footer {
+    border-top: 1px solid rgba(51, 51, 51, 0.65);
+    padding-top: 0.35rem;
+    margin-top: 0.15rem;
+}
+
+.dropdown-item--signout {
+    color: rgba(240, 200, 200, 0.95);
+}
+
+.dropdown-item--signout:hover {
+    background: rgba(185, 28, 28, 0.2);
+    color: #fecaca;
+}
+
+.header-buy-coffee {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+/* Header coffee: keep vertical centering; no jump on hover (info.css uses translateY on .buy-coffee:hover) */
+.header-buy-coffee.buy-coffee {
+    transition: background 0.2s, box-shadow 0.2s;
+}
+
+.header-buy-coffee.buy-coffee:hover {
+    transform: translateY(-50%) scale(1);
+}
+
+.header-buy-coffee.buy-coffee:active {
+    transform: translateY(-50%);
 }
 
 /* ====== Play Section ====== */
