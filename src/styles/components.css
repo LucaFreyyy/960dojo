@@ -308,7 +308,7 @@
 }
 
 .rating-display__delta--down {
-  color: var(--eval-bad);
+  color: var(--eval-worst);
 }
 
 /* Mode / difficulty / position UI */
@@ -757,7 +757,7 @@
 }
 
 .eval-summary--bad {
-  color: var(--eval-bad);
+  color: var(--eval-worst);
 }
 
 .eval-summary--equal {

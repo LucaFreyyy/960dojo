@@ -118,9 +118,10 @@
   --white-square: #ffe4c4;
   --black-square: #6b4528;
 
-  --eval-best: #2ea4ff;
-  --eval-mid: #ffe4c4;
-  --eval-bad: #e8a090;
-  --eval-worst: #a22020;
+  /* Move list / eval line: green → yellow → orange → red (no blue) */
+  --eval-best: #4ade80;
+  --eval-mid: #facc15;
+  --eval-bad: #fb923c;
+  --eval-worst: #ef4444;
   --eval-on-cream: #2a1a10;
 }
