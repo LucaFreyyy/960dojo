@@ -10,6 +10,8 @@ export default function ProfileBody({
   actionSlot = null,
   friends = [],
   tabsUserId,
+  compareUserId = null,
+  profileName,
 }) {
   return (
     <>
@@ -23,7 +25,11 @@ export default function ProfileBody({
       <hr className="separating-line" />
       <FriendsList friends={friends} />
       <hr className="separating-line" />
-      <ProfileTabs userId={tabsUserId} />
+      <ProfileTabs
+        userId={tabsUserId}
+        compareUserId={compareUserId}
+        profileName={profileName ?? user?.name}
+      />
     </>
   );
 }

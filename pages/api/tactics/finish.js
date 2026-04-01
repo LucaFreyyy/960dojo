@@ -10,9 +10,8 @@ function expectedScore(playerRating, oppRating) {
 }
 
 function kFactor({ gamesPlayed, baseK }) {
-  // Strongly provisional: first 20 puzzles have significantly larger swings.
   const gp = Math.max(0, Math.min(20, gamesPlayed || 0));
-  const multiplier = 5 - (4 * gp) / 20; // 5.0 -> 1.0
+  const multiplier = 5 - (4 * gp) / 20;
   return Math.round(baseK * multiplier);
 }
 
@@ -58,7 +57,6 @@ export default async function handler(req, res) {
 
     const tacticRating = tacticRow.rating ?? 1500;
 
-    // Count finished tactics for user to scale rating volatility.
     const { count: userFinishedCount, error: userCountErr } = await supabaseAdmin
       .from('UserTactic')
       .select('id', { count: 'exact', head: true })
@@ -66,7 +64,6 @@ export default async function handler(req, res) {
       .not('finished', 'is', null);
     if (userCountErr) return res.status(500).json({ error: userCountErr.message });
 
-    // Tactic volatility: if played fewer times => larger changes.
     const tacticTimesPlayed = Number.isFinite(tacticRow.numTimesPlayed) ? tacticRow.numTimesPlayed : 0;
 
     const e = expectedScore(userRating, tacticRating);
@@ -75,18 +72,30 @@ export default async function handler(req, res) {
     const userK = kFactor({ gamesPlayed: userFinishedCount || 0, baseK: 24 });
     const tacticK = kFactor({ gamesPlayed: tacticTimesPlayed, baseK: 24 });
 
-    const delta = Math.round(userK * (score - e));
-    const newUserRating = Math.max(100, userRating + delta);
-    const newTacticRating = Math.max(100, tacticRating - Math.round(tacticK * (score - e)));
-
-    // Update UserTactic row (create if missing, but normally it exists from "open").
-    const finishedAt = new Date().toISOString();
     const { data: progressRow } = await supabaseAdmin
       .from('UserTactic')
-      .select('id, finished')
+      .select('id, finished, solved')
       .eq('userId', userId)
       .eq('tacticId', tacticIdNum)
       .maybeSingle();
+
+    const isFailedQueueRetry =
+      progressRow?.finished != null && progressRow?.solved === false;
+
+    const rawUserDelta = Math.round(userK * (score - e));
+    let appliedUserDelta = rawUserDelta;
+    if (isFailedQueueRetry && solved) {
+      appliedUserDelta = Math.round(rawUserDelta * 0.5);
+    }
+
+    const newUserRating = Math.max(100, userRating + appliedUserDelta);
+
+    let newTacticRating = tacticRating;
+    if (!isFailedQueueRetry) {
+      newTacticRating = Math.max(100, tacticRating - Math.round(tacticK * (score - e)));
+    }
+
+    const finishedAt = new Date().toISOString();
 
     if (progressRow?.id) {
       await supabaseAdmin
@@ -103,7 +112,6 @@ export default async function handler(req, res) {
       });
     }
 
-    // Always append a new Rating row (rating graph).
     const { error: ratingInsertErr } = await supabaseAdmin.from('Rating').insert({
       id: crypto.randomUUID(),
       userId,
@@ -113,16 +121,15 @@ export default async function handler(req, res) {
     });
     if (ratingInsertErr) return res.status(500).json({ error: ratingInsertErr.message });
 
-    // Likes/dislikes: disLikes = [win+like, win+dislike, loss+like, loss+dislike]
     let disLikes = parseDislikesArray(tacticRow.disLikes);
     if (liked === true) disLikes[solved ? 0 : 2] += 1;
     if (liked === false) disLikes[solved ? 1 : 3] += 1;
 
-    const tacticUpdate = {
-      rating: newTacticRating,
-      disLikes,
-      numTimesPlayed: tacticTimesPlayed + 1,
-    };
+    const tacticUpdate = { disLikes };
+    if (!isFailedQueueRetry) {
+      tacticUpdate.rating = newTacticRating;
+      tacticUpdate.numTimesPlayed = tacticTimesPlayed + 1;
+    }
 
     const { error: tacticUpdateErr } = await supabaseAdmin
       .from('Tactic')
@@ -130,16 +137,19 @@ export default async function handler(req, res) {
       .eq('id', tacticIdNum);
     if (tacticUpdateErr) return res.status(500).json({ error: tacticUpdateErr.message });
 
+    const reportedFinishedCount =
+      (userFinishedCount || 0) + (isFailedQueueRetry ? 0 : 1);
+
     return res.status(200).json({
       userRating: newUserRating,
-      tacticRating: newTacticRating,
-      delta,
-      userFinishedCount: (userFinishedCount || 0) + 1,
-      tacticTimesPlayed: tacticTimesPlayed + 1,
+      tacticRating: isFailedQueueRetry ? tacticRating : newTacticRating,
+      delta: appliedUserDelta,
+      userFinishedCount: reportedFinishedCount,
+      tacticTimesPlayed: isFailedQueueRetry ? tacticTimesPlayed : tacticTimesPlayed + 1,
+      failedQueueRetry: isFailedQueueRetry,
     });
   } catch (e) {
     console.error('[api/tactics/finish] error:', e);
     return res.status(500).json({ error: 'Internal error' });
   }
 }
-

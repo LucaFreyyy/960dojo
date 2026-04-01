@@ -186,11 +186,7 @@ export default async function handler(req, res) {
             if (rmErr) return res.status(500).json({ error: rmErr.message });
           }
 
-          const { error: reopenErr } = await supabaseAdmin
-            .from('UserTactic')
-            .update({ finished: null, solved: false })
-            .eq('id', oldestFailedRow.id);
-          if (reopenErr) return res.status(500).json({ error: reopenErr.message });
+          // Keep UserTactic.solved/finished as the last recorded outcome; /api/tactics/finish overwrites on completion.
 
           return res.status(200).json({
             tactic: {
@@ -208,6 +204,7 @@ export default async function handler(req, res) {
             userFinishedCount,
             tacticTimesPlayed: Number.isFinite(chosen?.numTimesPlayed) ? chosen.numTimesPlayed : 0,
             infoMessage: 'Retrying your oldest missed puzzle.',
+            failedQueueRetry: true,
           });
         }
       }

@@ -13,9 +13,13 @@ const formatMap = {
     Openings: 'openings',
 };
 
-export default function ProfileTabs({ userId }) {
+export default function ProfileTabs({ userId, compareUserId = null, profileName }) {
     const [activeTab, setActiveTab] = useState('Bullet');
     const [rating, setRating] = useState(null);
+    const [viewerRating, setViewerRating] = useState(null);
+
+    const compareMode = Boolean(compareUserId && compareUserId !== userId);
+    const profileLabel = profileName?.trim() || 'Player';
 
     useEffect(() => {
         async function fetchRating() {
@@ -27,18 +31,37 @@ export default function ProfileTabs({ userId }) {
                 .eq('type', dbFormat)
                 .order('createdAt', { ascending: false })
                 .limit(1)
-                .single();
+                .maybeSingle();
 
             if (error) {
                 console.warn(`[ProfileTabs] No rating found for ${dbFormat}:`, error.message);
                 setRating(null);
             } else {
-                setRating(data.value);
+                setRating(data?.value ?? null);
+            }
+
+            if (compareUserId && compareUserId !== userId) {
+                const { data: vData, error: vErr } = await supabase
+                    .from('Rating')
+                    .select('value')
+                    .eq('userId', compareUserId)
+                    .eq('type', dbFormat)
+                    .order('createdAt', { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
+                if (vErr) {
+                    console.warn(`[ProfileTabs] No viewer rating for ${dbFormat}:`, vErr.message);
+                    setViewerRating(null);
+                } else {
+                    setViewerRating(vData?.value ?? null);
+                }
+            } else {
+                setViewerRating(null);
             }
         }
 
         fetchRating();
-    }, [activeTab, userId]);
+    }, [activeTab, userId, compareUserId]);
 
     return (
         <div className="profile-tabs">
@@ -51,8 +74,23 @@ export default function ProfileTabs({ userId }) {
             </div>
 
             <div className="tab-content">
-                <h3>Rating: {rating ?? '–'}</h3>
-                <RatingGraph userId={userId} format={formatMap[activeTab]} />
+                <h3 className="profile-tab-rating-headline">
+                    {compareMode ? (
+                        <>
+                            <span className="profile-tab-rating-profile">{profileLabel}: {rating ?? '–'}</span>
+                            <span className="profile-tab-rating-sep" aria-hidden="true"> · </span>
+                            <span className="profile-tab-rating-viewer">You: {viewerRating ?? '–'}</span>
+                        </>
+                    ) : (
+                        <>Rating: {rating ?? '–'}</>
+                    )}
+                </h3>
+                <RatingGraph
+                    userId={userId}
+                    format={formatMap[activeTab]}
+                    compareUserId={compareUserId}
+                    profileName={profileName}
+                />
                 <GameList userId={userId} format={formatMap[activeTab]} />
             </div>
         </div>

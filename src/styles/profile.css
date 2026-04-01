@@ -195,6 +195,19 @@
   font-family: var(--font-sketch);
 }
 
+.profile-tab-rating-headline .profile-tab-rating-profile {
+  color: var(--logo-blue);
+}
+
+.profile-tab-rating-headline .profile-tab-rating-viewer {
+  color: #fbbf24;
+}
+
+.profile-tab-rating-sep {
+  color: var(--ink-muted);
+  font-weight: 600;
+}
+
 .edit-button {
   all: unset;
   display: inline;
@@ -241,6 +254,13 @@
   color: var(--ink);
   letter-spacing: 0.02em;
   font-family: var(--font-sketch);
+}
+
+.rating-graph-compare-caption {
+  margin: 0 0 0.65rem;
+  font-size: 0.88rem;
+  color: var(--ink-muted);
+  font-weight: 600;
 }
 
 .rating-graph-container .recharts-default-tooltip {

@@ -103,6 +103,8 @@ export default function ProfilePage() {
                         editable={false}
                         friends={friends}
                         tabsUserId={id}
+                        compareUserId={viewerId && viewerId !== id ? viewerId : null}
+                        profileName={userData?.name}
                         actionSlot={
                             viewerId && viewerId !== id ? (
                                 friendship?.status === 'accepted' ? (
