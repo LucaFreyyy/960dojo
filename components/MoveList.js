@@ -70,6 +70,26 @@ function colorFromEval(evalValue, userColor) {
     return `rgb(${r}, ${g}, ${b})`;
 }
 
+function blendColor(a, b, t) {
+    const clamped = Math.max(0, Math.min(1, t));
+    const r = Math.round(a[0] + (b[0] - a[0]) * clamped);
+    const g = Math.round(a[1] + (b[1] - a[1]) * clamped);
+    const bl = Math.round(a[2] + (b[2] - a[2]) * clamped);
+    return `rgb(${r}, ${g}, ${bl})`;
+}
+
+function colorFromLossCp(lossCp) {
+    if (!Number.isFinite(lossCp)) return '#e6e6e6';
+    const effectiveLoss = Math.max(0, lossCp);
+    const clamped = Math.min(300, effectiveLoss);
+    // 0 cp loss => green, ~150 cp => yellow, >=300 cp => deep red.
+    const green = [34, 197, 94];
+    const yellow = [234, 179, 8];
+    const red = [153, 27, 27];
+    if (clamped <= 150) return blendColor(green, yellow, clamped / 150);
+    return blendColor(yellow, red, (clamped - 150) / 150);
+}
+
 function formatEval(evalValue) {
     if (!isFiniteNumber(evalValue)) return '';
     if (Math.abs(evalValue) > 100) {
@@ -85,6 +105,7 @@ export default function MoveList({
     pgn,
     evalData,
     userColor,
+    startTurn = 'white',
     loading,
     onBrowsePositionChanged,
     selectedPosition = null,
@@ -151,6 +172,43 @@ export default function MoveList({
         }
         return map;
     }, [evalData, hasValidEvalData, tree]);
+
+    const pathToPlyBefore = useMemo(() => {
+        const map = new Map();
+        function walk(line, path, plyStart) {
+            for (let i = 0; i < line.length; i += 1) {
+                const node = line[i];
+                const key = `${path.join('|') || 'main'}:${i}`;
+                map.set(key, plyStart + i);
+                for (let v = 0; v < node.variations.length; v += 1) {
+                    // Variations branch from the position after the anchor move.
+                    walk(node.variations[v], [...path, `${i}:${v}`], plyStart + i + 1);
+                }
+            }
+        }
+        walk(tree, [], 0);
+        return map;
+    }, [tree]);
+
+    function prevEvalFor(path, index) {
+        if (!hasValidEvalData) return null;
+        if (index > 0) {
+            const key = `${path.join('|') || 'main'}:${index - 1}`;
+            const value = pathToEval.get(key);
+            return isFiniteNumber(value) ? value : null;
+        }
+        if (path.length === 0) {
+            const initial = pathToEval.get('main:initial');
+            return isFiniteNumber(initial) ? initial : null;
+        }
+        const parentPath = path.slice(0, -1);
+        const [anchorMoveRaw] = String(path[path.length - 1]).split(':');
+        const anchorIndex = Number(anchorMoveRaw);
+        if (Number.isNaN(anchorIndex)) return null;
+        const parentKey = `${parentPath.join('|') || 'main'}:${anchorIndex}`;
+        const parentValue = pathToEval.get(parentKey);
+        return isFiniteNumber(parentValue) ? parentValue : null;
+    }
 
     const currentSelectedEval = useMemo(() => {
         if (!hasValidEvalData) return null;
@@ -224,7 +282,26 @@ export default function MoveList({
             && selection.variationPath.length === path.length
             && selection.variationPath.every((x, idx) => x === path[idx]);
         const evalValue = hasValidEvalData ? pathToEval.get(key) : null;
-        const color = selected ? '#101010' : hasValidEvalData ? colorFromEval(evalValue, userColor) : '#e6e6e6';
+        const evalText = isFiniteNumber(evalValue) ? formatEval(evalValue) : null;
+        let annotation = '';
+        let lossCp = null;
+        const prevEval = prevEvalFor(path, index);
+        const plyBefore = pathToPlyBefore.get(key);
+        if (
+            isFiniteNumber(prevEval)
+            && isFiniteNumber(evalValue)
+            && Number.isInteger(plyBefore)
+            && Math.abs(prevEval) <= 100
+            && Math.abs(evalValue) <= 100
+        ) {
+            const moverIsWhite = startTurn === 'white' ? (plyBefore % 2 === 0) : (plyBefore % 2 === 1);
+            lossCp = moverIsWhite
+                ? Math.round((prevEval - evalValue) * 100)
+                : Math.round((evalValue - prevEval) * 100);
+            if (lossCp > 250) annotation = '??';
+            else if (lossCp > 150) annotation = '?';
+        }
+        const color = selected ? '#101010' : hasValidEvalData ? colorFromLossCp(lossCp) : '#e6e6e6';
         const background = selected ? '#f6d94d' : 'transparent';
 
         return (
@@ -241,11 +318,18 @@ export default function MoveList({
                     fontWeight: 600,
                     textAlign: 'left',
                     width: fullWidth ? '100%' : 'auto',
-                    display: fullWidth ? 'block' : 'inline-block',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 8,
                 }}
             >
-                {prefix}
-                {node.san}
+                <span>
+                    {prefix}
+                    {node.san}
+                    {annotation}
+                </span>
+                {evalText ? <span style={{ opacity: 0.92, fontWeight: 700, fontSize: 10 }}>{evalText}</span> : null}
             </button>
         );
     }

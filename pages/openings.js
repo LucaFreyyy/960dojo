@@ -1,5 +1,4 @@
 import Head from 'next/head';
-import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Chess } from '../lib/chessCompat';
 import { useSupabaseSession } from '../lib/SessionContext';
@@ -703,9 +702,6 @@ export default function OpeningsPage() {
       <main style={{ maxWidth: 1180, margin: '0 auto', padding: '1.25rem 1rem 2rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
           <h1 style={{ margin: 0, color: '#e2e8f0' }}>Openings</h1>
-          <Link href="/" style={{ color: '#7dd3fc', fontWeight: 600 }}>
-            ← Home
-          </Link>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 360px) 1fr', gap: 20, alignItems: 'start' }}>
@@ -773,8 +769,16 @@ export default function OpeningsPage() {
             ) : null}
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'flex-start' }}>
+          <div
+            style={{
+              display: 'grid',
+              gap: 16,
+              minWidth: 0,
+              alignItems: 'start',
+              gridTemplateColumns: showMoveList ? '560px minmax(420px, 1fr)' : '560px',
+            }}
+          >
+            <div style={{ width: 560, maxWidth: '100%' }}>
               <Chessboard
                 fen={displayedFen}
                 orientation={userColor === 'black' ? 'black' : 'white'}
@@ -786,11 +790,12 @@ export default function OpeningsPage() {
             </div>
 
             {showMoveList ? (
-              <>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
                 <MoveList
                   pgn={moveListPgn}
                   evalData={moveListEvalData}
                   userColor={userColor}
+                  startTurn={startFen ? sideToMoveFromFen(startFen) : 'white'}
                   loading={moveListLoading}
                   onBrowsePositionChanged={handleBrowsePositionChanged}
                   selectedPosition={browsePosition}
@@ -801,7 +806,7 @@ export default function OpeningsPage() {
                     <OpenInLichessBtn onClick={() => window.open(openingsLichessUrl, '_blank')} />
                   </div>
                 ) : null}
-              </>
+              </div>
             ) : null}
           </div>
         </div>
