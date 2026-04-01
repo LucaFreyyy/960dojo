@@ -70,14 +70,56 @@ function getVariationKey(path) {
   return `${(path || []).join('|')}:0`;
 }
 
-function lichessUrlAtPly(url, ply, orientation = 'white') {
-  if (typeof url !== 'string' || !url) return null;
-  const p = Number(ply);
-  const hashPly = Number.isFinite(p) && p >= 1 ? Math.floor(p) : 0;
-  const base = url.split('#')[0];
-  const color = orientation === 'black' ? 'black' : 'white';
-  const sep = base.includes('?') ? '&' : '?';
-  return `${base}${sep}color=${color}#${hashPly}`;
+function lichessUrlAtPly(url, ply, orientation = 'white', startFen = null, solutionMoves = []) {
+  if (!startFen || !Array.isArray(solutionMoves) || solutionMoves.length === 0) {
+    // Fallback to game URL if no solution data
+    if (typeof url !== 'string' || !url) return null;
+    const p = Number(ply);
+    const hashPly = Number.isFinite(p) && p >= 1 ? Math.floor(p) : 0;
+    const base = url.split('#')[0];
+    const color = orientation === 'black' ? 'black' : 'white';
+    const sep = base.includes('?') ? '&' : '?';
+    return `${base}${sep}color=${color}#${hashPly}`;
+  }
+
+  try {
+    // First, get to the position where user starts solving (after opponent's first move)
+    const setupGame = new Chess(startFen, { chess960: true });
+    const firstMove = setupGame.move(solutionMoves[0], { sloppy: true });
+    if (!firstMove) return null;
+    
+    const puzzleStartFen = setupGame.fen();
+    
+    // Now build PGN with remaining moves (the actual solution moves)
+    const game = new Chess(puzzleStartFen, { chess960: true });
+    const pgnMoves = [];
+    
+    for (let i = 1; i < solutionMoves.length; i++) {
+      const san = solutionMoves[i];
+      const moveNo = game.moveNumber();
+      
+      if (game.turn() === 'w') {
+        pgnMoves.push(`${moveNo}. ${san}`);
+      } else {
+        // Only add move number with "..." on first black move or after white move
+        if (i === 1 || solutionMoves[i - 1]) {
+          pgnMoves.push(`${moveNo}... ${san}`);
+        } else {
+          pgnMoves.push(san);
+        }
+      }
+      
+      const move = game.move(san, { sloppy: true });
+      if (!move) break;
+    }
+
+    const movesStr = pgnMoves.join(' ');
+    const color = orientation === 'black' ? 'black' : 'white';
+    
+    return `https://lichess.org/analysis/pgn/${encodeURIComponent(`[FEN "${puzzleStartFen}"] ${movesStr}`)}?color=${color}#0`;
+  } catch {
+    return null;
+  }
 }
 
 export default function TacticsPage() {
@@ -440,8 +482,8 @@ export default function TacticsPage() {
   }
 
   const puzzleLink = useMemo(
-    () => lichessUrlAtPly(tactic?.linkToGame, tactic?.puzzleStartPly, orientation),
-    [tactic?.linkToGame, tactic?.puzzleStartPly, orientation]
+    () => lichessUrlAtPly(tactic?.linkToGame, tactic?.puzzleStartPly, orientation, startFen, solutionSans),
+    [tactic?.linkToGame, tactic?.puzzleStartPly, orientation, startFen, solutionSans]
   );
 
   return (
