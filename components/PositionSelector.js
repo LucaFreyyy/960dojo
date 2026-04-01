@@ -22,6 +22,34 @@ const POSITION_MODES = [
   { key: 'fixed', label: 'Fixed piece' },
 ];
 
+function isAdjacentFile(a, b) {
+  const ia = CHESS960_FILES.indexOf(a);
+  const ib = CHESS960_FILES.indexOf(b);
+  return ia >= 0 && ib >= 0 && Math.abs(ia - ib) === 1;
+}
+
+function sameSquareColorOnBackRank(a, b) {
+  const ia = CHESS960_FILES.indexOf(a);
+  const ib = CHESS960_FILES.indexOf(b);
+  if (ia < 0 || ib < 0) return false;
+  // On rank 1/8, equal parity => same color square.
+  return (ia % 2) === (ib % 2);
+}
+
+function normalizeFixedFilesForPiece(piece, fileSet) {
+  const ordered = CHESS960_FILES.filter((f) => fileSet.has(f));
+  const out = [];
+  for (const f of ordered) {
+    if (piece === 'king' && (f === 'a' || f === 'h')) continue;
+    if (out.length >= 2) continue;
+    if (piece === 'king' && out.length >= 1) continue;
+    if (piece === 'rook' && out.some((x) => isAdjacentFile(x, f))) continue;
+    if (piece === 'bishop' && out.some((x) => sameSquareColorOnBackRank(x, f))) continue;
+    out.push(f);
+  }
+  return new Set(out);
+}
+
 const PositionSelector = forwardRef(function PositionSelector(
   { rankedMode, openingNr, onOpeningNrChange, onTrainingOnlyNotice, disabled, minimal },
   ref
@@ -29,6 +57,10 @@ const PositionSelector = forwardRef(function PositionSelector(
   const [positionMode, setPositionMode] = useState('random');
   const [fixedPiece, setFixedPiece] = useState('knight');
   const [fixedFiles, setFixedFiles] = useState(() => new Set(['e']));
+
+  useEffect(() => {
+    setFixedFiles((prev) => normalizeFixedFilesForPiece(fixedPiece, prev));
+  }, [fixedPiece]);
 
   useEffect(() => {
     if (rankedMode && positionMode !== 'random') {
@@ -55,12 +87,20 @@ const PositionSelector = forwardRef(function PositionSelector(
       }
       setFixedFiles((prev) => {
         const n = new Set(prev);
-        if (n.has(f)) n.delete(f);
-        else n.add(f);
+        if (n.has(f)) return new Set([...n].filter((x) => x !== f));
+
+        if (n.size >= 2) return n;
+        if (fixedPiece === 'king') {
+          if (f === 'a' || f === 'h') return n;
+          if (n.size >= 1) return n;
+        }
+        if (fixedPiece === 'rook' && [...n].some((x) => isAdjacentFile(x, f))) return n;
+        if (fixedPiece === 'bishop' && [...n].some((x) => sameSquareColorOnBackRank(x, f))) return n;
+        n.add(f);
         return n;
       });
     },
-    [rankedMode, onTrainingOnlyNotice]
+    [rankedMode, onTrainingOnlyNotice, fixedPiece]
   );
 
   const generatePosition = useCallback(() => {
@@ -143,21 +183,36 @@ const PositionSelector = forwardRef(function PositionSelector(
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
             {CHESS960_FILES.map((f) => {
               const on = fixedFiles.has(f);
+              const size = fixedFiles.size;
+              const blockedByCap = !on && size >= 2;
+              const blockedByKingFile = fixedPiece === 'king' && (f === 'a' || f === 'h');
+              const blockedByKingCount = fixedPiece === 'king' && !on && size >= 1;
+              const blockedByRookAdj =
+                fixedPiece === 'rook' && !on && [...fixedFiles].some((x) => isAdjacentFile(x, f));
+              const blockedByBishopColor =
+                fixedPiece === 'bishop' && !on && [...fixedFiles].some((x) => sameSquareColorOnBackRank(x, f));
+              const blocked =
+                blockedByCap ||
+                blockedByKingFile ||
+                blockedByKingCount ||
+                blockedByRookAdj ||
+                blockedByBishopColor;
               return (
                 <button
                   key={f}
                   type="button"
-                  disabled={disabled}
+                  disabled={disabled || blocked}
                   onClick={() => toggleFile(f)}
                   style={{
                     width: 36,
                     height: 36,
                     borderRadius: 8,
                     border: `1px solid ${on ? '#f6d94d' : '#334155'}`,
-                    background: on ? '#2a2618' : '#0f131a',
-                    color: on ? '#f6d94d' : '#94a3b8',
+                    background: on ? '#2a2618' : blocked ? '#0b0f14' : '#0f131a',
+                    color: on ? '#f6d94d' : blocked ? '#475569' : '#94a3b8',
                     fontWeight: 800,
-                    cursor: disabled ? 'not-allowed' : 'pointer',
+                    cursor: disabled || blocked ? 'not-allowed' : 'pointer',
+                    opacity: blocked ? 0.65 : 1,
                   }}
                 >
                   {f}
