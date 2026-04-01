@@ -13,7 +13,7 @@ import PositionDisplay from '../components/PositionDisplay';
 import ModeSelector from '../components/ModeSelector';
 import StartBtn from '../components/StartBtn';
 import PlayAgainBtn from '../components/PlayAgainBtn';
-import { positionNrToStartFen } from '../lib/chess960';
+import { positionNrToStartFen, randomInt } from '../lib/chess960';
 import { buildPgnFromSans, replaySansFromStoredPgn } from '../lib/openingsPgn';
 import { getOpponentSanAndFen } from '../lib/openingsOpponent';
 import { evalFenDepthCpWhite } from '../lib/stockfishUtils';
@@ -636,7 +636,9 @@ export default function OpeningsPage() {
     userMovesDoneRef.current = 0;
 
     const gen = positionRef.current?.generatePosition?.();
-    const nr = gen?.openingNr ?? openingNr;
+    // If PositionSelector were unmounted, gen would be missing and we'd repeat openingNr — see always-mounted selector below.
+    const nr =
+      gen?.openingNr ?? (rankedMode ? randomInt(960) : openingNr);
     setOpeningNr(nr);
 
     let uc = 'white';
@@ -693,7 +695,7 @@ export default function OpeningsPage() {
         }
       }, 0);
     }
-  }, [userId, gameMode, colorChoice, openingNr, queuePositionEval, playOpponentOnce]);
+  }, [userId, gameMode, colorChoice, openingNr, rankedMode, queuePositionEval, playOpponentOnce]);
 
   const onTrainingNotice = useCallback(() => {
     setInfoMessage('Switch to training mode to customize.');
@@ -753,28 +755,6 @@ export default function OpeningsPage() {
                     gameMode === 'ranked' ? 'Starting position is always random in ranked mode.' : ''
                   }
                 />
-                <PositionSelector
-                  ref={positionRef}
-                  minimal={!showSetup}
-                  rankedMode={rankedMode}
-                  openingNr={openingNr}
-                  onOpeningNrChange={setOpeningNr}
-                  onTrainingOnlyNotice={onTrainingNotice}
-                />
-                <StartBtn onClick={startGame} disabled={gameMode === 'ranked' && !userId} />
-                {!rankedMode ? (
-                  <label className="training-rating-field">
-                    Training rating (used for Lichess explorer + Stockfish)
-                    <input
-                      type="number"
-                      value={trainingRating}
-                      onChange={(e) => setTrainingRating(Number(e.target.value) || 1500)}
-                    />
-                  </label>
-                ) : null}
-                {infoMessage ? (
-                  <div className="text-warn">{infoMessage}</div>
-                ) : null}
               </>
             ) : (
               <>
@@ -800,6 +780,33 @@ export default function OpeningsPage() {
                 ) : null}
               </>
             )}
+            {/* Stay mounted while playing so positionRef.generatePosition works on Play again */}
+            <PositionSelector
+              ref={positionRef}
+              minimal={!showSetup}
+              rankedMode={rankedMode}
+              openingNr={openingNr}
+              onOpeningNrChange={setOpeningNr}
+              onTrainingOnlyNotice={onTrainingNotice}
+            />
+            {showSetup ? (
+              <>
+                <StartBtn onClick={startGame} disabled={gameMode === 'ranked' && !userId} />
+                {!rankedMode ? (
+                  <label className="training-rating-field">
+                    Training rating (used for Lichess explorer + Stockfish)
+                    <input
+                      type="number"
+                      value={trainingRating}
+                      onChange={(e) => setTrainingRating(Number(e.target.value) || 1500)}
+                    />
+                  </label>
+                ) : null}
+                {infoMessage ? (
+                  <div className="text-warn">{infoMessage}</div>
+                ) : null}
+              </>
+            ) : null}
           </div>
         </div>
       </main>
