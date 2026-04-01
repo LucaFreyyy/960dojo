@@ -6,6 +6,9 @@
 
 html {
   -webkit-font-smoothing: antialiased;
+  background-color: var(--bg-deep);
+  /* Avoid rubber-band scroll revealing a default white canvas above the header */
+  overscroll-behavior-y: none;
 }
 
 body {
@@ -17,6 +20,7 @@ body {
   color: var(--ink);
   background: var(--bg-page);
   background-color: var(--bg-deep);
+  overscroll-behavior-y: none;
 }
 
 main {
