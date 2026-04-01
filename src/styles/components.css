@@ -1157,6 +1157,23 @@
   margin-bottom: 0;
 }
 
+.legal-page__title {
+  font-size: 2rem;
+  font-family: var(--font-sketch);
+  margin: 0 0 0.5rem;
+}
+
+.legal-page__subtitle {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0 0 1.25rem;
+}
+
+.legal-page__meta {
+  font-size: 0.9rem;
+  opacity: 0.85;
+}
+
 .link {
   color: var(--text-color-link);
   text-decoration: none;

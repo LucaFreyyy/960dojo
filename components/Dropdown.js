@@ -148,6 +148,9 @@ export default function Dropdown() {
                                 <Link href="/info" className="dropdown-item" role="menuitem" onClick={close}>
                                     Info
                                 </Link>
+                                <Link href="/legal" className="dropdown-item" role="menuitem" onClick={close}>
+                                    Legal
+                                </Link>
                                 <Link href="/feedback" className="dropdown-item" role="menuitem" onClick={close}>
                                     Feedback
                                 </Link>
@@ -188,6 +191,9 @@ export default function Dropdown() {
                             <MenuSection title="About">
                                 <Link href="/info" className="dropdown-item" role="menuitem" onClick={close}>
                                     Info
+                                </Link>
+                                <Link href="/legal" className="dropdown-item" role="menuitem" onClick={close}>
+                                    Legal
                                 </Link>
                                 <Link href="/feedback" className="dropdown-item" role="menuitem" onClick={close}>
                                     Feedback
