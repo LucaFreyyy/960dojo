@@ -463,7 +463,27 @@ export default function TacticsPage() {
   }
 
   async function submitFeedback(nextLike) {
-    if (!tactic?.id || !finished || likeChoice === nextLike) return;
+    if (!tactic?.id || !finished) return;
+
+    if (likeChoice === nextLike) {
+      const prevLike = likeChoice;
+      setLikeChoice(null);
+      try {
+        await fetch('/api/tactics/feedback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId,
+            tacticId: tactic.id,
+            solved,
+            removeOnly: true,
+            prevLiked: prevLike,
+          }),
+        });
+      } catch {}
+      return;
+    }
+
     const prevLike = likeChoice;
     setLikeChoice(nextLike);
     try {
@@ -475,7 +495,7 @@ export default function TacticsPage() {
           tacticId: tactic.id,
           solved,
           liked: nextLike,
-          prevLiked: prevLike,
+          prevLiked: typeof prevLike === 'boolean' ? prevLike : undefined,
         }),
       });
     } catch {}

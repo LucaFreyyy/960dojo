@@ -19,10 +19,10 @@ function feedbackIndex({ solved, liked }) {
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
-  const { tacticId, solved, liked, prevLiked } = req.body || {};
+  const { tacticId, solved, liked, prevLiked, removeOnly } = req.body || {};
   const tacticIdNum = Number(tacticId);
   if (!Number.isFinite(tacticIdNum)) return res.status(400).json({ error: 'Invalid tacticId' });
-  if (typeof solved !== 'boolean' || typeof liked !== 'boolean') return res.status(400).json({ error: 'Invalid feedback payload' });
+  if (typeof solved !== 'boolean') return res.status(400).json({ error: 'Invalid feedback payload' });
 
   try {
     const { data: tacticRow, error } = await supabaseAdmin
@@ -34,6 +34,23 @@ export default async function handler(req, res) {
     if (!tacticRow) return res.status(404).json({ error: 'Tactic not found' });
 
     const disLikes = parseDislikesArray(tacticRow.disLikes);
+
+    if (removeOnly === true) {
+      if (typeof prevLiked !== 'boolean') {
+        return res.status(400).json({ error: 'Missing prevLiked' });
+      }
+      const prevIdx = feedbackIndex({ solved, liked: prevLiked });
+      disLikes[prevIdx] = Math.max(0, (disLikes[prevIdx] || 0) - 1);
+      const { error: updateErr } = await supabaseAdmin
+        .from('Tactic')
+        .update({ disLikes })
+        .eq('id', tacticIdNum);
+      if (updateErr) return res.status(500).json({ error: updateErr.message });
+      return res.status(200).json({ success: true, disLikes });
+    }
+
+    if (typeof liked !== 'boolean') return res.status(400).json({ error: 'Invalid feedback payload' });
+
     if (typeof prevLiked === 'boolean') {
       const prevIdx = feedbackIndex({ solved, liked: prevLiked });
       disLikes[prevIdx] = Math.max(0, (disLikes[prevIdx] || 0) - 1);

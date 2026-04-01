@@ -1,3 +1,5 @@
+import { useId } from 'react';
+import { HiOutlineHandThumbDown, HiOutlineHandThumbUp } from 'react-icons/hi2';
 import Button from './Button';
 
 export function NextPuzzleBtn({ onClick, disabled = false }) {
@@ -16,29 +18,43 @@ export function OpenInLichessBtn({ onClick, disabled = false }) {
   );
 }
 
-export function ThumbsUpBtn({ onClick, active = false, disabled = false }) {
+export function ThumbsUpBtn({ onClick, active = false, disabled = false, roughFilterId }) {
   return (
-    <Button
+    <button
+      type="button"
+      className={`thumb-btn thumb-btn--up ${active ? 'thumb-btn--up-active' : ''}`.trim()}
       onClick={onClick}
       disabled={disabled}
-      variant="thumb"
-      className={`btn--thumb btn--thumb-up ${active ? 'btn--thumb-up-active' : ''}`.trim()}
+      aria-pressed={active}
+      aria-label={active ? 'Remove good rating' : 'Rate puzzle good'}
     >
-      Up
-    </Button>
+      <span
+        className="thumb-btn__icon-wrap"
+        style={roughFilterId ? { filter: `url(#${roughFilterId})` } : undefined}
+      >
+        <HiOutlineHandThumbUp className="thumb-btn__glyph" size={28} strokeWidth={2.25} />
+      </span>
+    </button>
   );
 }
 
-export function ThumbsDownBtn({ onClick, active = false, disabled = false }) {
+export function ThumbsDownBtn({ onClick, active = false, disabled = false, roughFilterId }) {
   return (
-    <Button
+    <button
+      type="button"
+      className={`thumb-btn thumb-btn--down ${active ? 'thumb-btn--down-active' : ''}`.trim()}
       onClick={onClick}
       disabled={disabled}
-      variant="thumb"
-      className={`btn--thumb ${active ? 'btn--thumb-down-active' : ''}`.trim()}
+      aria-pressed={active}
+      aria-label={active ? 'Remove bad rating' : 'Rate puzzle bad'}
     >
-      Down
-    </Button>
+      <span
+        className="thumb-btn__icon-wrap"
+        style={roughFilterId ? { filter: `url(#${roughFilterId})` } : undefined}
+      >
+        <HiOutlineHandThumbDown className="thumb-btn__glyph" size={28} strokeWidth={2.25} />
+      </span>
+    </button>
   );
 }
 
@@ -53,15 +69,35 @@ export default function PostTacticDisplay({
   lichessUrl,
   disabled = false,
 }) {
+  const roughFilterId = useId().replace(/:/g, '');
+
   if (!visible) return null;
 
   return (
     <div className="post-tactic">
+      <svg width="0" height="0" className="thumb-filter-svg" aria-hidden>
+        <defs>
+          <filter id={roughFilterId} x="-35%" y="-35%" width="170%" height="170%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.09" numOctaves="2" result="noise" seed="3" />
+            <feDisplacementMap in="SourceGraphic" in2="noise" scale="1.35" />
+          </filter>
+        </defs>
+      </svg>
       <div className="post-tactic__title">{solved ? 'Solved' : 'Failed'}</div>
       {lichessUrl ? <OpenInLichessBtn onClick={onOpenInLichess} disabled={disabled} /> : null}
       <div className="post-tactic__thumbs">
-        <ThumbsUpBtn onClick={onLike} active={likeChoice === true} disabled={disabled} />
-        <ThumbsDownBtn onClick={onDislike} active={likeChoice === false} disabled={disabled} />
+        <ThumbsUpBtn
+          onClick={onLike}
+          active={likeChoice === true}
+          disabled={disabled}
+          roughFilterId={roughFilterId}
+        />
+        <ThumbsDownBtn
+          onClick={onDislike}
+          active={likeChoice === false}
+          disabled={disabled}
+          roughFilterId={roughFilterId}
+        />
       </div>
       <div className="post-tactic__lichess-note">
         <NextPuzzleBtn onClick={onNextPuzzle} disabled={disabled} />
