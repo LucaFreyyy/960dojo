@@ -43,5 +43,3 @@ next-env.d.ts
 # venv file of leo
 venv/
 
-# DER FISH (100mb)
-public/stockfish-18.wasm
