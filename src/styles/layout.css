@@ -7,8 +7,8 @@ header {
   background: var(--surface);
   border-bottom: 2px solid rgba(162, 32, 32, 0.45);
   box-shadow: var(--sketch-shadow);
-  height: 3.5rem;
-  min-height: 3.5rem;
+  height: var(--header-height);
+  min-height: var(--header-height);
   position: relative;
 }
 

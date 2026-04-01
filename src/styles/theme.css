@@ -5,6 +5,8 @@
   --font-ui: 'Balsamiq Sans', cursive;
   --font-sketch: 'Balsamiq Sans', cursive;
 
+  --header-height: 4.55rem;
+
   /* Tactics / openings: fixed board square; move list scroll area is slightly shorter */
   --training-board-size: 560px;
   /* Openings move list body; tactics uses .move-list--tactics override */
