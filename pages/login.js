@@ -1,19 +1,56 @@
-import { useState } from 'react';
+import Head from 'next/head';
+import { useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { useRouter } from 'next/router';
+import Button from '../components/Button';
+import AuthField from '../components/AuthField';
 
 export default function LoginPage() {
-    const router = useRouter();
+    const [signInName, setSignInName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [username, setUsername] = useState('');
     const [isSignUp, setIsSignUp] = useState(false);
+    const [forgotMode, setForgotMode] = useState(false);
+    const [forgotEmail, setForgotEmail] = useState('');
     const [error, setError] = useState('');
+    const [info, setInfo] = useState('');
+    const [busy, setBusy] = useState(false);
+    const signInPasswordRef = useRef(null);
+    const signUpEmailRef = useRef(null);
+    const signUpPasswordRef = useRef(null);
 
     const handleSubmit = async () => {
         setError('');
-        if (isSignUp) {
-            if (!username.trim()) return setError('Username is required');
+        setInfo('');
+        setBusy(true);
+        if (!isSignUp) {
+            const typedName = signInName.trim();
+            if (!typedName) {
+                setBusy(false);
+                return setError('Username is required');
+            }
+            const { data: found, error: lookupError } = await supabase
+                .from('User')
+                .select('email')
+                .eq('name', typedName)
+                .maybeSingle();
+            if (lookupError || !found?.email) {
+                setBusy(false);
+                return setError('Invalid username or password');
+            }
+            const { error: signInError } = await supabase.auth.signInWithPassword({
+                email: found.email,
+                password,
+            });
+            if (signInError) {
+                setBusy(false);
+                return setError('Invalid username or password');
+            }
+        } else {
+            if (!username.trim()) {
+                setBusy(false);
+                return setError('Username is required');
+            }
 
             const { data: existing } = await supabase
                 .from('User')
@@ -21,7 +58,10 @@ export default function LoginPage() {
                 .eq('name', username.trim())
                 .maybeSingle();
 
-            if (existing) return setError('Username already taken');
+            if (existing) {
+                setBusy(false);
+                return setError('Username already taken');
+            }
 
             const res = await fetch('/api/auth/signup', {
                 method: 'POST',
@@ -29,28 +69,184 @@ export default function LoginPage() {
                 body: JSON.stringify({ email, password, username: username.trim() }),
             });
             const data = await res.json();
-            if (!res.ok) return setError(data.error);
-            await supabase.auth.signInWithPassword({ email, password });
-        } else {
-            const { error } = await supabase.auth.signInWithPassword({ email, password });
-            if (error) return setError(error.message);
+            if (!res.ok) {
+                setBusy(false);
+                return setError(data.error);
+            }
+            const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+            if (signInError) {
+                setBusy(false);
+                return setError(signInError.message);
+            }
         }
+        setBusy(false);
         window.location.href = '/';
     };
 
+    const handleForgotPassword = async () => {
+        setError('');
+        setInfo('');
+        setBusy(true);
+        await fetch('/api/auth/forgot-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: forgotEmail.trim() }),
+        }).catch(() => {});
+        setBusy(false);
+        setInfo('If an account exists for that email, we sent a password reset link.');
+    };
+
     return (
-        <div style={{ maxWidth: 400, margin: '100px auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <h2>{isSignUp ? 'Create Account' : 'Sign In'}</h2>
-            <input placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} />
-            <input placeholder="Password" type="password" value={password} onChange={e => setPassword(e.target.value)} />
-            {isSignUp && (
-                <input placeholder="Username" value={username} onChange={e => setUsername(e.target.value)} />
-            )}
-            {error && <p style={{ color: 'red' }}>{error}</p>}
-            <button onClick={handleSubmit}>{isSignUp ? 'Sign Up' : 'Sign In'}</button>
-            <a onClick={() => setIsSignUp(!isSignUp)} style={{ cursor: 'pointer' }}>
-                {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
-            </a>
-        </div>
+        <>
+            <Head>
+                <title>{forgotMode ? 'Forgot Password' : isSignUp ? 'Create Account' : 'Sign In'} - 960 Dojo</title>
+            </Head>
+            <main style={{ maxWidth: 460, margin: '8vh auto', padding: '0 1rem' }}>
+                <div
+                    style={{
+                        background: '#111827',
+                        border: '1px solid #334155',
+                        borderRadius: 14,
+                        padding: '1.1rem',
+                        boxShadow: '0 8px 30px rgba(0,0,0,0.25)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 12,
+                    }}
+                >
+                    <h2 style={{ margin: 0, color: '#e2e8f0' }}>
+                        {forgotMode ? 'Forgot Password' : isSignUp ? 'Create Account' : 'Sign In'}
+                    </h2>
+
+                    {forgotMode ? (
+                        <>
+                            <AuthField
+                                label="Email"
+                                type="email"
+                                value={forgotEmail}
+                                onChange={(e) => setForgotEmail(e.target.value)}
+                                autoComplete="email"
+                                disabled={busy}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') handleForgotPassword();
+                                }}
+                            />
+                            <Button
+                                onClick={handleForgotPassword}
+                                disabled={busy}
+                                style={{ width: '100%', background: '#2563eb', color: '#fff', border: '1px solid #1d4ed8', fontWeight: 800 }}
+                            >
+                                Send reset link
+                            </Button>
+                        </>
+                    ) : isSignUp ? (
+                        <>
+                            <AuthField
+                                label="Username"
+                                value={username}
+                                onChange={(e) => setUsername(e.target.value)}
+                                autoComplete="username"
+                                disabled={busy}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') signUpEmailRef.current?.focus();
+                                }}
+                            />
+                            <AuthField
+                                label="Email"
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                autoComplete="email"
+                                inputRef={signUpEmailRef}
+                                disabled={busy}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') signUpPasswordRef.current?.focus();
+                                }}
+                            />
+                            <AuthField
+                                label="Password"
+                                type="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                autoComplete="new-password"
+                                inputRef={signUpPasswordRef}
+                                disabled={busy}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') handleSubmit();
+                                }}
+                            />
+                            <Button
+                                onClick={handleSubmit}
+                                disabled={busy}
+                                style={{ width: '100%', background: '#2563eb', color: '#fff', border: '1px solid #1d4ed8', fontWeight: 800 }}
+                            >
+                                Sign Up
+                            </Button>
+                        </>
+                    ) : (
+                        <>
+                            <AuthField
+                                label="Username"
+                                value={signInName}
+                                onChange={(e) => setSignInName(e.target.value)}
+                                autoComplete="username"
+                                disabled={busy}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') signInPasswordRef.current?.focus();
+                                }}
+                            />
+                            <AuthField
+                                label="Password"
+                                type="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                autoComplete="current-password"
+                                inputRef={signInPasswordRef}
+                                disabled={busy}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') handleSubmit();
+                                }}
+                            />
+                            <Button
+                                onClick={handleSubmit}
+                                disabled={busy}
+                                style={{ width: '100%', background: '#2563eb', color: '#fff', border: '1px solid #1d4ed8', fontWeight: 800 }}
+                            >
+                                Sign In
+                            </Button>
+                        </>
+                    )}
+
+                    {error ? <div style={{ color: '#f87171', fontSize: 13, fontWeight: 700 }}>{error}</div> : null}
+                    {info ? <div style={{ color: '#93c5fd', fontSize: 13, fontWeight: 700 }}>{info}</div> : null}
+
+                    {!forgotMode ? (
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setIsSignUp((v) => !v);
+                                setError('');
+                                setInfo('');
+                            }}
+                            style={{ background: 'none', border: 'none', color: '#93c5fd', cursor: 'pointer', textAlign: 'left', padding: 0 }}
+                        >
+                            {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
+                        </button>
+                    ) : null}
+
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setForgotMode((v) => !v);
+                            setError('');
+                            setInfo('');
+                        }}
+                        style={{ background: 'none', border: 'none', color: '#93c5fd', cursor: 'pointer', textAlign: 'left', padding: 0 }}
+                    >
+                        {forgotMode ? 'Back to sign in' : 'Forgot password?'}
+                    </button>
+                </div>
+            </main>
+        </>
     );
 }
