@@ -80,6 +80,7 @@ export default function MoveList({
     userColor,
     startTurn = 'white',
     loading,
+    loadingMessage = 'Analyzing position...',
     onBrowsePositionChanged,
     selectedPosition = null,
     resetSelectionOnPgnChange = true,
@@ -375,7 +376,7 @@ export default function MoveList({
             {loading ? (
                 <div className="move-list__loading">
                     <div className="ml-spinner" />
-                    <span>Analyzing position...</span>
+                    <span>{loadingMessage}</span>
                 </div>
             ) : null}
 

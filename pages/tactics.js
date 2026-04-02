@@ -565,6 +565,7 @@ export default function TacticsPage() {
               evalData={[]}
               userColor={orientation}
               loading={loading}
+              loadingMessage="Loading puzzle..."
               selectedPosition={moveListSelectedPosition}
               resetSelectionOnPgnChange={false}
               onBrowsePositionChanged={handleBrowsePositionChanged}
