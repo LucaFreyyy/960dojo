@@ -1,4 +1,4 @@
-import { supabase } from '../../lib/supabase';
+import { createSupabaseAdmin } from '../../lib/supabaseAdmin';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -16,7 +16,8 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { data, error } = await supabase
+    const supabaseAdmin = createSupabaseAdmin();
+    const { data, error } = await supabaseAdmin
       .from('Feedback')
       .insert({
         userId: userId || null,

@@ -1,5 +1,5 @@
-import { createClient } from '@supabase/supabase-js';
 import { createRatedOpeningRow } from '../../../lib/openingsUserOpening';
+import { createSupabaseAdmin } from '../../../lib/supabaseAdmin';
 import { getRandomOpening, fetchNewTactic } from '../../../lib/userInit';
 
 async function hashEmail(email) {
@@ -10,13 +10,9 @@ async function hashEmail(email) {
     return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY
-);
-
 export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).end();
+    const supabaseAdmin = createSupabaseAdmin();
     const { email, password, username } = req.body;
 
     if (!username?.trim()) return res.status(400).json({ error: 'Username is required' });
@@ -47,7 +43,7 @@ export default async function handler(req, res) {
         const { error: ratingError } = await supabaseAdmin.from('Rating').insert(ratings);
 
         let tacticId = null;
-        try { tacticId = await fetchNewTactic(id); } catch {}
+        try { tacticId = await fetchNewTactic(supabaseAdmin, id); } catch {}
         if (tacticId) {
             await supabaseAdmin.from('UserTactic').insert({
                 id: crypto.randomUUID(),

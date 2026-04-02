@@ -98,6 +98,7 @@ export default function OpeningsPage() {
   const openingRowIdRef = useRef(null);
   const startFenRef = useRef(null);
   const userIdRef = useRef(null);
+  const sessionAccessTokenRef = useRef(null);
   const gameModeRef = useRef('training');
   const trainingRatingRef = useRef(1500);
   const dbRatingRef = useRef(1500);
@@ -132,6 +133,9 @@ export default function OpeningsPage() {
   useEffect(() => {
     userIdRef.current = userId;
   }, [userId]);
+  useEffect(() => {
+    sessionAccessTokenRef.current = session?.access_token ?? null;
+  }, [session]);
   useEffect(() => {
     gameModeRef.current = gameMode;
   }, [gameMode]);
@@ -324,18 +328,26 @@ export default function OpeningsPage() {
           const newRating = Math.round(dbRatingRef.current + change);
 
           try {
-            const res = await fetch('/api/createOpeningRating', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ id: userIdRef.current, newRating }),
-            });
-            const data = await res.json();
-            if (data?.success) {
-              setRatingDelta(change);
-              setDbRating(newRating);
-              setTrainingRating(newRating);
-              const nextCount = await countOpeningsRatings(userIdRef.current);
-              setOpeningsRatingCount(nextCount);
+            const token = sessionAccessTokenRef.current;
+            if (!token) {
+              console.warn('[openings/finalizeGame] missing session token for rating insert');
+            } else {
+              const res = await fetch('/api/createOpeningRating', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({ id: userIdRef.current, newRating }),
+              });
+              const data = await res.json();
+              if (data?.success) {
+                setRatingDelta(change);
+                setDbRating(newRating);
+                setTrainingRating(newRating);
+                const nextCount = await countOpeningsRatings(userIdRef.current);
+                setOpeningsRatingCount(nextCount);
+              }
             }
           } catch {}
         }
