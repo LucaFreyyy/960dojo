@@ -5,6 +5,21 @@
   color: var(--ink);
 }
 
+@media (max-width: 768px) {
+  .profile-page {
+    padding: 1rem 0.85rem 1.5rem;
+  }
+
+  .profile-header {
+    margin-top: 1rem;
+    gap: 1.25rem;
+  }
+
+  .profile-info {
+    gap: 1.25rem;
+  }
+}
+
 .profile-header {
   display: flex;
   flex-direction: column;

@@ -9,6 +9,7 @@ html {
   background-color: var(--bg-deep);
   /* Avoid rubber-band scroll revealing a default white canvas above the header */
   overscroll-behavior-y: none;
+  overflow-x: clip;
 }
 
 body {

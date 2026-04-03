@@ -7,8 +7,8 @@
 
   --header-height: 4.55rem;
 
-  /* Tactics / openings: fixed board square; move list scroll area is slightly shorter */
-  --training-board-size: 560px;
+  /* Tactics / openings: cap at 560px, shrink on narrow viewports so list height matches board */
+  --training-board-size: min(560px, calc(100vw - 2.5rem));
   /* Openings move list body; tactics uses .move-list--tactics override */
   --move-list-body-height: calc(var(--training-board-size) * 0.85);
 
@@ -105,7 +105,8 @@
   --bg-small-button: var(--surface);
   --bg-hover: #2a2928;
   --bg-active: #323130;
-  --bg-dropdown: var(--surface);
+  /* Opaque panel so the header menu stays readable over page content */
+  --bg-dropdown: #333231;
   --bg-highlight: rgba(162, 32, 32, 0.28);
   --bg-last-move: rgba(255, 228, 196, 0.35);
   --bg-can-move: rgba(162, 32, 32, 0.22);

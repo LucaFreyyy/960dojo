@@ -6,22 +6,30 @@
 
 .tactics-layout {
   display: grid;
-  grid-template-columns: minmax(340px, 600px) minmax(320px, 1fr);
+  grid-template-columns: minmax(0, min(600px, 100%)) minmax(0, 1fr);
   gap: 18px;
   align-items: start;
 }
 
+.tactics-layout > section {
+  min-width: 0;
+}
+
 .openings-layout {
   display: grid;
-  grid-template-columns: 560px minmax(420px, 1fr);
+  grid-template-columns: minmax(0, min(560px, 100%)) minmax(0, 1fr);
   gap: 20px;
   align-items: start;
   transform: translateX(clamp(-36px, -2.4vw, 0px));
 }
 
+.openings-layout > * {
+  min-width: 0;
+}
+
 .openings-col-board {
-  width: 560px;
-  max-width: 100%;
+  width: 100%;
+  max-width: var(--training-board-size);
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -537,4 +545,54 @@
   font-family: var(--font-sketch);
   margin-bottom: 2rem;
   color: var(--ink);
+}
+
+/* Narrow screens: stack training layouts; drop desktop-only nudge */
+@media (max-width: 768px) {
+  .tactics-layout {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .openings-layout {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    transform: none;
+  }
+
+  .openings-col-board {
+    width: 100%;
+  }
+
+  .tactics-col-side {
+    padding-top: 0;
+  }
+
+  .tactics-layout > section:first-child {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+  }
+
+  .openings-col-side--playing {
+    padding-top: 12px;
+  }
+
+  .narrow-action {
+    max-width: none;
+  }
+
+  .leaderboard-title,
+  .player-search-title {
+    font-size: 1.85rem;
+  }
+
+  .leaderboard-page {
+    padding: 1.25rem 0.85rem;
+  }
+
+  .info-page {
+    padding: 1.25rem 1rem;
+  }
 }

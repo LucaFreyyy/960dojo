@@ -1341,3 +1341,17 @@
   max-width: 460px;
   margin: 0 auto;
 }
+
+@media (max-width: 768px) {
+  .section-title__heading {
+    font-size: 1.85rem;
+  }
+
+  .rating-display__value {
+    font-size: 1.15rem;
+  }
+
+  .rating-display {
+    flex-wrap: wrap;
+  }
+}
