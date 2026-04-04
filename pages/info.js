@@ -10,7 +10,7 @@ export default function InfoPage() {
                 <section className="info-content">
                     <p>Hi! I&apos;m Luca, the creator of 960 Dojo.</p>
                     <p>
-                        After getting introduced to Chess960 at the Grenke Chess Open 2025, I was hooked.
+                        After getting introduced to Chess960 at the Grenke Chess Open 2025, I was hooked by it.
                     </p>
                     <p>
                         Unfortunately I couldn&apos;t find any resources on the web to properly practice specifically
@@ -24,6 +24,7 @@ export default function InfoPage() {
                         Grenke tournament begins.
                     </p>
                     <p>I hope you enjoy my website and that it helps you improve your Chess960 skills!</p>
+                    <p>If you want to reach out to me, you can do so via email at <a href="mailto:lucafreyq@gmail.com">lucafreyq@gmail.com</a></p>
                 </section>
             </main>
         </>
