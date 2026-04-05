@@ -66,14 +66,6 @@ function inDifficultyBand(tacticRating, userRating, difficulty) {
   return tacticRating >= userRating + min && tacticRating <= userRating + max;
 }
 
-function inAnyBand(tacticRating, userRating) {
-  return (
-    inDifficultyBand(tacticRating, userRating, 'easy')
-    || inDifficultyBand(tacticRating, userRating, 'middle')
-    || inDifficultyBand(tacticRating, userRating, 'hard')
-  );
-}
-
 async function chooseNewTactic({ userRating, difficulty, finishedIds, unfinishedIds }) {
   const { min, max } = parseDifficulty(difficulty);
   const minRating = userRating + min;
@@ -131,11 +123,13 @@ export default async function handler(req, res) {
     const finishedIds = new Set((finishedRows || []).map((r) => r.tacticId));
     const userFinishedCount = (finishedRows || []).length;
 
-    const { data: userRows, error: userRowsErr } = await supabaseAdmin
+    const { data: unfinishedProgress, error: unfinishedErr } = await supabaseAdmin
       .from('UserTactic')
-      .select('id, tacticId, finished, solved')
-      .eq('userId', userId);
-    if (userRowsErr) return res.status(500).json({ error: userRowsErr.message });
+      .select('id, tacticId')
+      .eq('userId', userId)
+      .is('finished', null)
+      .order('id', { ascending: true });
+    if (unfinishedErr) return res.status(500).json({ error: unfinishedErr.message });
 
     const { count: failedFinishedCount, error: failedCountErr } = await supabaseAdmin
       .from('UserTactic')
@@ -177,12 +171,11 @@ export default async function handler(req, res) {
             return res.status(500).json({ error: 'Invalid tactic PGN: missing FEN tag or moves' });
           }
 
-          const unfinishedForTrim = (userRows || []).filter((r) => !r.finished);
-          if (unfinishedForTrim.length >= 3) {
+          if ((unfinishedProgress || []).length >= 3) {
             const { error: rmErr } = await supabaseAdmin
               .from('UserTactic')
               .delete()
-              .eq('id', unfinishedForTrim[0].id);
+              .eq('id', unfinishedProgress[0].id);
             if (rmErr) return res.status(500).json({ error: rmErr.message });
           }
 
@@ -210,40 +203,38 @@ export default async function handler(req, res) {
       }
     }
 
-    const unfinishedRows = (userRows || []).filter((r) => !r.finished);
-    const unfinishedIds = unfinishedRows.map((r) => r.tacticId);
+    const unfinishedRows = unfinishedProgress || [];
+    const unfinishedTacticIds = unfinishedRows.map((r) => r.tacticId);
 
     let unfinishedTactics = [];
-    if (unfinishedIds.length) {
+    if (unfinishedTacticIds.length) {
       const { data: unfinishedTacticsRows, error: unfinishedTacticsErr } = await supabaseAdmin
         .from('Tactic')
         .select('id, rating, pgn, numTimesPlayed, disLikes')
-        .in('id', unfinishedIds);
+        .in('id', unfinishedTacticIds);
       if (unfinishedTacticsErr) return res.status(500).json({ error: unfinishedTacticsErr.message });
       unfinishedTactics = unfinishedTacticsRows || [];
     }
 
     const tacticById = new Map(unfinishedTactics.map((t) => [t.id, t]));
-    let activeUnfinished = unfinishedRows
+    const activeUnfinished = unfinishedRows
       .map((r) => ({ rowId: r.id, tactic: tacticById.get(r.tacticId) }))
       .filter((x) => x.tactic);
 
-    // Drop stale unfinished puzzles that no longer fit any difficulty band.
-    const stale = activeUnfinished.filter((x) => !inAnyBand(x.tactic.rating ?? 1500, userRating));
-    if (stale.length) {
-      const staleRowIds = stale.map((x) => x.rowId);
-      const { error: staleDeleteErr } = await supabaseAdmin.from('UserTactic').delete().in('id', staleRowIds);
-      if (staleDeleteErr) return res.status(500).json({ error: staleDeleteErr.message });
-      activeUnfinished = activeUnfinished.filter((x) => !staleRowIds.includes(x.rowId));
+    // Prefer resuming an unfinished puzzle in the selected difficulty band; otherwise resume any in-progress row.
+    let chosen = null;
+    let infoMessage = null;
+    const bandMatch = activeUnfinished.find((x) =>
+      inDifficultyBand(x.tactic.rating ?? 1500, userRating, difficulty)
+    );
+    if (bandMatch) {
+      chosen = bandMatch.tactic;
+    } else if (activeUnfinished.length) {
+      chosen = activeUnfinished[0].tactic;
+      infoMessage = 'Continuing your puzzle in progress.';
     }
 
-    // Reuse unfinished puzzle for this difficulty if in range.
-    let chosen = activeUnfinished
-      .map((x) => x.tactic)
-      .find((t) => inDifficultyBand(t.rating ?? 1500, userRating, difficulty));
-    let infoMessage = null;
-
-    // No unfinished in range => allocate one and persist immediately.
+    // No unfinished => allocate one and persist immediately.
     if (!chosen) {
       const activeUnfinishedIds = new Set(activeUnfinished.map((x) => x.tactic.id));
       const next = await chooseNewTactic({
