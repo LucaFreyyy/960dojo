@@ -11,6 +11,8 @@
 -- Feedback: guest email (API inserts email for non-logged-in users)
 -- ---------------------------------------------------------------------------
 ALTER TABLE public."Feedback" ADD COLUMN IF NOT EXISTS email text;
+ALTER TABLE public."Feedback" ADD COLUMN IF NOT EXISTS "read" boolean NOT NULL DEFAULT false;
+-- If the column already existed without NOT NULL: UPDATE public."Feedback" SET "read" = false WHERE "read" IS NULL;
 
 -- ---------------------------------------------------------------------------
 -- Helper: JWT email → public "User".id (SHA-256 hex of email in your app)
@@ -197,7 +199,7 @@ CREATE POLICY "FriendRequest_delete_receiver"
   USING ("receiverId" = public.current_app_user_id());
 
 -- ---------------------------------------------------------------------------
--- Feedback  (matches: id, userId, message, type, createdAt + email added above)
+-- Feedback  (matches: id, userId, message, type, createdAt, read + email added above)
 -- No policies for anon/authenticated → inserts only via service role (/api/feedback).
 -- ---------------------------------------------------------------------------
 ALTER TABLE public."Feedback" ENABLE ROW LEVEL SECURITY;

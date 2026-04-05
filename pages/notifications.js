@@ -1,23 +1,32 @@
 import Head from 'next/head';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useSupabaseSession } from '../lib/SessionContext';
 import { hashEmail } from '../lib/hashEmail';
 import { supabase } from '../lib/supabase';
+import { FEEDBACK_ADMIN_USERNAME } from '../lib/feedbackAdminConstants';
 import SectionTitle from '../components/SectionTitle';
 import Button from '../components/Button';
 import Link from 'next/link';
 
+async function getAccessToken() {
+  const { data } = await supabase.auth.getSession();
+  return data.session?.access_token ?? null;
+}
+
 export default function NotificationsPage() {
   const session = useSupabaseSession();
   const [userId, setUserId] = useState(null);
+  const [isFeedbackAdmin, setIsFeedbackAdmin] = useState(false);
   const [requests, setRequests] = useState([]);
+  const [feedback, setFeedback] = useState([]);
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
 
   useEffect(() => {
     if (!session?.user?.email) return setUserId(null);
     hashEmail(session.user.email).then(setUserId).catch(() => setUserId(null));
   }, [session]);
 
-  async function loadRequests(uid = userId) {
+  const loadRequests = useCallback(async (uid = userId) => {
     if (!uid) return;
     const { data, error } = await supabase
       .from('FriendRequest')
@@ -35,12 +44,57 @@ export default function NotificationsPage() {
         requesterName: byId.get(r.requesterId) || 'Unknown player',
       }))
     );
-  }
+  }, [userId]);
+
+  const loadFeedback = useCallback(async () => {
+    setFeedbackLoading(true);
+    try {
+      const token = await getAccessToken();
+      if (!token) {
+        setFeedback([]);
+        return;
+      }
+      const res = await fetch('/api/feedback/inbox', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        setFeedback([]);
+        return;
+      }
+      const json = await res.json();
+      const rows = json.feedback || [];
+      const submitterIds = [...new Set(rows.map((f) => f.userId).filter(Boolean))];
+      let byId = new Map();
+      if (submitterIds.length) {
+        const { data: users } = await supabase.from('User').select('id, name').in('id', submitterIds);
+        byId = new Map((users || []).map((u) => [u.id, u.name]));
+      }
+      setFeedback(
+        rows.map((f) => ({
+          ...f,
+          submitterName: f.userId ? byId.get(f.userId) || 'Player' : null,
+        }))
+      );
+    } finally {
+      setFeedbackLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
+    if (!userId) {
+      setIsFeedbackAdmin(false);
+      setFeedback([]);
+      return;
+    }
     loadRequests();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId]);
+    (async () => {
+      const { data } = await supabase.from('User').select('name').eq('id', userId).maybeSingle();
+      const admin = data?.name === FEEDBACK_ADMIN_USERNAME;
+      setIsFeedbackAdmin(admin);
+      if (admin) await loadFeedback();
+      else setFeedback([]);
+    })();
+  }, [userId, loadRequests, loadFeedback]);
 
   async function acceptRequest(id) {
     if (!userId) return;
@@ -58,6 +112,32 @@ export default function NotificationsPage() {
     loadRequests();
   }
 
+  async function markFeedbackRead(id, read) {
+    const token = await getAccessToken();
+    if (!token) return;
+    const res = await fetch(`/api/feedback/inbox/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ read }),
+    });
+    if (res.ok) await loadFeedback();
+  }
+
+  async function deleteFeedback(id) {
+    const token = await getAccessToken();
+    if (!token) return;
+    const res = await fetch(`/api/feedback/inbox/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (res.ok) await loadFeedback();
+  }
+
+  const hasFriendNotifications = requests.length > 0;
+
   return (
     <>
       <Head>
@@ -69,28 +149,111 @@ export default function NotificationsPage() {
           <div className="text-muted">Please log in to view notifications.</div>
         ) : (
           <div className="notifications-stack">
-            {requests.length === 0 ? (
+            {hasFriendNotifications ? (
+              <section className="notifications-section">
+                <h3 className="notifications-section__title">Friend requests</h3>
+                {requests.map((r) => (
+                  <div key={r.id} className="notification-card">
+                    <div className="notification-card__text">
+                      <Link href={`/profile/${r.requesterId}`} className="notification-card__link">
+                        {r.requesterName}
+                      </Link>{' '}
+                      sent you a friend request.
+                    </div>
+                    <div className="notification-card__actions">
+                      <Button onClick={() => acceptRequest(r.id)} variant="success">
+                        Accept
+                      </Button>
+                      <Button onClick={() => declineRequest(r.id)} variant="danger">
+                        Decline
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </section>
+            ) : null}
+
+            {isFeedbackAdmin ? (
+              <section className="notifications-section">
+                <h3 className="notifications-section__title">Feedback</h3>
+                {feedbackLoading ? (
+                  <div className="text-muted">Loading feedback…</div>
+                ) : feedback.length === 0 ? (
+                  <div className="text-muted">No feedback submissions yet.</div>
+                ) : (
+                  feedback.map((f) => {
+                    const unread = f.read !== true;
+                    return (
+                    <div
+                      key={f.id}
+                      className={[
+                        'notification-card',
+                        'notification-card--feedback',
+                        unread ? 'notification-card--unread' : '',
+                      ]
+                        .filter(Boolean)
+                        .join(' ')}
+                    >
+                      <div className="notification-card__text notification-card__text--block">
+                        <div className="feedback-notification__meta">
+                          <span className="feedback-notification__type">{f.type || 'general'}</span>
+                          {f.createdAt ? (
+                            <span className="feedback-notification__date">
+                              {new Date(f.createdAt).toLocaleString()}
+                            </span>
+                          ) : null}
+                          {unread ? (
+                            <span className="feedback-notification__unread-badge">Unread</span>
+                          ) : null}
+                        </div>
+                        <p className="feedback-notification__message">{f.message}</p>
+                        <div className="feedback-notification__from">
+                          {f.userId ? (
+                            <>
+                              From{' '}
+                              <Link href={`/profile/${f.userId}`} className="notification-card__link">
+                                {f.submitterName || 'Player'}
+                              </Link>
+                            </>
+                          ) : f.email ? (
+                            <>Guest ({f.email})</>
+                          ) : (
+                            <>Anonymous</>
+                          )}
+                        </div>
+                      </div>
+                      <div className="notification-card__actions">
+                        {unread ? (
+                          <Button
+                            className="btn--sm"
+                            variant="primary"
+                            onClick={() => markFeedbackRead(f.id, true)}
+                          >
+                            Mark read
+                          </Button>
+                        ) : (
+                          <Button
+                            className="btn--sm"
+                            variant="primary"
+                            onClick={() => markFeedbackRead(f.id, false)}
+                          >
+                            Mark unread
+                          </Button>
+                        )}
+                        <Button className="btn--sm" variant="danger" onClick={() => deleteFeedback(f.id)}>
+                          Delete
+                        </Button>
+                      </div>
+                    </div>
+                    );
+                  })
+                )}
+              </section>
+            ) : null}
+
+            {userId && !isFeedbackAdmin && !hasFriendNotifications ? (
               <div className="text-muted">No notifications.</div>
-            ) : (
-              requests.map((r) => (
-                <div key={r.id} className="notification-card">
-                  <div className="notification-card__text">
-                    <Link href={`/profile/${r.requesterId}`} className="notification-card__link">
-                      {r.requesterName}
-                    </Link>{' '}
-                    sent you a friend request.
-                  </div>
-                  <div className="notification-card__actions">
-                    <Button onClick={() => acceptRequest(r.id)} variant="success">
-                      Accept
-                    </Button>
-                    <Button onClick={() => declineRequest(r.id)} variant="danger">
-                      Decline
-                    </Button>
-                  </div>
-                </div>
-              ))
-            )}
+            ) : null}
           </div>
         )}
       </main>

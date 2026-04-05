@@ -24,6 +24,7 @@ export default async function handler(req, res) {
         email: email || null,
         message: message.trim(),
         type: type || 'general',
+        read: false,
       })
       .select()
       .single();

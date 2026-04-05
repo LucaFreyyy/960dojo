@@ -72,8 +72,22 @@ export default function Dropdown() {
                     .select('id', { count: 'exact', head: true })
                     .eq('receiverId', uid)
                     .eq('status', 'pending');
+
+                let unreadFeedback = 0;
+                const { data: sess } = await supabase.auth.getSession();
+                const token = sess?.session?.access_token;
+                if (token) {
+                    const fr = await fetch('/api/feedback/inbox?countOnly=1', {
+                        headers: { Authorization: `Bearer ${token}` },
+                    });
+                    if (fr.ok) {
+                        const j = await fr.json();
+                        unreadFeedback = typeof j.unreadFeedback === 'number' ? j.unreadFeedback : 0;
+                    }
+                }
+
                 if (!cancelled && !error) {
-                    setHasPendingNotifications((count ?? 0) > 0);
+                    setHasPendingNotifications((count ?? 0) > 0 || unreadFeedback > 0);
                 }
             } catch {
                 if (!cancelled) setHasPendingNotifications(false);
