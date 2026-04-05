@@ -721,7 +721,7 @@ export default function OpeningsPage() {
         <title>Openings - 960 Dojo</title>
       </Head>
       <main className="page-shell openings-page">
-        <SectionTitle title="Openings" onClick={() => window.location.reload()} />
+        <SectionTitle title="Openings" />
 
         <div className="openings-layout">
           <div className="openings-col-board">
