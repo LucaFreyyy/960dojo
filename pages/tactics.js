@@ -7,6 +7,7 @@ import Chessboard from '../components/Chessboard';
 import MoveList from '../components/MoveList';
 import DifficultySelector from '../components/DifficultySelector';
 import PostTacticDisplay from '../components/PostTacticDisplay';
+import TacticsPuzzleOverlay from '../components/TacticsPuzzleOverlay';
 import RatingDisplay from '../components/RatingDisplay';
 import { ESTABLISHED_RATING_MIN_ENTRIES } from '../lib/ratingConstants';
 import SectionTitle from '../components/SectionTitle';
@@ -536,7 +537,7 @@ export default function TacticsPage() {
               provisional={(tacticTimesPlayed || 0) < ESTABLISHED_RATING_MIN_ENTRIES}
             />
             <div className="board-stack">
-              <div className="training-chessboard">
+              <div className="training-chessboard tactics-board-wrap">
                 <Chessboard
                   fen={displayedFen || currentFen || startFen}
                   orientation={orientation}
@@ -544,6 +545,7 @@ export default function TacticsPage() {
                   disabled={finished || loading || waitingForReply || !isBrowsingLive}
                   lastMove={lastMove}
                 />
+                <TacticsPuzzleOverlay visible={finished} solved={solved} />
               </div>
             </div>
             <div className="board-stack">
