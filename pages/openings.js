@@ -215,10 +215,6 @@ export default function OpeningsPage() {
     isBrowsingLiveRef.current = isBrowsingLive;
   }
 
-  const turnNow = currentFen ? sideToMoveFromFen(currentFen) : null;
-  const userToMove =
-    turnNow && userColor && turnNow === userColor && phase === 'playing' && !opponentBusy;
-
   const handleBrowsePositionChanged = useCallback((index, variationPath) => {
     setBrowsePosition((prev) => {
       const nextPath = Array.isArray(variationPath) ? variationPath : [];
@@ -730,9 +726,10 @@ export default function OpeningsPage() {
                 fen={displayedFen}
                 orientation={phase === 'setup' && colorChoice === 'black' ? 'black' : (userColor === 'black' ? 'black' : 'white')}
                 onMove={onBoardMove}
-                disabled={phase !== 'playing' || opponentBusy || !userToMove || !isBrowsingLive}
+                disabled={phase !== 'playing' || !isBrowsingLive}
                 lastMove={lastMove}
-                movableColor={userToMove ? userColor : 'none'}
+                movableColor={userColor}
+                premoveEnabled
               />
             </div>
             <RatingDisplay

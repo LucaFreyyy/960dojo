@@ -13,6 +13,12 @@ export default function ChessBoard({
   lastMove,
   /** 'white' | 'black' | 'both' — who may drag pieces */
   movableColor = 'both',
+  /**
+   * When true, the side given by `movableColor` may queue a premove while it is not their turn.
+   * Chess960: castling premoves use standard-chess king-on-e-file logic in chessground, so those are off.
+   */
+  premoveEnabled = false,
+  premovableCastle = false,
 }) {
   const containerRef = useRef(null);
   const positionRef = useRef(null);
@@ -21,6 +27,8 @@ export default function ChessBoard({
   const onPositionChangeRef = useRef(onPositionChange);
   const movableColorRef = useRef(movableColor);
   const disabledRef = useRef(disabled);
+  const premoveEnabledRef = useRef(premoveEnabled);
+  const premovableCastleRef = useRef(premovableCastle);
   const [ground, setGround] = useState(null);
 
   useEffect(() => {
@@ -29,6 +37,14 @@ export default function ChessBoard({
   useEffect(() => {
     disabledRef.current = disabled;
   }, [disabled]);
+
+  useEffect(() => {
+    premoveEnabledRef.current = premoveEnabled;
+  }, [premoveEnabled]);
+
+  useEffect(() => {
+    premovableCastleRef.current = premovableCastle;
+  }, [premovableCastle]);
 
   useEffect(() => {
     onMoveRef.current = onMove;
@@ -49,15 +65,17 @@ export default function ChessBoard({
       orientation: orientation,
       autoCastle: false,
       turnColor: turnColorFromFen(fen),
+      premovable: {
+        enabled: premoveEnabled && !disabled,
+        showDests: true,
+        castle: premovableCastle,
+      },
       movable: {
         free: false,
         color: disabled ? 'none' : movableColor,
         dests: disabled ? new Map() : toDests(positionRef.current),
         events: {
           after: (orig, dest, metadata) => {
-            if (DBG && metadata?.premove) {
-              console.warn('[Chessboard] after callback with premove=true', { orig, dest });
-            }
             let san;
             let newFen;
             try {
@@ -71,7 +89,7 @@ export default function ChessBoard({
             }
 
             if (onMoveRef.current) {
-              onMoveRef.current({ from: orig, to: dest, san, newFen });
+              onMoveRef.current({ from: orig, to: dest, san, newFen, premove: !!metadata?.premove });
             }
             if (onPositionChangeRef.current) {
               onPositionChangeRef.current(newFen);
@@ -81,6 +99,11 @@ export default function ChessBoard({
               fen: newFen,
               turnColor: turnColorFromFen(newFen),
               orientation: orientationRef.current,
+              premovable: {
+                enabled: premoveEnabledRef.current && !disabledRef.current,
+                showDests: true,
+                castle: premovableCastleRef.current,
+              },
               movable: {
                 color: disabledRef.current ? 'none' : movableColorRef.current,
                 dests: toDests(positionRef.current),
@@ -92,7 +115,7 @@ export default function ChessBoard({
       },
     });
     setGround(cg);
-  }, [fen, ground, orientation, disabled, movableColor]);
+  }, [fen, ground, orientation, disabled, movableColor, premoveEnabled, premovableCastle]);
 
   useEffect(() => () => {
     if (!ground) return;
@@ -111,12 +134,22 @@ export default function ChessBoard({
       fen: fen,
       turnColor: turnColorFromFen(fen),
       lastMove: Array.isArray(lastMove) ? lastMove : undefined,
+      premovable: {
+        enabled: premoveEnabled && !disabled,
+        showDests: true,
+        castle: premovableCastle,
+      },
       movable: {
         color: disabled ? 'none' : movableColor,
         dests: disabled ? new Map() : toDests(positionRef.current),
       },
     });
-  }, [fen, ground, disabled, lastMove, movableColor]);
+    if (premoveEnabled && !disabled) {
+      ground.playPremove();
+    } else {
+      ground.cancelPremove();
+    }
+  }, [fen, ground, disabled, lastMove, movableColor, premoveEnabled, premovableCastle]);
 
   useEffect(() => {
     if (!ground) return;
@@ -125,12 +158,28 @@ export default function ChessBoard({
     ground.set({
       orientation: orientationRef.current,
       turnColor: turnColorFromFen(fen),
+      premovable: {
+        enabled: premoveEnabled && !disabled,
+        showDests: true,
+        castle: premovableCastle,
+      },
       movable: {
         color: disabled ? 'none' : movableColor,
         dests: disabled ? new Map() : toDests(positionRef.current),
       },
     });
-  }, [fen, orientation, ground, disabled, movableColor]);
+  }, [fen, orientation, ground, disabled, movableColor, premoveEnabled, premovableCastle]);
+
+  useEffect(() => {
+    if (!ground) return;
+    ground.set({
+      premovable: {
+        enabled: premoveEnabled && !disabled,
+        showDests: true,
+        castle: premovableCastle,
+      },
+    });
+  }, [ground, premoveEnabled, premovableCastle, disabled]);
 
   if (!fen) {
     return (
