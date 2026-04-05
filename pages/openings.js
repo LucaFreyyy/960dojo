@@ -206,6 +206,11 @@ export default function OpeningsPage() {
     return fenByIndex[idx] || currentFen || startFen;
   }, [phase, openingNr, browsePosition, fenByIndex, currentFen, startFen]);
 
+  const opponentToMove = useMemo(() => {
+    if (phase !== 'playing' || !isBrowsingLive || !displayedFen) return false;
+    return sideToMoveFromFen(displayedFen) !== userColor;
+  }, [phase, isBrowsingLive, displayedFen, userColor]);
+
   /** Refs read inside `onBoardMove` must match this render (that handler runs before useEffect). */
   if (typeof window !== 'undefined') {
     phaseRef.current = phase;
@@ -720,7 +725,73 @@ export default function OpeningsPage() {
 
         <div className="openings-layout">
           <div className="openings-col-board">
-            <PositionDisplay value={openingNr} editable={false} />
+            <div className="openings-board-head">
+              <PositionDisplay value={openingNr} editable={false} />
+              {opponentToMove ? (
+                <div
+                  className={[
+                    'openings-opponent-thinking',
+                    opponentBusy ? 'openings-opponent-thinking--busy' : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                  role="status"
+                  aria-live="polite"
+                  aria-label={opponentBusy ? 'Opponent is thinking' : 'Opponent to move'}
+                  title={opponentBusy ? 'Opponent is thinking' : 'Opponent to move'}
+                >
+                  <span className="openings-opponent-thinking__mark" aria-hidden>
+                    <svg
+                      className="openings-opponent-thinking__cloud"
+                      viewBox="0 0 44 34"
+                      width="34"
+                      height="26"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        className="openings-opponent-thinking__cloud-main"
+                        d="M22 5.5c4.2-.8 8.6 1.1 10.8 4.8 2.4 4 1.8 9-1.4 12.2-2.2 2.2-5.4 3.2-8.6 2.8-3.8-.4-7-2.8-8.4-6.4-1-2.6-.6-5.6 1.2-7.8 1.8-2.2 4.6-3.4 7.4-3.6z"
+                        fill="rgba(46, 164, 255, 0.14)"
+                        strokeWidth="2.15"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <ellipse
+                        className="openings-opponent-thinking__cloud-puff"
+                        cx="13"
+                        cy="21"
+                        rx="5.2"
+                        ry="4.6"
+                        fill="rgba(255, 228, 196, 0.1)"
+                        strokeWidth="1.75"
+                        strokeLinecap="round"
+                      />
+                      <circle
+                        className="openings-opponent-thinking__cloud-dot"
+                        cx="7"
+                        cy="26.5"
+                        r="2.4"
+                        fill="none"
+                        strokeWidth="1.65"
+                        strokeLinecap="round"
+                      />
+                      <path
+                        className="openings-opponent-thinking__cloud-tail"
+                        d="M4.5 30.5l-2.2 2.8"
+                        fill="none"
+                        strokeWidth="1.55"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                    <span className="openings-opponent-thinking__dots">
+                      <span />
+                      <span />
+                      <span />
+                    </span>
+                  </span>
+                </div>
+              ) : null}
+            </div>
             <div className="training-chessboard">
               <Chessboard
                 fen={displayedFen}

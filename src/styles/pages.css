@@ -35,6 +35,113 @@
   gap: 12px;
 }
 
+/* Same width as before (full board column): do not shrink-wrap or the badge sits on the number. */
+.openings-board-head {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+}
+
+/* Icon sits in the empty margin on the right of the strip, not over the label/value. */
+.openings-opponent-thinking {
+  position: absolute;
+  z-index: 2;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: flex-end;
+  padding: 2px 3px 3px;
+  border-radius: 10px 6px 8px 7px;
+  background: rgba(26, 25, 24, 0.42);
+  box-shadow:
+    0 0 0 1px rgba(46, 164, 255, 0.35),
+    1px 2px 0 rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+}
+
+.openings-opponent-thinking__mark {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 0.1rem;
+  flex-shrink: 0;
+}
+
+.openings-opponent-thinking__cloud {
+  display: block;
+  transform: rotate(-2deg);
+  flex-shrink: 0;
+}
+
+.openings-opponent-thinking__cloud-main {
+  stroke: var(--logo-blue);
+}
+
+.openings-opponent-thinking__cloud-puff {
+  stroke: rgba(255, 228, 196, 0.72);
+}
+
+.openings-opponent-thinking__cloud-dot {
+  stroke: rgba(255, 228, 196, 0.55);
+}
+
+.openings-opponent-thinking__cloud-tail {
+  stroke: rgba(255, 228, 196, 0.48);
+}
+
+.openings-opponent-thinking__dots {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 14px;
+  padding-bottom: 0;
+  margin-left: -2px;
+}
+
+.openings-opponent-thinking__dots span {
+  display: block;
+  width: 5px;
+  height: 6px;
+  border-radius: 45% 55% 48% 52% / 55% 45% 52% 48%;
+  background: linear-gradient(160deg, #c42e2e 0%, var(--logo-red) 45%, #7a1818 100%);
+  box-shadow:
+    0 0 0 1px rgba(255, 228, 196, 0.35),
+    1px 2px 0 rgba(0, 0, 0, 0.35);
+  animation: openings-thinking-bob 0.82s ease-in-out infinite;
+}
+
+.openings-opponent-thinking__dots span:nth-child(2) {
+  animation-delay: 0.14s;
+  width: 4px;
+  height: 5px;
+}
+
+.openings-opponent-thinking__dots span:nth-child(3) {
+  animation-delay: 0.28s;
+  width: 4px;
+  height: 4px;
+}
+
+.openings-opponent-thinking--busy .openings-opponent-thinking__dots span {
+  animation-duration: 0.52s;
+}
+
+@keyframes openings-thinking-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .openings-opponent-thinking__dots span {
+    animation: none;
+  }
+}
+
 .openings-col-side {
   display: flex;
   flex-direction: column;
