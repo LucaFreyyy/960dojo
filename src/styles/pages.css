@@ -149,6 +149,55 @@
   min-width: 0;
 }
 
+.analysis-setup-row,
+.analysis-engine-row,
+.analysis-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.analysis-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--ink-muted);
+}
+
+.analysis-input {
+  width: 180px;
+}
+
+.analysis-engine-depth,
+.analysis-engine-eval {
+  font-size: 0.84rem;
+  color: var(--ink-muted);
+}
+
+.analysis-import-export {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.analysis-subtitle {
+  margin: 0.3rem 0 0.1rem;
+  font-size: 1rem;
+  color: var(--gold);
+}
+
+.analysis-textarea {
+  width: min(100%, 960px);
+  border: var(--border-soft);
+  border-radius: var(--sketch-radius);
+  background: var(--surface);
+  color: var(--ink);
+  padding: 0.55rem 0.65rem;
+  font-family: var(--font-mono);
+  font-size: 0.84rem;
+}
+
 .openings-col-side--playing {
   padding-top: 28px;
 }

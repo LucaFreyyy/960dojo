@@ -85,13 +85,23 @@ export default function MoveList({
     selectedPosition = null,
     resetSelectionOnPgnChange = true,
     className = '',
+    allowSparseEvalData = false,
 }) {
     const tree = useMemo(() => parsePgnTree(pgn), [pgn]);
     const template = useMemo(() => buildEvalTemplate(tree), [tree]);
-    const hasValidEvalData = useMemo(
-        () => validateEvalShape(evalData, template),
-        [evalData, template]
-    );
+    const hasValidEvalData = useMemo(() => {
+        if (!allowSparseEvalData) return validateEvalShape(evalData, template);
+        const isStructuredLikeTemplate = (value, tmpl) => {
+            if (!Array.isArray(value) || !Array.isArray(tmpl) || value.length !== tmpl.length) return false;
+            for (let i = 0; i < tmpl.length; i += 1) {
+                if (Array.isArray(tmpl[i])) {
+                    if (!isStructuredLikeTemplate(value[i], tmpl[i])) return false;
+                }
+            }
+            return true;
+        };
+        return isStructuredLikeTemplate(evalData, template);
+    }, [allowSparseEvalData, evalData, template]);
 
     const [selection, setSelection] = useState({ index: -1, variationPath: [] });
     const suppressNextBrowseCallbackRef = useRef(false);
@@ -272,15 +282,14 @@ export default function MoveList({
             else if (lossCp > 150) annotation = '?';
             else if (lossCp >= 50) annotation = '?!';
         }
-        const toneClass = selected
-            ? 'move-btn--selected'
-            : (hasValidEvalData ? lossToneClass(lossCp) : 'move-btn--tone-neutral');
+        const toneClass = hasValidEvalData ? lossToneClass(lossCp) : 'move-btn--tone-neutral';
+        const selectedClass = selected ? 'move-btn--selected' : '';
 
         return (
             <button
                 type="button"
                 onClick={() => setSelection({ index, variationPath: clonePath(path) })}
-                className={`move-btn ${fullWidth ? 'move-btn--full' : 'move-btn--inline'} ${toneClass}`.trim()}
+                className={`move-btn ${fullWidth ? 'move-btn--full' : 'move-btn--inline'} ${toneClass} ${selectedClass}`.trim()}
             >
                 <span>
                     {prefix}

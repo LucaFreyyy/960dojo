@@ -77,6 +77,22 @@ export default function HomePage() {
             </Link>
           </div>
         </section>
+
+        <section className="tools">
+          <SectionTitle title="Tools" sectionClassName="tools" headingClassName="section-title__heading--home" />
+          <div className="practice-grid">
+            <div className="practice-card">
+              <Link className="practice-box" href="/analysis">
+                <h3>Analysis</h3>
+              </Link>
+              <div className="practice-card__explain">
+                <Explanation label="About Analysis">
+                  <p>Analyze Chess960 games or any imported PGN/FEN.</p>
+                </Explanation>
+              </div>
+            </div>
+          </div>
+        </section>
       </main>
     </>
   );
