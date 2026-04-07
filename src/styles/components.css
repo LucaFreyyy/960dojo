@@ -1034,6 +1034,12 @@
 }
 
 /* Chessboard wrapper */
+.chessboard-shell {
+  position: relative;
+  width: 100%;
+  max-width: var(--training-board-size);
+}
+
 .chessboard-root {
   width: 100%;
   max-width: var(--training-board-size);
@@ -1049,6 +1055,54 @@
 .training-chessboard .chessboard-root,
 .training-chessboard .chessboard-placeholder {
   max-width: none;
+}
+
+.chessboard-promotion-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 7;
+  background: transparent;
+}
+
+.chessboard-promotion-square {
+  position: absolute;
+  width: 12.5%;
+  height: 12.5%;
+  border: 1px solid rgba(0, 0, 0, 0.45);
+  border-radius: 0;
+  background: rgba(24, 23, 22, 0.94);
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1px rgba(255, 228, 196, 0.08);
+}
+
+.chessboard-promotion-square:hover {
+  background: rgba(38, 37, 36, 0.96);
+}
+
+.chessboard-promotion-square:focus-visible {
+  outline: 2px solid var(--logo-blue);
+  outline-offset: -2px;
+}
+
+.chessboard-promotion-piece {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  background-size: contain !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+}
+
+.chessboard-promotion-piece-wrap {
+  position: relative;
+  width: 100%;
+  height: 100%;
 }
 
 .chessboard-placeholder {
