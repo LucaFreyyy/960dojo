@@ -100,9 +100,47 @@ async function chooseNewTactic({ userRating, difficulty, finishedIds, unfinished
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end();
   const { userId, difficulty = 'middle' } = req.query || {};
-  if (!userId) return res.status(400).json({ error: 'Missing userId' });
+  const isGuest = !userId;
 
   try {
+    if (isGuest) {
+      const guestRating = 1500;
+      const next = await chooseNewTactic({
+        userRating: guestRating,
+        difficulty,
+        finishedIds: new Set(),
+        unfinishedIds: new Set(),
+      });
+      if (!next?.tactic) return res.status(404).json({ error: 'No available tactics' });
+      const chosen = next.tactic;
+      const startFen = extractPgnTag(chosen.pgn, 'FEN');
+      const puzzleLine = parseSanMovesFromPgn(chosen.pgn);
+      const puzzleStartPly = extractPuzzleStartPlyFromPgn(chosen.pgn);
+      if (!startFen || !puzzleLine.length) {
+        return res.status(500).json({ error: 'Invalid tactic PGN: missing FEN tag or moves' });
+      }
+
+      return res.status(200).json({
+        tactic: {
+          id: chosen.id,
+          rating: chosen.rating,
+          pgn: chosen.pgn,
+          numTimesPlayed: chosen.numTimesPlayed,
+          disLikes: chosen.disLikes,
+          startFen,
+          puzzleLine,
+          linkToGame: extractPgnTag(chosen.pgn, 'Site'),
+          puzzleStartPly,
+        },
+        userRating: guestRating,
+        userFinishedCount: 0,
+        tacticTimesPlayed: Number.isFinite(chosen?.numTimesPlayed) ? chosen.numTimesPlayed : 0,
+        infoMessage: next.usedFallback
+          ? `No more puzzles available in ${difficulty} range. Loaded closest puzzle instead.`
+          : null,
+      });
+    }
+
     const { data: ratingRow, error: ratingErr } = await supabaseAdmin
       .from('Rating')
       .select('value')

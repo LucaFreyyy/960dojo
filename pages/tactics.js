@@ -251,10 +251,6 @@ export default function TacticsPage() {
       replyTimerRef.current = null;
     }
     setWaitingForReply(false);
-    if (!userId) {
-      setError('Log in to play tactics.');
-      return;
-    }
     setLoading(true);
     setError('');
     setInfoMessage('');
@@ -269,8 +265,11 @@ export default function TacticsPage() {
     setSolutionSans([]);
 
     try {
-      tlog('loadNextPuzzle:start', { userId, difficulty });
-      const res = await fetch(`/api/tactics/next?userId=${encodeURIComponent(userId)}&difficulty=${encodeURIComponent(difficulty)}`);
+      tlog('loadNextPuzzle:start', { userId: userId || 'guest', difficulty });
+      const q = userId
+        ? `userId=${encodeURIComponent(userId)}&difficulty=${encodeURIComponent(difficulty)}`
+        : `difficulty=${encodeURIComponent(difficulty)}`;
+      const res = await fetch(`/api/tactics/next?${q}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || 'Failed to load puzzle');
 
@@ -315,7 +314,6 @@ export default function TacticsPage() {
   }
 
   useEffect(() => {
-    if (!userId) return;
     loadNextPuzzle();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, difficulty]);
@@ -350,6 +348,7 @@ export default function TacticsPage() {
       setCurrentFen(game.fen());
     }
 
+    if (!userId) return;
     try {
       const res = await fetch('/api/tactics/finish', {
         method: 'POST',
@@ -465,7 +464,7 @@ export default function TacticsPage() {
   }
 
   async function submitFeedback(nextLike) {
-    if (!tactic?.id || !finished) return;
+    if (!tactic?.id || !finished || !userId) return;
 
     if (likeChoice === nextLike) {
       const prevLike = likeChoice;
@@ -520,7 +519,7 @@ export default function TacticsPage() {
         {infoMessage ? <div className="alert alert--info mb-sm">{infoMessage}</div> : null}
         {!userId ? (
           <div className="tactics-login-hint mb-md">
-            <strong>Log in to play puzzles</strong>
+            <strong>Playing as guest (no rating/progress saved)</strong>
             <Link href="/login" className="btn btn--primary btn--sm">
               Log in
             </Link>
@@ -576,6 +575,7 @@ export default function TacticsPage() {
               visible={finished}
               solved={solved}
               likeChoice={likeChoice}
+              showFeedbackButtons={!!userId}
               lichessUrl={puzzleLink}
               onLike={() => submitFeedback(true)}
               onDislike={() => submitFeedback(false)}

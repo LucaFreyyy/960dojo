@@ -68,6 +68,7 @@ export default function PostTacticDisplay({
   onNextPuzzle,
   lichessUrl,
   disabled = false,
+  showFeedbackButtons = true,
 }) {
   const roughFilterId = useId().replace(/:/g, '');
 
@@ -85,20 +86,22 @@ export default function PostTacticDisplay({
       </svg>
       <div className="post-tactic__title">{solved ? 'Solved' : 'Failed'}</div>
       {lichessUrl ? <OpenInLichessBtn onClick={onOpenInLichess} disabled={disabled} /> : null}
-      <div className="post-tactic__thumbs">
-        <ThumbsUpBtn
-          onClick={onLike}
-          active={likeChoice === true}
-          disabled={disabled}
-          roughFilterId={roughFilterId}
-        />
-        <ThumbsDownBtn
-          onClick={onDislike}
-          active={likeChoice === false}
-          disabled={disabled}
-          roughFilterId={roughFilterId}
-        />
-      </div>
+      {showFeedbackButtons ? (
+        <div className="post-tactic__thumbs">
+          <ThumbsUpBtn
+            onClick={onLike}
+            active={likeChoice === true}
+            disabled={disabled}
+            roughFilterId={roughFilterId}
+          />
+          <ThumbsDownBtn
+            onClick={onDislike}
+            active={likeChoice === false}
+            disabled={disabled}
+            roughFilterId={roughFilterId}
+          />
+        </div>
+      ) : null}
       <div className="post-tactic__lichess-note">
         <NextPuzzleBtn onClick={onNextPuzzle} disabled={disabled} />
       </div>
