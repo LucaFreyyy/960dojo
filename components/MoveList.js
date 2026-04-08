@@ -295,6 +295,11 @@ export default function MoveList({
                     {prefix}
                     {node.san}
                     {annotation}
+                    {node.comment ? (
+                        <span className="move-btn__comment" title={node.comment} aria-label="Move comment">
+                            c
+                        </span>
+                    ) : null}
                 </span>
                 {evalText ? <span className="move-btn__eval">{evalText}</span> : null}
             </button>

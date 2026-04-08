@@ -1053,6 +1053,22 @@
   font-size: 0.62rem;
 }
 
+.move-btn__comment {
+  margin-left: 0.28rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 0.95rem;
+  height: 0.95rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 228, 196, 0.22);
+  background: rgba(26, 25, 24, 0.35);
+  color: rgba(255, 228, 196, 0.75);
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
 .eval-summary--muted {
   color: var(--ink-muted);
 }

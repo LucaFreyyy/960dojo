@@ -5,6 +5,7 @@ import MoveList from '../components/MoveList';
 import PositionDisplay from '../components/PositionDisplay';
 import SectionTitle from '../components/SectionTitle';
 import BackrankInput from '../components/BackrankInput';
+import AnalysisCommentBox from '../components/AnalysisCommentBox';
 import { positionNrToStartFen } from '../lib/chess960';
 import STARTING_POSITIONS from '../lib/chess960Positions.json';
 import { Chess } from '../lib/chessCompat';
@@ -72,11 +73,22 @@ function buildBackrankToNumberMap(numberToBackrank) {
 }
 
 function createLine() {
-  return [];
+  const line = [];
+  line.rootComment = '';
+  return line;
 }
 
 function cloneLine(line) {
-  return line.map((n) => ({ san: n.san, variations: n.variations.map(cloneLine) }));
+  const out = createLine();
+  out.rootComment = String(line?.rootComment || '');
+  for (const n of (line || [])) {
+    out.push({
+      san: n.san,
+      comment: n.comment || '',
+      variations: (n.variations || []).map(cloneLine),
+    });
+  }
+  return out;
 }
 
 function getLineByPath(mainline, variationPath) {
@@ -100,7 +112,8 @@ function buildPgnFromTree(startFen, mainline) {
       const node = line[i];
       const moveNo = Math.floor(ply / 2) + 1;
       const whiteToMove = ply % 2 === 0;
-      out.push(whiteToMove ? `${moveNo}. ${node.san}` : `${node.san}`);
+      const comment = node.comment ? ` {${String(node.comment).replace(/\}/g, '').trim()}}` : '';
+      out.push(whiteToMove ? `${moveNo}. ${node.san}${comment}` : `${node.san}${comment}`);
       const childPlyStart = ply + 1;
       for (let v = 0; v < node.variations.length; v += 1) {
         const varText = renderLine(node.variations[v], childPlyStart, [...path, `${i}:${v}`]);
@@ -110,7 +123,9 @@ function buildPgnFromTree(startFen, mainline) {
     }
     return out.join(' ');
   }
-  const movetext = renderLine(mainline, 0, []);
+  const rootComment = String(mainline?.rootComment || '').trim();
+  const prefix = rootComment ? `{${rootComment.replace(/\}/g, '').trim()}} ` : '';
+  const movetext = `${prefix}${renderLine(mainline, 0, [])}`.trim();
   return [
     '[Event "960 Dojo Analysis"]',
     '[Variant "Chess960"]',
@@ -137,8 +152,9 @@ function buildEvalDataFromMap(tree, evalByKey) {
   return buildFromLine(tree, [], true);
 }
 
-function getFenAtSelection(startFen, mainline, selection) {
+function getPositionAtSelection(startFen, mainline, selection) {
   const game = new Chess(startFen, { chess960: true });
+  let last = null;
   const path = Array.isArray(selection?.variationPath) ? selection.variationPath : [];
   for (let p = 0; p < path.length; p += 1) {
     const seg = path[p];
@@ -149,7 +165,7 @@ function getFenAtSelection(startFen, mainline, selection) {
     for (let i = 0; i <= mi; i += 1) {
       const n = parent[i];
       if (!n) break;
-      game.move(n.san, { sloppy: true });
+      last = game.move(n.san, { sloppy: true }) || last;
     }
     const anchor = parent[mi];
     const varLine = anchor?.variations?.[vi] || [];
@@ -158,16 +174,17 @@ function getFenAtSelection(startFen, mainline, selection) {
       const [nextMiRaw] = String(nextSeg).split(':');
       const nextMi = Number(nextMiRaw);
       for (let i = 0; i <= nextMi && i < varLine.length; i += 1) {
-        game.move(varLine[i].san, { sloppy: true });
+        last = game.move(varLine[i].san, { sloppy: true }) || last;
       }
     }
   }
   const line = getLineByPath(mainline, path);
   const index = Number.isInteger(selection?.index) ? selection.index : -1;
   for (let i = 0; i <= index && i < line.length; i += 1) {
-    game.move(line[i].san, { sloppy: true });
+    last = game.move(line[i].san, { sloppy: true }) || last;
   }
-  return game.fen();
+  const lastMove = last?.from && last?.to ? [last.from, last.to] : undefined;
+  return { fen: game.fen(), lastMove };
 }
 
 export default function AnalysisPage() {
@@ -191,6 +208,7 @@ export default function AnalysisPage() {
   const [engineEvalCp, setEngineEvalCp] = useState(null);
   const [evalByKey, setEvalByKey] = useState(new Map());
   const [depthByKey, setDepthByKey] = useState(new Map());
+  const [moveCommentDraft, setMoveCommentDraft] = useState('');
   const engineCancelRef = useRef(null);
   const engineStateRef = useRef({ key: null, depth: 0, cpWhite: null });
 
@@ -233,8 +251,48 @@ export default function AnalysisPage() {
   }, [currentFen]);
 
   useEffect(() => {
-    setCurrentFen(getFenAtSelection(startFen, mainline, selection));
+    const { fen, lastMove: lm } = getPositionAtSelection(startFen, mainline, selection);
+    setCurrentFen(fen);
+    setLastMove(lm);
   }, [startFen, mainline, selection]);
+
+  const selectedNode = useMemo(() => {
+    const path = Array.isArray(selection?.variationPath) ? selection.variationPath : [];
+    const line = getLineByPath(mainline, path);
+    const idx = Number.isInteger(selection?.index) ? selection.index : -1;
+    if (idx < 0) return null;
+    return line[idx] || null;
+  }, [mainline, selection]);
+
+  const selectedLine = useMemo(() => {
+    const path = Array.isArray(selection?.variationPath) ? selection.variationPath : [];
+    return getLineByPath(mainline, path);
+  }, [mainline, selection]);
+
+  useEffect(() => {
+    if (selectedNode) {
+      setMoveCommentDraft(selectedNode.comment || '');
+    } else {
+      setMoveCommentDraft(String(selectedLine?.rootComment || ''));
+    }
+  }, [selectedNode, selectedLine]);
+
+  const persistSelectedComment = useCallback((raw) => {
+    const path = Array.isArray(selection?.variationPath) ? selection.variationPath : [];
+    const idx = Number.isInteger(selection?.index) ? selection.index : -1;
+    const nextText = String(raw || '');
+    setMainline((prev) => {
+      const next = cloneLine(prev);
+      const line = getLineByPath(next, path);
+      if (idx < 0) {
+        line.rootComment = nextText;
+        return next;
+      }
+      if (!line[idx]) return prev;
+      line[idx].comment = nextText;
+      return next;
+    });
+  }, [selection]);
 
   const handleBrowsePositionChanged = useCallback((index, variationPath) => {
     setSelection((prev) => {
@@ -290,7 +348,7 @@ export default function AnalysisPage() {
       const index = Number.isInteger(selection.index) ? selection.index : -1;
       const moveSan = mv.san;
       if (index === line.length - 1) {
-        line.push({ san: moveSan, variations: [] });
+        line.push({ san: moveSan, comment: '', variations: [] });
         setSelection({ index: line.length - 1, variationPath: path });
       } else if (index >= 0 && line[index]) {
         const anchor = line[index];
@@ -298,22 +356,21 @@ export default function AnalysisPage() {
         if (existingVarIdx >= 0) {
           setSelection({ index: 0, variationPath: [...path, `${index}:${existingVarIdx}`] });
         } else {
-          anchor.variations.push([{ san: moveSan, variations: [] }]);
+          anchor.variations.push([{ san: moveSan, comment: '', variations: [] }]);
           setSelection({ index: 0, variationPath: [...path, `${index}:${anchor.variations.length - 1}`] });
         }
       } else if (index === -1) {
         if (!line.length) {
-          line.push({ san: moveSan, variations: [] });
+          line.push({ san: moveSan, comment: '', variations: [] });
           setSelection({ index: 0, variationPath: path });
         } else if (line[0]?.san === moveSan) {
           setSelection({ index: 0, variationPath: path });
         } else {
-          line[0].variations.push([{ san: moveSan, variations: [] }]);
+          line[0].variations.push([{ san: moveSan, comment: '', variations: [] }]);
           setSelection({ index: 0, variationPath: [`0:${line[0].variations.length - 1}`] });
         }
       }
 
-      setLastMove([from, to]);
       return next;
     });
   }, [currentFen, selection]);
@@ -515,6 +572,14 @@ export default function AnalysisPage() {
               selectedPosition={selection}
               resetSelectionOnPgnChange={false}
               onBrowsePositionChanged={handleBrowsePositionChanged}
+            />
+            <AnalysisCommentBox
+              value={moveCommentDraft}
+              disabled={false}
+              onChange={(v) => {
+                setMoveCommentDraft(v);
+                persistSelectedComment(v);
+              }}
             />
           </div>
         </div>
