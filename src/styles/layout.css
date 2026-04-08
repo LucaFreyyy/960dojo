@@ -293,6 +293,10 @@ header {
   text-align: center;
 }
 
+.home-main {
+  padding-bottom: 2.5rem;
+}
+
 .practice .section-title,
 .play .section-title {
   margin-bottom: 0.75rem;

@@ -24,7 +24,7 @@ export default function HomePage() {
         <title>960 Dojo</title>
       </Head>
 
-      <main>
+      <main className="home-main">
         <section className="practice">
           <SectionTitle title="Practice" sectionClassName="practice" headingClassName="section-title__heading--home" />
           <div className="practice-grid">
