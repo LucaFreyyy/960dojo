@@ -24,6 +24,7 @@ import {
 } from '../lib/openingsEval';
 import {
   applyBoardMoveToChessGame,
+  applyMoveMatchingTargetFen,
   computeFenTrail,
   countUserMovesFromSans,
   sideToMoveFromFen,
@@ -437,39 +438,48 @@ export default function OpeningsPage() {
   );
 
   const onBoardMove = useCallback(
-    async ({ from, to, san }) => {
+    async ({ from, to, san, newFen: boardNewFen, promotion, premove }) => {
       const dbg = process.env.NODE_ENV === 'development';
-      if (phaseRef.current !== 'playing' || opponentBusyRef.current || !isBrowsingLiveRef.current) {
+      const busyBlocks =
+        opponentBusyRef.current && !premove;
+      if (phaseRef.current !== 'playing' || busyBlocks || !isBrowsingLiveRef.current) {
         if (dbg) {
           console.warn('[openings/onBoardMove] blocked (phase/opponent/browse)', {
             phase: phaseRef.current,
             opponentBusy: opponentBusyRef.current,
             isBrowsingLive: isBrowsingLiveRef.current,
+            premove: !!premove,
           });
         }
         return;
       }
+      // `opponentBusy` can stay true until `playOpponentOnce` finishes `await updateUserOpening`
+      // even though FEN / playedSans already updated — Chessground then runs premoves on the new
+      // position. Allow premoves whenever it is clearly the user's turn.
       const ut =
         currentFenRef.current &&
         sideToMoveFromFen(currentFenRef.current) === userColorRef.current &&
         phaseRef.current === 'playing' &&
-        !opponentBusyRef.current;
+        (premove || !opponentBusyRef.current);
       if (!ut) {
         if (dbg) {
           console.warn('[openings/onBoardMove] blocked (not user turn / no fen)', {
             fen: currentFenRef.current?.slice(0, 80),
             userColor: userColorRef.current,
             side: currentFenRef.current && sideToMoveFromFen(currentFenRef.current),
+            opponentBusy: opponentBusyRef.current,
+            premove: !!premove,
           });
         }
         return;
       }
 
       const g = new Chess(currentFenRef.current, { chess960: true });
-      const m = applyBoardMoveToChessGame(g, from, to, san);
+      let m = applyBoardMoveToChessGame(g, from, to, san, promotion);
+      if (!m) m = applyMoveMatchingTargetFen(g, boardNewFen);
       if (!m) {
         if (dbg) {
-          console.warn('[openings/onBoardMove] applyBoardMoveToChessGame failed', { from, to, san });
+          console.warn('[openings/onBoardMove] apply move failed', { from, to, san, boardNewFen, promotion });
         }
         return;
       }

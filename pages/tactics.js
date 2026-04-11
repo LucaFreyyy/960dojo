@@ -164,6 +164,8 @@ export default function TacticsPage() {
   const waitingForReplyRef = useRef(false);
   const isBrowsingLiveRef = useRef(true);
   const lastProcessedMoveRef = useRef('');
+  const finishRatingPromiseRef = useRef(null);
+  const [ratingSavePending, setRatingSavePending] = useState(false);
 
   useEffect(() => {
     if (!session?.user?.email) return setUserId(null);
@@ -250,6 +252,10 @@ export default function TacticsPage() {
       clearTimeout(replyTimerRef.current);
       replyTimerRef.current = null;
     }
+    const pendingRating = finishRatingPromiseRef.current;
+    if (pendingRating) {
+      await pendingRating;
+    }
     setWaitingForReply(false);
     setLoading(true);
     setError('');
@@ -331,6 +337,60 @@ export default function TacticsPage() {
       replyTimerRef.current = null;
     }
     setWaitingForReply(false);
+
+    const ratingSnap = {
+      userId,
+      tacticId: tactic?.id,
+      puzzleRating,
+      userRating,
+      userFinishedCount,
+      tacticTimesPlayed,
+    };
+
+    if (ratingSnap.userId && ratingSnap.tacticId) {
+      setRatingSavePending(true);
+      const finishWork = (async () => {
+        try {
+          const res = await fetch('/api/tactics/finish', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: ratingSnap.userId,
+              tacticId: ratingSnap.tacticId,
+              solved: didSolve,
+              liked: null,
+            }),
+          });
+          const data = await res.json();
+          if (!res.ok) return;
+          setUserDelta(data?.delta ?? null);
+          setPuzzleDelta(
+            Number.isFinite(ratingSnap.puzzleRating) && Number.isFinite(data?.tacticRating)
+              ? data.tacticRating - ratingSnap.puzzleRating
+              : null
+          );
+          setUserRating(data?.userRating ?? ratingSnap.userRating);
+          setPuzzleRating(data?.tacticRating ?? ratingSnap.puzzleRating);
+          setUserFinishedCount(data?.userFinishedCount ?? ratingSnap.userFinishedCount);
+          setTacticTimesPlayed(data?.tacticTimesPlayed ?? ratingSnap.tacticTimesPlayed);
+          tlog('finishPuzzle:rating', {
+            delta: data?.delta,
+            userRating: data?.userRating,
+            tacticRating: data?.tacticRating,
+          });
+        } catch {
+        } finally {
+          setRatingSavePending(false);
+        }
+      })();
+      finishRatingPromiseRef.current = finishWork;
+      finishWork.finally(() => {
+        if (finishRatingPromiseRef.current === finishWork) {
+          finishRatingPromiseRef.current = null;
+        }
+      });
+    }
+
     setFinished(true);
     setSolved(didSolve);
     if (didSolve) {
@@ -347,37 +407,6 @@ export default function TacticsPage() {
       }
       setCurrentFen(game.fen());
     }
-
-    if (!userId) return;
-    try {
-      const res = await fetch('/api/tactics/finish', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId,
-          tacticId: tactic?.id,
-          solved: didSolve,
-          liked: null,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) return;
-      setUserDelta(data?.delta ?? null);
-      setPuzzleDelta(
-        Number.isFinite(puzzleRating) && Number.isFinite(data?.tacticRating)
-          ? data.tacticRating - puzzleRating
-          : null
-      );
-      setUserRating(data?.userRating ?? userRating);
-      setPuzzleRating(data?.tacticRating ?? puzzleRating);
-      setUserFinishedCount(data?.userFinishedCount ?? userFinishedCount);
-      setTacticTimesPlayed(data?.tacticTimesPlayed ?? tacticTimesPlayed);
-      tlog('finishPuzzle:rating', {
-        delta: data?.delta,
-        userRating: data?.userRating,
-        tacticRating: data?.tacticRating,
-      });
-    } catch {}
   }
 
   async function onBoardMove({ from, to, san, newFen }) {
@@ -581,7 +610,7 @@ export default function TacticsPage() {
               onDislike={() => submitFeedback(false)}
               onOpenInLichess={() => window.open(puzzleLink, '_blank')}
               onNextPuzzle={loadNextPuzzle}
-              disabled={loading}
+              disabled={loading || ratingSavePending}
             />
           </section>
         </div>

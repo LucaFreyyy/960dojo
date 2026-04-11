@@ -131,13 +131,17 @@ export default function ChessBoard({
             try {
               const promoCtx = getPromotionContext(positionRef.current, orig, dest);
               if (promoCtx.needed) {
-                // Keep prior highlight while promotion choice is pending.
-                cg.set({ lastMove: previousLastMove });
-                promotion = await requestPromotion({
-                  color: promoCtx.color,
-                  dest,
-                  orientation: orientationRef.current,
-                });
+                if (metadata?.premove) {
+                  promotion = 'queen';
+                } else {
+                  // Keep prior highlight while promotion choice is pending.
+                  cg.set({ lastMove: previousLastMove });
+                  promotion = await requestPromotion({
+                    color: promoCtx.color,
+                    dest,
+                    orientation: orientationRef.current,
+                  });
+                }
                 if (!promotion) {
                   cg.set({
                     fen: fenRef.current,
