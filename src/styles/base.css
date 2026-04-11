@@ -22,6 +22,7 @@ body {
   background: var(--bg-page);
   background-color: var(--bg-deep);
   overscroll-behavior-y: none;
+  padding-bottom: calc(var(--page-scroll-past) + env(safe-area-inset-bottom, 0px));
 }
 
 main {

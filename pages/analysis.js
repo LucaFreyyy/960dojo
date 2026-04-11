@@ -1,4 +1,5 @@
 import Head from 'next/head';
+import { useRouter } from 'next/router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Chessboard from '../components/Chessboard';
 import MoveList from '../components/MoveList';
@@ -12,6 +13,7 @@ import { Chess } from '../lib/chessCompat';
 import { applyBoardMoveToChessGame } from '../lib/openingsGame';
 import { analyzeFenMultipvStream, uciPvToSanString } from '../lib/stockfishUtils';
 import { parsePgnTree } from '../lib/moveListEval';
+import { takePgnForImportNonce } from '../lib/analysisSessionImport';
 
 const EXAMPLE_BACKRANK = 'bbnnrkqr';
 const MAX_DEPTH_CAP = 50;
@@ -233,6 +235,9 @@ function getPositionAtSelection(startFen, mainline, selection) {
 }
 
 export default function AnalysisPage() {
+  const router = useRouter();
+  /** Survives React Strict Mode remount after takePgnForImportNonce removed the payload from localStorage. */
+  const tacticImportPgnStashRef = useRef({ nonce: null, pgn: '' });
   const numberToBackrank = useMemo(buildNumberToBackrankMap, []);
   const backrankToNumber = useMemo(() => buildBackrankToNumberMap(numberToBackrank), [numberToBackrank]);
 
@@ -555,35 +560,72 @@ export default function AnalysisPage() {
     }
   }, [fenInput, backrankToNumber]);
 
+  const applyImportedPgnText = useCallback(
+    (rawText, { infoMessage: msg = 'Imported PGN.' } = {}) => {
+      const raw = String(rawText || '').trim();
+      if (!raw) {
+        setInfoMessage('Empty PGN.');
+        return false;
+      }
+      setPgnInput(raw);
+      let importedStartFen = null;
+      const fenTagMatch = raw.match(/\[FEN\s+"([^"]+)"\]/i);
+      if (fenTagMatch?.[1]) {
+        try {
+          const gFen = new Chess(fenTagMatch[1], { chess960: true });
+          importedStartFen = gFen.fen();
+          setStartFen(importedStartFen);
+        } catch {}
+      }
+      const backrank = importedStartFen ? extract960StartingBackrankFromFen(importedStartFen) : null;
+      if (backrank) {
+        const mappedNr = backrankToNumber.get(backrank);
+        if (Number.isInteger(mappedNr)) setPositionNr(mappedNr);
+        setBackrankInput(backrank);
+      }
+      const tree = parsePgnTree(raw);
+      setMainline(tree);
+      setSelection({ index: Math.max(-1, tree.length - 1), variationPath: [] });
+      setEvalByKey(new Map());
+      setDepthByKey(new Map());
+      setDepthReached(0);
+      setEngineEvalCp(null);
+      setEngineMultipvLines([]);
+      engineStateRef.current = { key: null, depth: 0, cpWhite: null };
+      setInfoMessage(msg);
+      return true;
+    },
+    [backrankToNumber]
+  );
+
   const importPgn = useCallback(() => {
-    const raw = pgnInput.trim();
-    if (!raw) return;
-    let importedStartFen = null;
-    const fenTagMatch = raw.match(/\[FEN\s+"([^"]+)"\]/i);
-    if (fenTagMatch?.[1]) {
-      try {
-        const gFen = new Chess(fenTagMatch[1], { chess960: true });
-        importedStartFen = gFen.fen();
-        setStartFen(importedStartFen);
-      } catch {}
+    applyImportedPgnText(pgnInput.trim());
+  }, [pgnInput, applyImportedPgnText]);
+
+  useEffect(() => {
+    if (!router.isReady) return;
+    if (router.query.importPgn !== '1') return;
+    const nRaw = router.query.n;
+    const n = Array.isArray(nRaw) ? nRaw[0] : nRaw;
+    if (!n) return;
+
+    let raw = '';
+    if (tacticImportPgnStashRef.current.nonce === n && tacticImportPgnStashRef.current.pgn) {
+      raw = tacticImportPgnStashRef.current.pgn;
+    } else {
+      raw = takePgnForImportNonce(n);
+      if (raw) {
+        tacticImportPgnStashRef.current = { nonce: n, pgn: raw };
+      }
     }
-    const backrank = importedStartFen ? extract960StartingBackrankFromFen(importedStartFen) : null;
-    if (backrank) {
-      const mappedNr = backrankToNumber.get(backrank);
-      if (Number.isInteger(mappedNr)) setPositionNr(mappedNr);
-      setBackrankInput(backrank);
+
+    if (raw) {
+      applyImportedPgnText(raw, { infoMessage: 'Loaded puzzle from tactics.' });
+    } else {
+      setInfoMessage('No puzzle data found. Use “Open in analysis” from the tactics page.');
     }
-    const tree = parsePgnTree(raw);
-    setMainline(tree);
-    setSelection({ index: Math.max(-1, tree.length - 1), variationPath: [] });
-    setEvalByKey(new Map());
-    setDepthByKey(new Map());
-    setDepthReached(0);
-    setEngineEvalCp(null);
-    setEngineMultipvLines([]);
-    engineStateRef.current = { key: null, depth: 0, cpWhite: null };
-    setInfoMessage('Imported PGN.');
-  }, [pgnInput, backrankToNumber]);
+    router.replace('/analysis', undefined, { shallow: true }).catch(() => {});
+  }, [router.isReady, router.query.importPgn, router.query.n, applyImportedPgnText, router]);
 
   const engineBestLinesForMoveList = useMemo(() => {
     if (!showEngineBestMoves || !engineMultipvLines.length) return null;
@@ -687,7 +729,7 @@ export default function AnalysisPage() {
                 </button>
               ) : null}
               <span className="analysis-engine-eval">
-                {Number.isFinite(engineEvalCp) ? `Eval ${(engineEvalCp / 100).toFixed(2)}` : ''}
+                {Number.isFinite(engineEvalCp) ? `Eval ${formatEvalFromCpWhite(engineEvalCp)}` : ''}
               </span>
             </div>
             <MoveList

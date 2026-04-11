@@ -6,6 +6,8 @@
   --font-sketch: 'Balsamiq Sans', cursive;
 
   --header-height: 4.55rem;
+  /* Extra space below page content so you can scroll past the last block (all pages). */
+  --page-scroll-past: min(22vh, 6rem);
 
   /* Tactics / openings: cap at 560px, shrink on narrow viewports so list height matches board */
   --training-board-size: min(560px, calc(100vw - 2.5rem));

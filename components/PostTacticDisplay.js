@@ -18,6 +18,22 @@ export function OpenInLichessBtn({ onClick, disabled = false }) {
   );
 }
 
+export function OpenInAnalysisBtn({ onClick, disabled = false }) {
+  return (
+    <Button onClick={onClick} disabled={disabled} variant="tactic-analysis" className="btn--block">
+      Open in analysis
+    </Button>
+  );
+}
+
+export function OpenLichessGameBtn({ onClick, disabled = false }) {
+  return (
+    <Button onClick={onClick} disabled={disabled} variant="tactic-lichess" className="btn--block">
+      Open game
+    </Button>
+  );
+}
+
 export function ThumbsUpBtn({ onClick, active = false, disabled = false, roughFilterId }) {
   return (
     <button
@@ -64,9 +80,11 @@ export default function PostTacticDisplay({
   likeChoice,
   onLike,
   onDislike,
-  onOpenInLichess,
+  onOpenInAnalysis,
+  onOpenGame,
+  lichessGameUrl,
+  canOpenInAnalysis = false,
   onNextPuzzle,
-  lichessUrl,
   disabled = false,
   showFeedbackButtons = true,
 }) {
@@ -85,7 +103,22 @@ export default function PostTacticDisplay({
         </defs>
       </svg>
       <div className="post-tactic__title">{solved ? 'Solved' : 'Failed'}</div>
-      {lichessUrl ? <OpenInLichessBtn onClick={onOpenInLichess} disabled={disabled} /> : null}
+      {canOpenInAnalysis || lichessGameUrl ? (
+        <div className="post-tactic__open-actions">
+          {canOpenInAnalysis ? (
+            <OpenInAnalysisBtn
+              onClick={onOpenInAnalysis}
+              disabled={disabled || !onOpenInAnalysis}
+            />
+          ) : null}
+          {lichessGameUrl ? (
+            <OpenLichessGameBtn
+              onClick={onOpenGame}
+              disabled={disabled || !onOpenGame}
+            />
+          ) : null}
+        </div>
+      ) : null}
       {showFeedbackButtons ? (
         <div className="post-tactic__thumbs">
           <ThumbsUpBtn

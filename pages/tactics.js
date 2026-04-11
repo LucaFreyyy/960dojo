@@ -11,6 +11,7 @@ import TacticsPuzzleOverlay from '../components/TacticsPuzzleOverlay';
 import RatingDisplay from '../components/RatingDisplay';
 import { ESTABLISHED_RATING_MIN_ENTRIES } from '../lib/ratingConstants';
 import SectionTitle from '../components/SectionTitle';
+import { stashPgnAndOpenAnalysis } from '../lib/analysisSessionImport';
 
 const TACTICS_DEBUG = true;
 function tlog(...args) {
@@ -62,63 +63,63 @@ function buildPgnFromSan(startFen, mainlineSans, failedVariation = null) {
     if (failedVariation && failedVariation.anchorIndex === i) {
       tokens.push(`(${moveNo}${game.turn() === 'w' ? '.' : '...'} ${failedVariation.san})`);
     }
-    try { game.move(san); } catch { break; }
+    try {
+      game.move(san, { sloppy: true });
+    } catch {
+      break;
+    }
   }
 
   return tokens.join(' ');
+}
+
+/** Minimal Chess960 PGN for our analysis page: puzzle start + only the played puzzle line (linear). */
+function buildPuzzleOnlyPgnForAnalysis(startFen, solutionSans, solved, playedSans, failedVariation) {
+  if (!startFen || !Array.isArray(solutionSans) || solutionSans.length === 0) return null;
+  let sans;
+  if (solved) {
+    sans = [...solutionSans];
+  } else {
+    sans = Array.isArray(playedSans) ? [...playedSans] : [];
+    if (failedVariation?.san) sans.push(failedVariation.san);
+  }
+  const movetext = buildPgnFromSan(startFen, sans, null);
+  if (!movetext.trim()) return null;
+  return [
+    '[Event "960 Dojo tactics puzzle"]',
+    '[Variant "Chess960"]',
+    `[FEN "${startFen}"]`,
+    '[SetUp "1"]',
+    '',
+    movetext.trim(),
+  ].join('\n');
 }
 
 function getVariationKey(path) {
   return `${(path || []).join('|')}:0`;
 }
 
-function lichessUrlAtPly(url, ply, orientation = 'white', startFen = null, solutionMoves = []) {
-  if (!startFen || !Array.isArray(solutionMoves) || solutionMoves.length === 0) {
-    // Fallback to game URL if no solution data
-    if (typeof url !== 'string' || !url) return null;
-    const p = Number(ply);
-    const hashPly = Number.isFinite(p) && p >= 1 ? Math.floor(p) : 0;
-    const base = url.split('#')[0];
-    const color = orientation === 'black' ? 'black' : 'white';
-    const sep = base.includes('?') ? '&' : '?';
-    return `${base}${sep}color=${color}#${hashPly}`;
-  }
-
+/**
+ * Lichess game URL at a ply; POV is `/black` or `/white` after the game id (Lichess convention).
+ */
+function lichessGameUrlAtPly(rawUrl, ply, boardOrientation = 'white') {
+  if (typeof rawUrl !== 'string' || !rawUrl.trim()) return null;
+  const p = Number(ply);
+  const hashPly = Number.isFinite(p) && p >= 1 ? Math.floor(p) : 0;
+  const side = boardOrientation === 'black' ? 'black' : 'white';
   try {
-    // First, get to the position where user starts solving (after opponent's first move)
-    const setupGame = new Chess(startFen, { chess960: true });
-    const firstMove = setupGame.move(solutionMoves[0], { sloppy: true });
-    if (!firstMove) return null;
-    
-    const puzzleStartFen = setupGame.fen();
-    
-    // Now build PGN with remaining moves (the actual solution moves)
-    const game = new Chess(puzzleStartFen, { chess960: true });
-    const pgnMoves = [];
-    
-    for (let i = 1; i < solutionMoves.length; i++) {
-      const san = solutionMoves[i];
-      const moveNo = game.moveNumber();
-      
-      if (game.turn() === 'w') {
-        pgnMoves.push(`${moveNo}. ${san}`);
-      } else {
-        // Only add move number with "..." on first black move or after white move
-        if (i === 1 || solutionMoves[i - 1]) {
-          pgnMoves.push(`${moveNo}... ${san}`);
-        } else {
-          pgnMoves.push(san);
-        }
+    const u = new URL(rawUrl.trim().split('#')[0], 'https://lichess.org');
+    const host = u.hostname.replace(/^www\./i, '');
+    if (host === 'lichess.org') {
+      const parts = u.pathname.split('/').filter(Boolean);
+      const id = parts[0];
+      if (id && /^[a-zA-Z0-9]{8}$/.test(id)) {
+        u.pathname = `/${id}/${side}`;
+        u.search = '';
+        return `${u.href}#${hashPly}`;
       }
-      
-      const move = game.move(san, { sloppy: true });
-      if (!move) break;
     }
-
-    const movesStr = pgnMoves.join(' ');
-    const color = orientation === 'black' ? 'black' : 'white';
-    
-    return `https://lichess.org/analysis/pgn/${encodeURIComponent(`[FEN "${puzzleStartFen}"] ${movesStr}`)}?color=${color}#0`;
+    return `${u.origin}${u.pathname}${u.search}#${hashPly}`;
   } catch {
     return null;
   }
@@ -531,9 +532,15 @@ export default function TacticsPage() {
     } catch {}
   }
 
-  const puzzleLink = useMemo(
-    () => lichessUrlAtPly(tactic?.linkToGame, tactic?.puzzleStartPly, orientation, startFen, solutionSans),
-    [tactic?.linkToGame, tactic?.puzzleStartPly, orientation, startFen, solutionSans]
+  /** Original Lichess game URL at the puzzle ply (not the analysis board). */
+  const lichessGameUrl = useMemo(
+    () => lichessGameUrlAtPly(tactic?.linkToGame, tactic?.puzzleStartPly, orientation),
+    [tactic?.linkToGame, tactic?.puzzleStartPly, orientation]
+  );
+
+  const puzzleOnlyPgnForAnalysis = useMemo(
+    () => buildPuzzleOnlyPgnForAnalysis(startFen, solutionSans, solved, playedSans, failedVariation),
+    [startFen, solutionSans, solved, playedSans, failedVariation]
   );
 
   return (
@@ -605,10 +612,12 @@ export default function TacticsPage() {
               solved={solved}
               likeChoice={likeChoice}
               showFeedbackButtons={!!userId}
-              lichessUrl={puzzleLink}
+              canOpenInAnalysis={Boolean(puzzleOnlyPgnForAnalysis)}
+              lichessGameUrl={lichessGameUrl}
               onLike={() => submitFeedback(true)}
               onDislike={() => submitFeedback(false)}
-              onOpenInLichess={() => window.open(puzzleLink, '_blank')}
+              onOpenInAnalysis={() => puzzleOnlyPgnForAnalysis && stashPgnAndOpenAnalysis(puzzleOnlyPgnForAnalysis)}
+              onOpenGame={() => lichessGameUrl && window.open(lichessGameUrl, '_blank', 'noopener,noreferrer')}
               onNextPuzzle={loadNextPuzzle}
               disabled={loading || ratingSavePending}
             />
