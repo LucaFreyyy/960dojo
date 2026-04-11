@@ -10,13 +10,58 @@ import { positionNrToStartFen } from '../lib/chess960';
 import STARTING_POSITIONS from '../lib/chess960Positions.json';
 import { Chess } from '../lib/chessCompat';
 import { applyBoardMoveToChessGame } from '../lib/openingsGame';
-import { analyzeFenCpWhiteStream } from '../lib/stockfishUtils';
+import { analyzeFenMultipvStream, uciPvToSanString } from '../lib/stockfishUtils';
 import { parsePgnTree } from '../lib/moveListEval';
 
 const EXAMPLE_BACKRANK = 'bbnnrkqr';
 const MAX_DEPTH_CAP = 50;
 const BASE_DEPTH_LIMIT = 20;
 const DEPTH_UNLOCK_STEP = 5;
+const ENGINE_MULTIPV = 5;
+const EMPTY_ANALYSIS_DRAWABLE = { analysisAutoShapes: [], analysisDrawableBrushes: {} };
+
+function formatEvalFromCpWhite(cpWhite) {
+  if (!Number.isFinite(cpWhite)) return '…';
+  const v = cpWhite / 100;
+  if (Math.abs(v) > 100) {
+    const movesToMate = Math.max(0, Math.round(Math.abs(v) - 100));
+    if (movesToMate <= 0) return v < 0 ? '-#' : '#';
+    return v < 0 ? `-#${movesToMate}` : `#${movesToMate}`;
+  }
+  const rounded = Math.round(v * 100) / 100;
+  return rounded > 0 ? `+${rounded}` : `${rounded}`;
+}
+
+function whiteToMoveFromFen(fen) {
+  return Boolean(fen && String(fen).trim().split(/\s+/)[1] !== 'b');
+}
+
+/** Centipawn quality from the side to move's perspective (higher = better for them). */
+function stmQualityCp(cpWhite, whiteToMove) {
+  if (!Number.isFinite(cpWhite)) return null;
+  return whiteToMove ? cpWhite : -cpWhite;
+}
+
+/** How many centipawns worse this line is vs the best engine line (index 0). */
+function lossCpVsBestLine(lines, lineIndex, whiteToMove) {
+  if (!lines?.length || lineIndex <= 0) return 0;
+  const q0 = stmQualityCp(lines[0].cpWhite, whiteToMove);
+  const qi = stmQualityCp(lines[lineIndex].cpWhite, whiteToMove);
+  if (q0 === null || qi === null) return 0;
+  return Math.max(0, q0 - qi);
+}
+
+/** Green (best) → yellow → red as loss grows (cap ~100cp for full red shift). */
+function lossToEngineBrush(lossCp) {
+  const cap = 100;
+  const t = Math.min(1, Math.max(0, lossCp / cap));
+  const hue = 118 * (1 - t) + 12 * t;
+  return {
+    color: `hsl(${hue} 74% 40%)`,
+    opacity: 0.9,
+    lineWidth: 10,
+  };
+}
 
 function buildStartFenFromBackrank(backrank) {
   const white = backrank.toUpperCase();
@@ -209,8 +254,28 @@ export default function AnalysisPage() {
   const [evalByKey, setEvalByKey] = useState(new Map());
   const [depthByKey, setDepthByKey] = useState(new Map());
   const [moveCommentDraft, setMoveCommentDraft] = useState('');
+  const [engineMultipvLines, setEngineMultipvLines] = useState([]);
+  const [showEngineBestMoves, setShowEngineBestMoves] = useState(true);
+  const [hoveredEngineLineRank, setHoveredEngineLineRank] = useState(null);
   const engineCancelRef = useRef(null);
   const engineStateRef = useRef({ key: null, depth: 0, cpWhite: null });
+
+  const analysisPositionKey = useMemo(() => {
+    const { fen } = getPositionAtSelection(startFen, mainline, selection);
+    const idx = Number.isInteger(selection?.index) ? selection.index : -1;
+    const path = Array.isArray(selection?.variationPath) ? selection.variationPath : [];
+    const sk = idx < 0 ? 'main:initial' : `${path.join('|') || 'main'}:${idx}`;
+    return `${fen}::${sk}`;
+  }, [startFen, mainline, selection]);
+
+  useEffect(() => {
+    setEngineMultipvLines([]);
+    setHoveredEngineLineRank(null);
+  }, [analysisPositionKey]);
+
+  useEffect(() => {
+    if (!showEngineBestMoves) setHoveredEngineLineRank(null);
+  }, [showEngineBestMoves]);
 
   const treePgn = useMemo(() => buildPgnFromTree(startFen, mainline), [startFen, mainline]);
   const moveListEvalData = useMemo(() => buildEvalDataFromMap(mainline, evalByKey), [mainline, evalByKey]);
@@ -238,6 +303,7 @@ export default function AnalysisPage() {
     setDepthByKey(new Map());
     setDepthReached(0);
     setEngineEvalCp(null);
+    setEngineMultipvLines([]);
     engineStateRef.current = { key: null, depth: 0, cpWhite: null };
     setInfoMessage('');
   }, [numberToBackrank, positionNr, startFen]);
@@ -332,6 +398,7 @@ export default function AnalysisPage() {
     setDepthByKey(new Map());
     setDepthReached(0);
     setEngineEvalCp(null);
+    setEngineMultipvLines([]);
     engineStateRef.current = { key: null, depth: 0, cpWhite: null };
     setInfoMessage('');
   }, [backrankInput, backrankToNumber, positionNr, startFen]);
@@ -376,6 +443,7 @@ export default function AnalysisPage() {
   }, [currentFen, selection]);
 
   useEffect(() => {
+    const { fen: analysisFen } = getPositionAtSelection(startFen, mainline, selection);
     const selectionKey = selection.index < 0
       ? 'main:initial'
       : `${(selection.variationPath || []).join('|') || 'main'}:${selection.index}`;
@@ -392,7 +460,7 @@ export default function AnalysisPage() {
       setEngineEvalCp(null);
     }
 
-    if (!engineOn || !currentFen) {
+    if (!engineOn || !analysisFen) {
       setEngineRunning(false);
       return;
     }
@@ -403,8 +471,9 @@ export default function AnalysisPage() {
 
     if (engineCancelRef.current) engineCancelRef.current();
     setEngineRunning(true);
-    const cancel = analyzeFenCpWhiteStream(currentFen, depthLimit, {
-      onInfo: ({ depth, cpWhite }) => {
+    const cancel = analyzeFenMultipvStream(analysisFen, depthLimit, {
+      multipv: ENGINE_MULTIPV,
+      onInfo: ({ depth, cpWhite, lines }) => {
         const infoDepth = Math.max(bootDepth, depth || 0);
         setDepthReached((d) => Math.max(d, infoDepth));
         setDepthByKey((prev) => {
@@ -421,8 +490,11 @@ export default function AnalysisPage() {
             return next;
           });
         }
+        if (Array.isArray(lines) && lines.length) {
+          setEngineMultipvLines(lines);
+        }
       },
-      onDone: ({ depth, cpWhite }) => {
+      onDone: ({ depth, cpWhite, lines }) => {
         setEngineRunning(false);
         const finalDepth = Math.max(bootDepth, depth || 0);
         setDepthReached((d) => Math.max(d, finalDepth));
@@ -440,6 +512,9 @@ export default function AnalysisPage() {
           });
         }
         engineStateRef.current = { key: selectionKey, depth: finalDepth, cpWhite };
+        if (Array.isArray(lines) && lines.length) {
+          setEngineMultipvLines(lines);
+        }
       },
     });
     engineCancelRef.current = cancel;
@@ -447,7 +522,7 @@ export default function AnalysisPage() {
       if (engineCancelRef.current) engineCancelRef.current();
       setEngineRunning(false);
     };
-  }, [engineOn, currentFen, depthLimit, selection]);
+  }, [engineOn, startFen, mainline, selection, depthLimit]);
 
   const canUnlockDepth = depthLimit < MAX_DEPTH_CAP && depthReached >= depthLimit && depthLimit >= BASE_DEPTH_LIMIT;
 
@@ -471,6 +546,7 @@ export default function AnalysisPage() {
       setEvalByKey(new Map());
       setDepthByKey(new Map());
       setEngineEvalCp(null);
+      setEngineMultipvLines([]);
       setDepthReached(0);
       engineStateRef.current = { key: null, depth: 0, cpWhite: null };
       setInfoMessage('Imported FEN.');
@@ -504,9 +580,52 @@ export default function AnalysisPage() {
     setDepthByKey(new Map());
     setDepthReached(0);
     setEngineEvalCp(null);
+    setEngineMultipvLines([]);
     engineStateRef.current = { key: null, depth: 0, cpWhite: null };
     setInfoMessage('Imported PGN.');
   }, [pgnInput, backrankToNumber]);
+
+  const engineBestLinesForMoveList = useMemo(() => {
+    if (!showEngineBestMoves || !engineMultipvLines.length) return null;
+    const fen = currentFen;
+    return engineMultipvLines.map((ln) => {
+      const sanPv = uciPvToSanString(fen, ln.pvUci);
+      return {
+        rank: ln.multipv,
+        evalText: formatEvalFromCpWhite(ln.cpWhite),
+        pvText: sanPv || (Array.isArray(ln.pvUci) ? ln.pvUci.join(' ') : ''),
+      };
+    });
+  }, [showEngineBestMoves, engineMultipvLines, currentFen]);
+
+  const whiteToMove = whiteToMoveFromFen(currentFen);
+
+  const { analysisAutoShapes, analysisDrawableBrushes } = useMemo(() => {
+    if (!showEngineBestMoves || !engineMultipvLines.length) {
+      return EMPTY_ANALYSIS_DRAWABLE;
+    }
+    const sq = (k) => typeof k === 'string' && /^[a-h][1-8]$/.test(k);
+    const slice = engineMultipvLines.slice(0, ENGINE_MULTIPV);
+    const linesToShow =
+      hoveredEngineLineRank != null
+        ? slice.filter((ln) => ln.multipv === hoveredEngineLineRank)
+        : slice;
+
+    const brushes = {};
+    const shapes = [];
+    for (const ln of linesToShow) {
+      if (!sq(ln.firstFrom) || !sq(ln.firstTo)) continue;
+      const lineIdx = slice.findIndex((x) => x.multipv === ln.multipv);
+      const loss = lossCpVsBestLine(slice, lineIdx, whiteToMove);
+      const brushKey = `engl-${ln.multipv}`;
+      if (!brushes[brushKey]) {
+        const b = lossToEngineBrush(loss);
+        brushes[brushKey] = { key: brushKey, ...b };
+      }
+      shapes.push({ orig: ln.firstFrom, dest: ln.firstTo, brush: brushKey });
+    }
+    return { analysisAutoShapes: shapes, analysisDrawableBrushes: brushes };
+  }, [showEngineBestMoves, engineMultipvLines, hoveredEngineLineRank, whiteToMove]);
 
   return (
     <>
@@ -525,6 +644,8 @@ export default function AnalysisPage() {
                 orientation="white"
                 onMove={onBoardMove}
                 lastMove={lastMove}
+                autoShapes={analysisAutoShapes}
+                extraDrawableBrushes={analysisDrawableBrushes}
               />
             </div>
             <div className="openings-board-head">
@@ -546,6 +667,14 @@ export default function AnalysisPage() {
                 onClick={() => setEngineOn((v) => !v)}
               >
                 {engineOn ? 'Engine: On' : 'Engine: Off'}
+              </button>
+              <button
+                type="button"
+                className="btn btn--sm btn--secondary"
+                disabled={!engineMultipvLines.length}
+                onClick={() => setShowEngineBestMoves((v) => !v)}
+              >
+                {showEngineBestMoves ? 'Hide best moves' : 'Show best moves'}
               </button>
               <span className="analysis-engine-depth">Depth {depthReached || 0}</span>
               {canUnlockDepth ? (
@@ -572,6 +701,8 @@ export default function AnalysisPage() {
               selectedPosition={selection}
               resetSelectionOnPgnChange={false}
               onBrowsePositionChanged={handleBrowsePositionChanged}
+              engineBestLines={engineBestLinesForMoveList}
+              onEngineLineHover={showEngineBestMoves ? setHoveredEngineLineRank : null}
             />
             <AnalysisCommentBox
               value={moveCommentDraft}

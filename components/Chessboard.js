@@ -43,6 +43,10 @@ export default function ChessBoard({
    */
   premoveEnabled = false,
   premovableCastle = false,
+  /** Engine / analysis arrows: `{ orig, dest, brush }[]` — uses chessground `drawable.autoShapes` */
+  autoShapes = [],
+  /** Extra chessground brush defs merged into `drawable.brushes` (e.g. eval-colored arrows). */
+  extraDrawableBrushes = null,
 }) {
   const containerRef = useRef(null);
   const positionRef = useRef(null);
@@ -117,6 +121,12 @@ export default function ChessBoard({
         enabled: premoveEnabled && !disabled,
         showDests: true,
         castle: premovableCastle,
+      },
+      drawable: {
+        autoShapes: Array.isArray(autoShapes) ? autoShapes : [],
+        ...(extraDrawableBrushes && typeof extraDrawableBrushes === 'object' && Object.keys(extraDrawableBrushes).length > 0
+          ? { brushes: extraDrawableBrushes }
+          : {}),
       },
       movable: {
         free: false,
@@ -224,6 +234,12 @@ export default function ChessBoard({
       fen: fen,
       turnColor: turnColorFromFen(fen),
       lastMove: Array.isArray(lastMove) ? lastMove : undefined,
+      drawable: {
+        autoShapes: Array.isArray(autoShapes) ? autoShapes : [],
+        ...(extraDrawableBrushes && typeof extraDrawableBrushes === 'object' && Object.keys(extraDrawableBrushes).length > 0
+          ? { brushes: extraDrawableBrushes }
+          : {}),
+      },
       premovable: {
         enabled: premoveEnabled && !disabled,
         showDests: true,
@@ -239,7 +255,7 @@ export default function ChessBoard({
     } else {
       ground.cancelPremove();
     }
-  }, [fen, ground, disabled, lastMove, movableColor, premoveEnabled, premovableCastle]);
+  }, [fen, ground, disabled, lastMove, movableColor, premoveEnabled, premovableCastle, autoShapes, extraDrawableBrushes]);
 
   useEffect(() => {
     if (!ground) return;

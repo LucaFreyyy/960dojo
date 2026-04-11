@@ -86,6 +86,10 @@ export default function MoveList({
     resetSelectionOnPgnChange = true,
     className = '',
     allowSparseEvalData = false,
+    /** Optional engine MultiPV rows shown above the game moves (analysis). */
+    engineBestLines = null,
+    /** `(rank | null)` — rank is engine multipv index (1-based); null when pointer leaves the block. */
+    onEngineLineHover = null,
 }) {
     const tree = useMemo(() => parsePgnTree(pgn), [pgn]);
     const template = useMemo(() => buildEvalTemplate(tree), [tree]);
@@ -377,6 +381,27 @@ export default function MoveList({
                 <button type="button" onClick={goNext} className="ml-btn">{'>'}</button>
                 <button type="button" onClick={goToMainlineEnd} className="ml-btn">{'>>'}</button>
             </div>
+
+            {Array.isArray(engineBestLines) && engineBestLines.length > 0 ? (
+                <div
+                    className="move-list__engine-lines"
+                    onMouseLeave={() => onEngineLineHover?.(null)}
+                >
+                    <div className="move-list__engine-lines-title">Engine lines</div>
+                    <ol className="move-list__engine-lines-list">
+                        {engineBestLines.map((row) => (
+                            <li
+                                key={row.rank}
+                                className="move-list__engine-line"
+                                onMouseEnter={() => onEngineLineHover?.(row.rank)}
+                            >
+                                <span className="move-list__engine-line-eval">{row.evalText}</span>
+                                <span className="move-list__engine-line-pv">{row.pvText}</span>
+                            </li>
+                        ))}
+                    </ol>
+                </div>
+            ) : null}
 
             <div className="move-list__body">
                 {tree.length > 0 ? (
