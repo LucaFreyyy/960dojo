@@ -22,6 +22,7 @@ import {
   OPENINGS_EVAL_DEPTH_MOVE,
   buildMoveListEvalDataFromTrail,
 } from '../lib/openingsEval';
+import { createPosition } from '../lib/chessopsUtils';
 import {
   applyBoardMoveToChessGame,
   applyMoveMatchingTargetFen,
@@ -29,6 +30,7 @@ import {
   countUserMovesFromSans,
   sideToMoveFromFen,
 } from '../lib/openingsGame';
+import { playChessMove, playOpeningSessionEnd } from '../lib/soundEffects';
 import { computeOpeningsRatingDelta } from '../lib/openingsRating';
 import { createRatedOpeningRow } from '../lib/openingsUserOpening';
 import {
@@ -356,6 +358,7 @@ export default function OpeningsPage() {
       }
 
       setMoveListLoading(false);
+      playOpeningSessionEnd(lastFen, userColorRef.current);
       setPhase('done');
     } finally {
       endingGameRef.current = false;
@@ -390,6 +393,9 @@ export default function OpeningsPage() {
       currentFenRef.current = newFen;
       setLastMove(res.lastMove || undefined);
       setBrowsePosition({ index: newSans.length - 1, variationPath: [] });
+
+      const posAfter = createPosition(newFen);
+      playChessMove({ inCheck: Boolean(posAfter?.isCheck()) });
 
       if (isRatedRef.current && openingRowIdRef.current) {
         const pgnText = buildPgnFromSans(startFenRef.current, newSans);

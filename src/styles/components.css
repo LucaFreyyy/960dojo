@@ -1153,12 +1153,31 @@
   position: relative;
   width: 100%;
   max-width: var(--training-board-size);
+  margin-inline: auto;
+  line-height: 0;
 }
 
 .chessboard-root {
   width: 100%;
   max-width: var(--training-board-size);
   aspect-ratio: 1 / 1;
+  display: block;
+  margin: 0;
+  padding: 0;
+}
+
+/* Chessground mounts on .chessboard-root and adds .cg-wrap — keep a strict square box for bounds math */
+.chessboard-root.cg-wrap {
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 0;
+  /* cg-container is absolutely positioned; anchor to top-left so it matches getBoundingClientRect math */
+  position: relative;
+}
+
+.chessboard-root.cg-wrap cg-container {
+  left: 0;
+  top: 0;
 }
 
 /* Fixed-size board for training pages (no resize handle) */

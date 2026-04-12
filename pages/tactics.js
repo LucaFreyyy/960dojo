@@ -12,6 +12,8 @@ import RatingDisplay from '../components/RatingDisplay';
 import { ESTABLISHED_RATING_MIN_ENTRIES } from '../lib/ratingConstants';
 import SectionTitle from '../components/SectionTitle';
 import { stashPgnAndOpenAnalysis } from '../lib/analysisSessionImport';
+import { createPosition } from '../lib/chessopsUtils';
+import { playChessMove, playLoseSound, playWinSound } from '../lib/soundEffects';
 
 const TACTICS_DEBUG = true;
 function tlog(...args) {
@@ -333,6 +335,8 @@ export default function TacticsPage() {
       playedLen: playedSansRef.current.length,
       solutionLen: solutionSansRef.current.length,
     });
+    if (didSolve) playWinSound();
+    else playLoseSound();
     if (replyTimerRef.current) {
       clearTimeout(replyTimerRef.current);
       replyTimerRef.current = null;
@@ -481,6 +485,8 @@ export default function TacticsPage() {
         return;
       }
       const afterReply = game.fen();
+      const posAfter = createPosition(afterReply);
+      playChessMove({ inCheck: Boolean(posAfter?.isCheck()) });
       const afterPlayed = [...newPlayed, rm.san];
       setPlayedSans(afterPlayed);
       setCurrentFen(afterReply);

@@ -1,6 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { parseSquare } from 'chessops/util';
 import { Chessground } from 'chessground';
 import { createPosition, toDests, makeMove, turnColorFromFen } from '../lib/chessopsUtils';
+import { playChessMove, playPieceTouch } from '../lib/soundEffects';
 
 const DBG = process.env.NODE_ENV === 'development';
 const PROMOTION_CHOICES = ['queen', 'rook', 'bishop', 'knight'];
@@ -60,8 +62,21 @@ export default function ChessBoard({
   const premovableCastleRef = useRef(premovableCastle);
   const fenRef = useRef(fen);
   const promotionResolverRef = useRef(null);
+  const pieceSelectHandlerRef = useRef(() => {});
+  pieceSelectHandlerRef.current = (key) => {
+    if (!key || disabledRef.current) return;
+    const pos = positionRef.current;
+    if (!pos) return;
+    const sq = parseSquare(key);
+    if (sq === undefined) return;
+    if (pos.board.get(sq)) playPieceTouch();
+  };
+  /** Chessground 9+ calls `state.events.select` when a square is chosen (tap or drag start), not `selectable.events.set`. */
+  const onChessSelect = useMemo(() => (key) => pieceSelectHandlerRef.current(key), []);
   const [ground, setGround] = useState(null);
   const [promotionUI, setPromotionUI] = useState(null);
+
+  const chessEvents = useMemo(() => ({ select: onChessSelect }), [onChessSelect]);
 
   const requestPromotion = (payload) =>
     new Promise((resolve) => {
@@ -117,6 +132,8 @@ export default function ChessBoard({
       orientation: orientation,
       autoCastle: false,
       turnColor: turnColorFromFen(fen),
+      events: chessEvents,
+      selectable: { enabled: !disabled },
       premovable: {
         enabled: premoveEnabled && !disabled,
         showDests: true,
@@ -145,7 +162,11 @@ export default function ChessBoard({
                   promotion = 'queen';
                 } else {
                   // Keep prior highlight while promotion choice is pending.
-                  cg.set({ lastMove: previousLastMove });
+                  cg.set({
+                    lastMove: previousLastMove,
+                    events: chessEvents,
+                    selectable: { enabled: !disabledRef.current },
+                  });
                   promotion = await requestPromotion({
                     color: promoCtx.color,
                     dest,
@@ -158,6 +179,8 @@ export default function ChessBoard({
                     turnColor: turnColorFromFen(fenRef.current),
                     orientation: orientationRef.current,
                     lastMove: previousLastMove,
+                    events: chessEvents,
+                    selectable: { enabled: !disabledRef.current },
                     movable: {
                       color: disabledRef.current ? 'none' : movableColorRef.current,
                       dests: disabledRef.current ? new Map() : toDests(positionRef.current),
@@ -175,6 +198,9 @@ export default function ChessBoard({
             if (DBG && (san === 'O-O' || san === 'O-O-O')) {
               console.log('[Chessboard] castling', { san, orig, dest, before: fen, after: newFen });
             }
+
+            const inCheck = positionRef.current.isCheck();
+            playChessMove({ inCheck });
 
             if (onMoveRef.current) {
               onMoveRef.current({
@@ -194,6 +220,8 @@ export default function ChessBoard({
               fen: newFen,
               turnColor: turnColorFromFen(newFen),
               orientation: orientationRef.current,
+              events: chessEvents,
+              selectable: { enabled: !disabledRef.current },
               premovable: {
                 enabled: premoveEnabledRef.current && !disabledRef.current,
                 showDests: true,
@@ -210,7 +238,7 @@ export default function ChessBoard({
       },
     });
     setGround(cg);
-  }, [fen, ground, orientation, disabled, movableColor, premoveEnabled, premovableCastle]);
+  }, [fen, ground, orientation, disabled, movableColor, premoveEnabled, premovableCastle, chessEvents]);
 
   useEffect(() => () => {
     if (promotionResolverRef.current) {
@@ -234,6 +262,8 @@ export default function ChessBoard({
       fen: fen,
       turnColor: turnColorFromFen(fen),
       lastMove: Array.isArray(lastMove) ? lastMove : undefined,
+      events: chessEvents,
+      selectable: { enabled: !disabled },
       drawable: {
         autoShapes: Array.isArray(autoShapes) ? autoShapes : [],
         ...(extraDrawableBrushes && typeof extraDrawableBrushes === 'object' && Object.keys(extraDrawableBrushes).length > 0
@@ -255,7 +285,7 @@ export default function ChessBoard({
     } else {
       ground.cancelPremove();
     }
-  }, [fen, ground, disabled, lastMove, movableColor, premoveEnabled, premovableCastle, autoShapes, extraDrawableBrushes]);
+  }, [fen, ground, disabled, lastMove, movableColor, premoveEnabled, premovableCastle, autoShapes, extraDrawableBrushes, chessEvents]);
 
   useEffect(() => {
     if (!ground) return;
@@ -264,6 +294,8 @@ export default function ChessBoard({
     ground.set({
       orientation: orientationRef.current,
       turnColor: turnColorFromFen(fen),
+      events: chessEvents,
+      selectable: { enabled: !disabled },
       premovable: {
         enabled: premoveEnabled && !disabled,
         showDests: true,
@@ -274,18 +306,20 @@ export default function ChessBoard({
         dests: disabled ? new Map() : toDests(positionRef.current),
       },
     });
-  }, [fen, orientation, ground, disabled, movableColor, premoveEnabled, premovableCastle]);
+  }, [fen, orientation, ground, disabled, movableColor, premoveEnabled, premovableCastle, chessEvents]);
 
   useEffect(() => {
     if (!ground) return;
     ground.set({
+      events: chessEvents,
+      selectable: { enabled: !disabled },
       premovable: {
         enabled: premoveEnabled && !disabled,
         showDests: true,
         castle: premovableCastle,
       },
     });
-  }, [ground, premoveEnabled, premovableCastle, disabled]);
+  }, [ground, premoveEnabled, premovableCastle, disabled, chessEvents]);
 
   if (!fen) {
     return (
