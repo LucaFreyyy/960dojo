@@ -30,7 +30,7 @@ import {
   countUserMovesFromSans,
   sideToMoveFromFen,
 } from '../lib/openingsGame';
-import { playChessMove, playOpeningSessionEnd } from '../lib/soundEffects';
+import { playChessMove, playLoseSound, playWinSound } from '../lib/soundEffects';
 import { computeOpeningsRatingDelta } from '../lib/openingsRating';
 import { createRatedOpeningRow } from '../lib/openingsUserOpening';
 import {
@@ -366,7 +366,12 @@ export default function OpeningsPage() {
       }
 
       setMoveListLoading(false);
-      playOpeningSessionEnd(lastFen, userColorRef.current);
+      const uc = userColorRef.current;
+      const userAhead =
+        Number.isFinite(finalCp) &&
+        ((uc === 'white' && finalCp > 0) || (uc === 'black' && finalCp < 0));
+      if (userAhead) playWinSound();
+      else playLoseSound();
       setPhase('done');
     } finally {
       endingGameRef.current = false;
