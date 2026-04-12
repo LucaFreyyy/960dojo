@@ -41,6 +41,8 @@ import {
   updateUserOpening,
 } from '../lib/openingsDb';
 import { hashEmail } from '../lib/hashEmail';
+import { lastMoveSquaresAtMainlineSansIndex } from '../lib/trainingBrowseHighlight';
+import { useMoveListWheelNavigation } from '../lib/useMoveListWheelNavigation';
 
 const USER_TARGET_MOVES = 11;
 
@@ -79,7 +81,7 @@ export default function OpeningsPage() {
 
   const [playedSans, setPlayedSans] = useState([]);
   const [currentFen, setCurrentFen] = useState(null);
-  const [lastMove, setLastMove] = useState(undefined);
+  const { moveListNavRef, onWheelNavigate } = useMoveListWheelNavigation();
 
   const [browsePosition, setBrowsePosition] = useState({ index: -1, variationPath: [] });
   const [opponentBusy, setOpponentBusy] = useState(false);
@@ -208,6 +210,12 @@ export default function OpeningsPage() {
     const idx = Math.max(0, browsePosition.index + 1);
     return fenByIndex[idx] || currentFen || startFen;
   }, [phase, openingNr, browsePosition, fenByIndex, currentFen, startFen]);
+
+  const boardLastMove = useMemo(() => {
+    if (phase === 'setup' || !startFen) return undefined;
+    if (browsePosition.variationPath?.length) return undefined;
+    return lastMoveSquaresAtMainlineSansIndex(startFen, playedSans, browsePosition.index);
+  }, [phase, startFen, playedSans, browsePosition]);
 
   const opponentToMove = useMemo(() => {
     if (phase !== 'playing' || !isBrowsingLive || !displayedFen) return false;
@@ -391,7 +399,6 @@ export default function OpeningsPage() {
       setPlayedSans(newSans);
       setCurrentFen(newFen);
       currentFenRef.current = newFen;
-      setLastMove(res.lastMove || undefined);
       setBrowsePosition({ index: newSans.length - 1, variationPath: [] });
 
       const posAfter = createPosition(newFen);
@@ -502,7 +509,6 @@ export default function OpeningsPage() {
       setPlayedSans(newSans);
       setCurrentFen(newFen);
       currentFenRef.current = newFen;
-      setLastMove([from, to]);
       setBrowsePosition({ index: newSans.length - 1, variationPath: [] });
 
       userMovesDoneRef.current += 1;
@@ -570,7 +576,6 @@ export default function OpeningsPage() {
         const trail = computeFenTrail(sf, sans);
         setCurrentFen(trail[trail.length - 1] || sf);
         currentFenRef.current = trail[trail.length - 1] || sf;
-        setLastMove(undefined);
         setBrowsePosition({ index: Math.max(-1, sans.length - 1), variationPath: [] });
         setOpeningRowId(rowId);
         openingRowIdRef.current = rowId;
@@ -623,7 +628,6 @@ export default function OpeningsPage() {
     setPlayedSans([]);
     setCurrentFen(startPosFen);
     currentFenRef.current = startPosFen;
-    setLastMove(undefined);
     setBrowsePosition({ index: -1, variationPath: [] });
 
     evalHistoryTrailRef.current = [];
@@ -660,7 +664,6 @@ export default function OpeningsPage() {
     evalJobsRef.current = [];
     evalHistoryTrailRef.current = [];
     setPlayedSans([]);
-    setLastMove(undefined);
     setBrowsePosition({ index: -1, variationPath: [] });
     userMovesDoneRef.current = 0;
 
@@ -814,7 +817,8 @@ export default function OpeningsPage() {
                 orientation={phase === 'setup' && colorChoice === 'black' ? 'black' : (userColor === 'black' ? 'black' : 'white')}
                 onMove={onBoardMove}
                 disabled={phase !== 'playing' || !isBrowsingLive}
-                lastMove={lastMove}
+                lastMove={boardLastMove}
+                onWheelNavigate={showMoveList ? onWheelNavigate : undefined}
                 movableColor={userColor}
                 premoveEnabled
               />
@@ -857,6 +861,7 @@ export default function OpeningsPage() {
                   </div>
                 ) : null}
                 <MoveList
+                  ref={moveListNavRef}
                   pgn={moveListPgn}
                   evalData={moveListEvalData}
                   userColor={userColor}

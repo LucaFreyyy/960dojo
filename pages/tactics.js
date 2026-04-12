@@ -13,6 +13,8 @@ import { ESTABLISHED_RATING_MIN_ENTRIES } from '../lib/ratingConstants';
 import SectionTitle from '../components/SectionTitle';
 import { stashPgnAndOpenAnalysis } from '../lib/analysisSessionImport';
 import { createPosition } from '../lib/chessopsUtils';
+import { tacticsBoardLastMove } from '../lib/trainingBrowseHighlight';
+import { useMoveListWheelNavigation } from '../lib/useMoveListWheelNavigation';
 import { playChessMove, playLoseSound, playWinSound } from '../lib/soundEffects';
 
 const TACTICS_DEBUG = true;
@@ -149,7 +151,7 @@ export default function TacticsPage() {
 
   const [playedSans, setPlayedSans] = useState([]);
   const [currentFen, setCurrentFen] = useState(null);
-  const [lastMove, setLastMove] = useState(undefined);
+  const { moveListNavRef, onWheelNavigate } = useMoveListWheelNavigation();
 
   const [finished, setFinished] = useState(false);
   const [solved, setSolved] = useState(false);
@@ -220,6 +222,11 @@ export default function TacticsPage() {
     [browsePosition]
   );
 
+  const boardLastMove = useMemo(
+    () => tacticsBoardLastMove(startFen, lineForDisplay, browsePosition, failedVariation),
+    [startFen, lineForDisplay, browsePosition, failedVariation]
+  );
+
   const handleBrowsePositionChanged = useCallback((index, variationPath) => {
     setBrowsePosition((prev) => {
       const nextPath = Array.isArray(variationPath) ? variationPath : [];
@@ -268,7 +275,6 @@ export default function TacticsPage() {
     setLikeChoice(null);
     setFailedVariation(null);
     setPlayedSans([]);
-    setLastMove(undefined);
     setUserDelta(null);
     setPuzzleDelta(null);
     setSolutionSans([]);
@@ -298,7 +304,6 @@ export default function TacticsPage() {
       setOrientation(game.turn() === 'b' ? 'black' : 'white');
       setCurrentFen(game.fen());
       setPlayedSans([firstMove.san]);
-      setLastMove([firstMove.from, firstMove.to]);
       setBrowsePosition({ index: 0, variationPath: [] });
       setStartFen(nextFen);
       setSolutionSans(parsedLine);
@@ -462,7 +467,6 @@ export default function TacticsPage() {
     const newPlayed = [...played, san];
     setPlayedSans(newPlayed);
     setCurrentFen(newFen);
-    setLastMove([from, to]);
     setBrowsePosition({ index: newPlayed.length - 1, variationPath: [] });
 
     const reply = solution[newPlayed.length];
@@ -490,7 +494,6 @@ export default function TacticsPage() {
       const afterPlayed = [...newPlayed, rm.san];
       setPlayedSans(afterPlayed);
       setCurrentFen(afterReply);
-      setLastMove([rm.from, rm.to]);
       setBrowsePosition({ index: afterPlayed.length - 1, variationPath: [] });
       replyTimerRef.current = null;
       setWaitingForReply(false);
@@ -584,7 +587,8 @@ export default function TacticsPage() {
                   orientation={orientation}
                   onMove={onBoardMove}
                   disabled={finished || loading || waitingForReply || !isBrowsingLive}
-                  lastMove={lastMove}
+                  lastMove={boardLastMove}
+                  onWheelNavigate={onWheelNavigate}
                 />
                 <TacticsPuzzleOverlay visible={finished} solved={solved} />
               </div>
@@ -603,6 +607,7 @@ export default function TacticsPage() {
           <section className="tactics-col-side">
             <DifficultySelector value={difficulty} onChange={setDifficulty} disabled={loading} />
             <MoveList
+              ref={moveListNavRef}
               className="move-list--tactics"
               pgn={moveListPgn}
               evalData={[]}

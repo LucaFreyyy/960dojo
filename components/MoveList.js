@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 
 import { formatEval, evalSummaryClass } from '../lib/evalDisplay';
 import {
@@ -51,23 +51,26 @@ function lossToneClass(lossCp) {
     return 'move-btn--tone-worst';
 }
 
-export default function MoveList({
-    pgn,
-    evalData,
-    userColor,
-    startTurn = 'white',
-    loading,
-    loadingMessage = 'Analyzing position...',
-    onBrowsePositionChanged,
-    selectedPosition = null,
-    resetSelectionOnPgnChange = true,
-    className = '',
-    allowSparseEvalData = false,
-    /** Optional engine MultiPV rows shown above the game moves (analysis). */
-    engineBestLines = null,
-    /** `(rank | null)` — rank is engine multipv index (1-based); null when pointer leaves the block. */
-    onEngineLineHover = null,
-}) {
+const MoveList = forwardRef(function MoveList(
+    {
+        pgn,
+        evalData,
+        userColor,
+        startTurn = 'white',
+        loading,
+        loadingMessage = 'Analyzing position...',
+        onBrowsePositionChanged,
+        selectedPosition = null,
+        resetSelectionOnPgnChange = true,
+        className = '',
+        allowSparseEvalData = false,
+        /** Optional engine MultiPV rows shown above the game moves (analysis). */
+        engineBestLines = null,
+        /** `(rank | null)` — rank is engine multipv index (1-based); null when pointer leaves the block. */
+        onEngineLineHover = null,
+    },
+    ref
+) {
     const tree = useMemo(() => parsePgnTree(pgn), [pgn]);
     const template = useMemo(() => buildEvalTemplate(tree), [tree]);
     const hasValidEvalData = useMemo(() => {
@@ -221,6 +224,19 @@ export default function MoveList({
             return prev;
         });
     }, []);
+
+    useImperativeHandle(
+        ref,
+        () => ({
+            stepPrevious: () => {
+                goPrev();
+            },
+            stepNext: () => {
+                goNext();
+            },
+        }),
+        [goNext, goPrev]
+    );
 
     useEffect(() => {
         function onKeyDown(event) {
@@ -406,4 +422,8 @@ export default function MoveList({
             ) : null}
         </div>
     );
-}
+});
+
+MoveList.displayName = 'MoveList';
+
+export default MoveList;

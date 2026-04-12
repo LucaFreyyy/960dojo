@@ -51,8 +51,11 @@ export default function ChessBoard({
   extraDrawableBrushes = null,
   /** Rank/file labels (chessground `coordinates`). Default true for training boards. */
   showCoordinates = true,
+  /** Wheel over the board: -1 = previous move, +1 = next (non-passive listener; used with MoveList ref). */
+  onWheelNavigate = null,
 }) {
   const containerRef = useRef(null);
+  const shellRef = useRef(null);
   const positionRef = useRef(null);
   const orientationRef = useRef(orientation);
   const onMoveRef = useRef(onMove);
@@ -122,6 +125,26 @@ export default function ChessBoard({
   useEffect(() => {
     lastMoveRef.current = lastMove;
   }, [lastMove]);
+
+  const onWheelNavigateRef = useRef(onWheelNavigate);
+  onWheelNavigateRef.current = onWheelNavigate;
+
+  useEffect(() => {
+    if (!fen) return undefined;
+    const el = shellRef.current;
+    if (!el) return undefined;
+    const wheelOpts = { passive: false, capture: true };
+    const onWheel = (e) => {
+      const fn = onWheelNavigateRef.current;
+      if (typeof fn !== 'function') return;
+      if (Math.abs(e.deltaY) < 6 && Math.abs(e.deltaX) < 6) return;
+      e.preventDefault();
+      e.stopPropagation();
+      fn(e.deltaY > 0 ? 1 : -1);
+    };
+    el.addEventListener('wheel', onWheel, wheelOpts);
+    return () => el.removeEventListener('wheel', onWheel, wheelOpts);
+  }, [fen]);
 
   // Initialize once when a valid fen exists.
   useEffect(() => {
@@ -302,6 +325,7 @@ export default function ChessBoard({
     ground.set({
       orientation: orientationRef.current,
       turnColor: turnColorFromFen(fen),
+      lastMove: Array.isArray(lastMove) ? lastMove : undefined,
       events: chessEvents,
       selectable: { enabled: !disabled },
       premovable: {
@@ -314,20 +338,21 @@ export default function ChessBoard({
         dests: disabled ? new Map() : toDests(positionRef.current),
       },
     });
-  }, [fen, orientation, ground, disabled, movableColor, premoveEnabled, premovableCastle, chessEvents]);
+  }, [fen, orientation, ground, disabled, movableColor, premoveEnabled, premovableCastle, chessEvents, lastMove]);
 
   useEffect(() => {
     if (!ground) return;
     ground.set({
       events: chessEvents,
       selectable: { enabled: !disabled },
+      lastMove: Array.isArray(lastMove) ? lastMove : undefined,
       premovable: {
         enabled: premoveEnabled && !disabled,
         showDests: true,
         castle: premovableCastle,
       },
     });
-  }, [ground, premoveEnabled, premovableCastle, disabled, chessEvents]);
+  }, [ground, premoveEnabled, premovableCastle, disabled, chessEvents, lastMove]);
 
   if (!fen) {
     return (
@@ -355,7 +380,7 @@ export default function ChessBoard({
     : [];
 
   return (
-    <div className="chessboard-shell">
+    <div ref={shellRef} className="chessboard-shell">
       <div ref={containerRef} className="chessboard-root" />
       {promotionUI ? (
         <div

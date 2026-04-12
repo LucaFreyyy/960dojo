@@ -14,6 +14,7 @@ import { applyBoardMoveToChessGame } from '../lib/openingsGame';
 import { analyzeFenMultipvStream, uciPvToSanString, warmStockfish } from '../lib/stockfishUtils';
 import { parsePgnTree } from '../lib/moveListEval';
 import { takePgnForImportNonce } from '../lib/analysisSessionImport';
+import { useMoveListWheelNavigation } from '../lib/useMoveListWheelNavigation';
 
 const EXAMPLE_BACKRANK = 'bbnnrkqr';
 const MAX_DEPTH_CAP = 50;
@@ -264,6 +265,7 @@ export default function AnalysisPage() {
   const [hoveredEngineLineRank, setHoveredEngineLineRank] = useState(null);
   const engineCancelRef = useRef(null);
   const engineStateRef = useRef({ key: null, depth: 0, cpWhite: null });
+  const { moveListNavRef, onWheelNavigate } = useMoveListWheelNavigation();
 
   const analysisPositionKey = useMemo(() => {
     const { fen } = getPositionAtSelection(startFen, mainline, selection);
@@ -698,6 +700,7 @@ export default function AnalysisPage() {
                 orientation="white"
                 onMove={onBoardMove}
                 lastMove={lastMove}
+                onWheelNavigate={onWheelNavigate}
                 autoShapes={analysisAutoShapes}
                 extraDrawableBrushes={analysisDrawableBrushes}
               />
@@ -745,6 +748,7 @@ export default function AnalysisPage() {
               </span>
             </div>
             <MoveList
+              ref={moveListNavRef}
               className="move-list--openings"
               pgn={treePgn}
               evalData={moveListEvalData}
