@@ -63,5 +63,6 @@ export default async function handler(req, res) {
         );
     }
 
-    return res.status(200).json({ success: true });
+    const needsEmailConfirmation = !data?.session;
+    return res.status(200).json({ success: true, needsEmailConfirmation });
 }
