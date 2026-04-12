@@ -1,4 +1,5 @@
 import '@/styles/app.css';
+import Head from 'next/head';
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { SessionContext } from '../lib/SessionContext';
@@ -23,8 +24,21 @@ export default function App({ Component, pageProps }) {
     return () => listener.subscription.unsubscribe();
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    import('../lib/stockfishUtils').then((mod) => {
+      if (!cancelled) mod.warmStockfish();
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <SessionContext.Provider value={{ session, loading }}>
+      <Head>
+        <link rel="preload" href="/stockfish-18.wasm" as="fetch" crossOrigin="anonymous" />
+      </Head>
       <Layout>
         <Component {...pageProps} />
       </Layout>

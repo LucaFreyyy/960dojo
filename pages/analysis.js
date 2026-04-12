@@ -11,7 +11,7 @@ import { positionNrToStartFen } from '../lib/chess960';
 import STARTING_POSITIONS from '../lib/chess960Positions.json';
 import { Chess } from '../lib/chessCompat';
 import { applyBoardMoveToChessGame } from '../lib/openingsGame';
-import { analyzeFenMultipvStream, uciPvToSanString } from '../lib/stockfishUtils';
+import { analyzeFenMultipvStream, uciPvToSanString, warmStockfish } from '../lib/stockfishUtils';
 import { parsePgnTree } from '../lib/moveListEval';
 import { takePgnForImportNonce } from '../lib/analysisSessionImport';
 
@@ -272,6 +272,10 @@ export default function AnalysisPage() {
     const sk = idx < 0 ? 'main:initial' : `${path.join('|') || 'main'}:${idx}`;
     return `${fen}::${sk}`;
   }, [startFen, mainline, selection]);
+
+  useEffect(() => {
+    warmStockfish();
+  }, []);
 
   useEffect(() => {
     setEngineMultipvLines([]);
