@@ -572,7 +572,7 @@ export default function TacticsPage() {
           <section>
             <RatingDisplay
               className="rating-display--panel"
-              label="Puzzle"
+              label={tactic?.id != null ? `Puzzle #${tactic.id}` : 'Puzzle'}
               rating={puzzleRating}
               delta={puzzleDelta}
               provisional={(tacticTimesPlayed || 0) < ESTABLISHED_RATING_MIN_ENTRIES}

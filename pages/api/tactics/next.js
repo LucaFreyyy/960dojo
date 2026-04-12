@@ -1,16 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
+import { extractPgnTag } from '../../../lib/tacticPgnUtils';
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
-
-function extractPgnTag(pgn, tag) {
-  if (typeof pgn !== 'string') return null;
-  const re = new RegExp(`^\\[${tag} "([^"]*)"\\]$`, 'm');
-  const m = pgn.match(re);
-  return m?.[1] || null;
-}
 
 function parseSanMovesFromPgn(pgn) {
   if (typeof pgn !== 'string') return [];

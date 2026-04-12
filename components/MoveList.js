@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { formatEval, evalSummaryClass } from '../lib/evalDisplay';
 import {
     buildEvalTemplate,
     isFiniteNumber,
@@ -48,30 +49,6 @@ function lossToneClass(lossCp) {
     if (lossCp < 150) return 'move-btn--tone-mid';
     if (lossCp < 300) return 'move-btn--tone-bad';
     return 'move-btn--tone-worst';
-}
-
-function evalSummaryClass(evalValue, userColor) {
-    if (!isFiniteNumber(evalValue)) return 'eval-summary--muted';
-    if (Math.abs(evalValue) > 100) {
-        const favorable = userColor === 'black' ? evalValue < 0 : evalValue > 0;
-        return favorable ? 'eval-summary--good' : 'eval-summary--bad';
-    }
-    let v = evalValue;
-    if (userColor === 'black') v = -v;
-    if (v > 0.2) return 'eval-summary--good';
-    if (v < -0.2) return 'eval-summary--bad';
-    return 'eval-summary--equal';
-}
-
-function formatEval(evalValue) {
-    if (!isFiniteNumber(evalValue)) return '';
-    if (Math.abs(evalValue) > 100) {
-        const movesToMate = Math.max(0, Math.round(Math.abs(evalValue) - 100));
-        if (movesToMate <= 0) return evalValue < 0 ? '-#' : '#';
-        return evalValue < 0 ? `-#${movesToMate}` : `#${movesToMate}`;
-    }
-    const rounded = Math.round(evalValue * 100) / 100;
-    return rounded > 0 ? `+${rounded}` : `${rounded}`;
 }
 
 export default function MoveList({

@@ -49,6 +49,8 @@ export default function ChessBoard({
   autoShapes = [],
   /** Extra chessground brush defs merged into `drawable.brushes` (e.g. eval-colored arrows). */
   extraDrawableBrushes = null,
+  /** Rank/file labels (chessground `coordinates`). Default true for training boards. */
+  showCoordinates = true,
 }) {
   const containerRef = useRef(null);
   const positionRef = useRef(null);
@@ -130,6 +132,7 @@ export default function ChessBoard({
     const cg = Chessground(containerRef.current, {
       fen: fen,
       orientation: orientation,
+      coordinates: showCoordinates,
       autoCastle: false,
       turnColor: turnColorFromFen(fen),
       events: chessEvents,
@@ -238,7 +241,12 @@ export default function ChessBoard({
       },
     });
     setGround(cg);
-  }, [fen, ground, orientation, disabled, movableColor, premoveEnabled, premovableCastle, chessEvents]);
+  }, [fen, ground, orientation, disabled, movableColor, premoveEnabled, premovableCastle, chessEvents, showCoordinates]);
+
+  useEffect(() => {
+    if (!ground) return;
+    ground.set({ coordinates: showCoordinates });
+  }, [ground, showCoordinates]);
 
   useEffect(() => () => {
     if (promotionResolverRef.current) {

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import RatingGraph from './RatingGraph';
 import GameList from './GameList';
+import ProfileActivityFeed from './ProfileActivityFeed';
 import RatingEstablishedHint from './RatingEstablishedHint';
 import { supabase } from '../lib/supabase';
 import { ESTABLISHED_RATING_MIN_ENTRIES } from '../lib/ratingConstants';
@@ -134,7 +135,13 @@ export default function ProfileTabs({ userId, compareUserId = null, profileName 
                     compareUserId={compareUserId}
                     profileName={profileName}
                 />
-                <GameList userId={userId} format={formatMap[activeTab]} />
+                {activeTab === 'Tactics' ? (
+                    <ProfileActivityFeed userId={userId} variant="tactics" />
+                ) : activeTab === 'Openings' ? (
+                    <ProfileActivityFeed userId={userId} variant="openings" />
+                ) : (
+                    <GameList userId={userId} format={formatMap[activeTab]} />
+                )}
             </div>
         </div>
     );

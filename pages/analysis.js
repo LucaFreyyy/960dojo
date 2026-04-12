@@ -565,7 +565,7 @@ export default function AnalysisPage() {
   }, [fenInput, backrankToNumber]);
 
   const applyImportedPgnText = useCallback(
-    (rawText, { infoMessage: msg = 'Imported PGN.' } = {}) => {
+    (rawText, { infoMessage: msg = 'Imported PGN.', browseAtStart = false } = {}) => {
       const raw = String(rawText || '').trim();
       if (!raw) {
         setInfoMessage('Empty PGN.');
@@ -589,7 +589,11 @@ export default function AnalysisPage() {
       }
       const tree = parsePgnTree(raw);
       setMainline(tree);
-      setSelection({ index: Math.max(-1, tree.length - 1), variationPath: [] });
+      setSelection(
+        browseAtStart
+          ? { index: -1, variationPath: [] }
+          : { index: Math.max(-1, tree.length - 1), variationPath: [] }
+      );
       setEvalByKey(new Map());
       setDepthByKey(new Map());
       setDepthReached(0);
@@ -623,13 +627,17 @@ export default function AnalysisPage() {
       }
     }
 
+    const atRaw = router.query.at;
+    const at = Array.isArray(atRaw) ? atRaw[0] : atRaw;
+    const browseAtStart = at === 'start';
+
     if (raw) {
-      applyImportedPgnText(raw, { infoMessage: 'Loaded puzzle from tactics.' });
+      applyImportedPgnText(raw, { infoMessage: 'Loaded PGN in analysis.', browseAtStart });
     } else {
-      setInfoMessage('No puzzle data found. Use “Open in analysis” from the tactics page.');
+      setInfoMessage('No imported PGN found. Open from tactics or profile history again.');
     }
     router.replace('/analysis', undefined, { shallow: true }).catch(() => {});
-  }, [router.isReady, router.query.importPgn, router.query.n, applyImportedPgnText, router]);
+  }, [router.isReady, router.query.importPgn, router.query.n, router.query.at, applyImportedPgnText, router]);
 
   const engineBestLinesForMoveList = useMemo(() => {
     if (!showEngineBestMoves || !engineMultipvLines.length) return null;
