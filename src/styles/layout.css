@@ -331,6 +331,7 @@ header {
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  box-sizing: border-box;
   min-height: 6.5rem;
   background: var(--surface);
   border: none;

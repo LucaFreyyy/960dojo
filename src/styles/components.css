@@ -213,16 +213,12 @@
   font-weight: 500;
   font-family: var(--font-ui);
   font-style: normal;
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-  transition: opacity 0.14s ease, visibility 0.14s;
+  display: none;
 }
 
 .explanation:hover .explanation__tooltip,
 .explanation:focus-within .explanation__tooltip {
-  opacity: 1;
-  visibility: visible;
+  display: block;
   pointer-events: auto;
 }
 
