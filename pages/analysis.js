@@ -277,7 +277,6 @@ export default function AnalysisPage() {
   const [lastMove, setLastMove] = useState(undefined);
   const [infoMessage, setInfoMessage] = useState('');
   const [engineOn, setEngineOn] = useState(false);
-  const [engineRunning, setEngineRunning] = useState(false);
   const [depthLimit, setDepthLimit] = useState(BASE_DEPTH_LIMIT);
   const [depthReached, setDepthReached] = useState(0);
   const [engineEvalCp, setEngineEvalCp] = useState(null);
@@ -496,16 +495,13 @@ export default function AnalysisPage() {
     }
 
     if (!engineOn || !analysisFen) {
-      setEngineRunning(false);
       return;
     }
     if (knownDepth >= depthLimit) {
-      setEngineRunning(false);
       return;
     }
 
     if (engineCancelRef.current) engineCancelRef.current();
-    setEngineRunning(true);
     const cancel = analyzeFenMultipvStream(analysisFen, depthLimit, {
       multipv: ENGINE_MULTIPV,
       onInfo: ({ depth, cpWhite, lines }) => {
@@ -530,7 +526,6 @@ export default function AnalysisPage() {
         }
       },
       onDone: ({ depth, cpWhite, lines }) => {
-        setEngineRunning(false);
         const finalDepth = Math.max(bootDepth, depth || 0);
         setDepthReached((d) => Math.max(d, finalDepth));
         setDepthByKey((prev) => {
@@ -555,7 +550,6 @@ export default function AnalysisPage() {
     engineCancelRef.current = cancel;
     return () => {
       if (engineCancelRef.current) engineCancelRef.current();
-      setEngineRunning(false);
     };
   }, [engineOn, startFen, mainline, selection, depthLimit]);
 
@@ -827,8 +821,7 @@ export default function AnalysisPage() {
               evalData={moveListEvalData}
               allowSparseEvalData
               userColor="white"
-              loading={engineRunning}
-              loadingMessage="Engine analyzing..."
+              loading={false}
               selectedPosition={selection}
               resetSelectionOnPgnChange={false}
               onBrowsePositionChanged={handleBrowsePositionChanged}
