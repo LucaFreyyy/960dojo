@@ -80,6 +80,7 @@ export default function OpeningsPage() {
   const [moveListLoading, setMoveListLoading] = useState(false);
   const [moveListEvalData, setMoveListEvalData] = useState(null);
   const [openingDeepAnal, setOpeningDeepAnal] = useState(false);
+  const [boardEvalPulse, setBoardEvalPulse] = useState('');
 
   const playedSansRef = useRef([]);
   const currentFenRef = useRef(null);
@@ -104,6 +105,7 @@ export default function OpeningsPage() {
   const openingDeepAnalRef = useRef(false);
   const openingDeepAnalHydratedRef = useRef(false);
   const settingsAccessDeniedRef = useRef(false);
+  const boardEvalPulseTimerRef = useRef(null);
 
   useEffect(() => {
     const email = session?.user?.email || null;
@@ -115,6 +117,13 @@ export default function OpeningsPage() {
       .then((id) => setUserId((prev) => (prev === id ? prev : id)))
       .catch(() => setUserId((prev) => (prev === null ? prev : null)));
   }, [session?.user?.email]);
+
+  useEffect(() => () => {
+    if (boardEvalPulseTimerRef.current) {
+      clearTimeout(boardEvalPulseTimerRef.current);
+      boardEvalPulseTimerRef.current = null;
+    }
+  }, []);
 
   useEffect(() => {
     playedSansRef.current = playedSans;
@@ -458,6 +467,14 @@ export default function OpeningsPage() {
       const userAhead =
         Number.isFinite(finalCp) &&
         ((uc === 'white' && finalCp > 0) || (uc === 'black' && finalCp < 0));
+      if (boardEvalPulseTimerRef.current) {
+        clearTimeout(boardEvalPulseTimerRef.current);
+      }
+      setBoardEvalPulse(userAhead ? 'win' : 'lose');
+      boardEvalPulseTimerRef.current = setTimeout(() => {
+        setBoardEvalPulse('');
+        boardEvalPulseTimerRef.current = null;
+      }, 1050);
       if (userAhead) playWinSound();
       else playLoseSound();
       setPhase('done');
@@ -627,6 +644,7 @@ export default function OpeningsPage() {
     setInfoMessage('');
     setRatingDelta(null);
     setMoveListEvalData(null);
+    setBoardEvalPulse('');
     cancelAllEvalTasks();
     evalHistoryTrailRef.current = [];
 
@@ -760,6 +778,7 @@ export default function OpeningsPage() {
     lastBoardMoveKeyRef.current = '';
     setMoveListEvalData(null);
     setRatingDelta(null);
+    setBoardEvalPulse('');
     cancelAllEvalTasks();
     evalHistoryTrailRef.current = [];
     setPlayedSans([]);
@@ -910,7 +929,16 @@ export default function OpeningsPage() {
                 </div>
               ) : null}
             </div>
-            <div className="training-chessboard">
+            <div
+              className={[
+                'training-chessboard',
+                phase === 'finishing' ? 'training-chessboard--openings-eval-loading' : '',
+                boardEvalPulse === 'win' ? 'training-chessboard--openings-eval-win' : '',
+                boardEvalPulse === 'lose' ? 'training-chessboard--openings-eval-lose' : '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
+            >
               <Chessboard
                 fen={displayedFen}
                 orientation={phase === 'setup' && colorChoice === 'black' ? 'black' : (userColor === 'black' ? 'black' : 'white')}
@@ -975,6 +1003,9 @@ export default function OpeningsPage() {
                         setOpeningDeepAnal(e.target.checked);
                       }}
                     />
+                    <span className="slider-toggle__track" aria-hidden>
+                      <span className="slider-toggle__thumb" />
+                    </span>
                     <span>analyze each move [not recommended on phone]</span>
                   </label>
                 ) : null}

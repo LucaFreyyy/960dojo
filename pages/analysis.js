@@ -773,13 +773,17 @@ export default function AnalysisPage() {
 
           <div className="openings-col-side">
             <div className="analysis-engine-row">
-              <button
-                type="button"
-                className="btn btn--sm btn--secondary"
-                onClick={() => setEngineOn((v) => !v)}
-              >
-                {engineOn ? 'Engine: On' : 'Engine: Off'}
-              </button>
+              <label className="analysis-engine-toggle">
+                <input
+                  type="checkbox"
+                  checked={engineOn}
+                  onChange={(e) => setEngineOn(e.target.checked)}
+                />
+                <span className="slider-toggle__track" aria-hidden>
+                  <span className="slider-toggle__thumb" />
+                </span>
+                <span>Engine</span>
+              </label>
               <button
                 type="button"
                 className="btn btn--sm btn--secondary"

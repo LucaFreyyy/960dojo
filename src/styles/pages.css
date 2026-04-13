@@ -226,47 +226,77 @@
 }
 
 .opening-deep-anal-toggle input {
-  appearance: none;
-  -webkit-appearance: none;
-  margin: 0;
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+
+.analysis-engine-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.analysis-engine-toggle input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+
+.slider-toggle__track {
+  width: 42px;
+  height: 24px;
+  border-radius: 999px;
+  background: rgba(150, 150, 150, 0.42);
+  box-shadow: 0 0 0 2px rgba(160, 160, 160, 0.45), 2px 2px 0 rgba(0, 0, 0, 0.35);
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  padding: 2px;
+  transition: background 0.14s ease, box-shadow 0.14s ease;
+  flex-shrink: 0;
+}
+
+.slider-toggle__thumb {
   width: 18px;
   height: 18px;
-  border-radius: 6px 4px 5px 7px;
-  background: var(--surface);
-  box-shadow: var(--btn-sketch-ring), 2px 2px 0 rgba(0, 0, 0, 0.35);
-  position: relative;
-  cursor: pointer;
-  display: inline-grid;
-  place-items: center;
-  transition: background 0.14s ease, box-shadow 0.14s ease;
+  border-radius: 50%;
+  background: #d7d7d7;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
+  transform: translateX(0);
+  transition: transform 0.14s ease;
 }
 
-.opening-deep-anal-toggle input::before {
-  content: '';
-  width: 9px;
-  height: 5px;
-  border-left: 2px solid var(--gold);
-  border-bottom: 2px solid var(--gold);
-  transform: rotate(-45deg) scale(0.75);
-  opacity: 0;
-  transition: opacity 0.14s ease, transform 0.14s ease;
+.opening-deep-anal-toggle input:checked + .slider-toggle__track,
+.analysis-engine-toggle input:checked + .slider-toggle__track {
+  background: rgba(52, 199, 89, 0.42);
+  box-shadow: 0 0 0 2px rgba(52, 199, 89, 0.72), 2px 2px 0 rgba(0, 0, 0, 0.35);
 }
 
-.opening-deep-anal-toggle input:checked {
-  background: var(--surface-active);
-  box-shadow: var(--btn-sketch-ring-primary), 2px 2px 0 rgba(0, 0, 0, 0.35);
-}
-
-.opening-deep-anal-toggle input:checked::before {
-  opacity: 1;
-  transform: rotate(-45deg) scale(1);
+.opening-deep-anal-toggle input:checked + .slider-toggle__track .slider-toggle__thumb,
+.analysis-engine-toggle input:checked + .slider-toggle__track .slider-toggle__thumb {
+  background: #34c759;
+  transform: translateX(18px);
 }
 
 .opening-deep-anal-toggle input:focus-visible {
+  outline: none;
+}
+
+.opening-deep-anal-toggle input:focus-visible + .slider-toggle__track,
+.analysis-engine-toggle input:focus-visible + .slider-toggle__track {
   box-shadow: var(--focus-ring), var(--btn-sketch-ring), 2px 2px 0 rgba(0, 0, 0, 0.35);
 }
 
-.opening-deep-anal-toggle input:checked:focus-visible {
+.opening-deep-anal-toggle input:checked:focus-visible + .slider-toggle__track,
+.analysis-engine-toggle input:checked:focus-visible + .slider-toggle__track {
   box-shadow: var(--focus-ring), var(--btn-sketch-ring-primary), 2px 2px 0 rgba(0, 0, 0, 0.35);
 }
 
@@ -317,6 +347,68 @@
     var(--surface);
   border-radius: 0 8px 8px 0;
   cursor: ns-resize;
+}
+
+.training-chessboard--openings-eval-loading .chessboard-shell {
+  border-radius: 6px;
+  animation: openings-eval-border-blue 1.05s linear infinite;
+}
+
+.training-chessboard--openings-eval-win .chessboard-shell {
+  border-radius: 6px;
+  animation: openings-eval-border-win 0.28s ease-in-out 4;
+}
+
+.training-chessboard--openings-eval-lose .chessboard-shell {
+  border-radius: 6px;
+  animation: openings-eval-border-lose 0.28s ease-in-out 4;
+}
+
+@keyframes openings-eval-border-blue {
+  0% {
+    box-shadow: 0 0 0 2px rgba(46, 164, 255, 0.4), 0 0 0 5px rgba(46, 164, 255, 0.08);
+  }
+  50% {
+    box-shadow: 0 0 0 2px rgba(46, 164, 255, 0.95), 0 0 0 7px rgba(46, 164, 255, 0.22);
+  }
+  100% {
+    box-shadow: 0 0 0 2px rgba(46, 164, 255, 0.4), 0 0 0 5px rgba(46, 164, 255, 0.08);
+  }
+}
+
+@keyframes openings-eval-border-win {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(74, 222, 128, 0);
+  }
+  50% {
+    box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.9), 0 0 0 7px rgba(74, 222, 128, 0.24);
+  }
+}
+
+@keyframes openings-eval-border-lose {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+  }
+  50% {
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.86), 0 0 0 7px rgba(239, 68, 68, 0.24);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .training-chessboard--openings-eval-loading .chessboard-shell {
+    animation: none;
+    box-shadow: 0 0 0 2px rgba(46, 164, 255, 0.75);
+  }
+  .training-chessboard--openings-eval-win .chessboard-shell {
+    animation: none;
+    box-shadow: 0 0 0 2px rgba(74, 222, 128, 0.82);
+  }
+  .training-chessboard--openings-eval-lose .chessboard-shell {
+    animation: none;
+    box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.8);
+  }
 }
 
 .difficulty-row {
