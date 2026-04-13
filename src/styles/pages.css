@@ -1164,3 +1164,57 @@
     padding: 1.25rem 1rem;
   }
 }
+
+.settings-page {
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.settings-section {
+  margin-top: 14px;
+  padding: 0.9rem;
+  border: var(--border-soft);
+  border-radius: var(--sketch-radius);
+  background: var(--surface);
+  box-shadow: var(--sketch-shadow);
+}
+
+.settings-section__title {
+  margin: 0 0 10px;
+  font-family: var(--font-sketch);
+  font-size: 1.2rem;
+}
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--ink-muted);
+  font-size: 0.84rem;
+}
+
+.settings-field select {
+  border: none;
+  border-radius: 10px;
+  padding: 8px 10px;
+  background: var(--bg-deep);
+  color: var(--ink);
+  box-shadow: var(--btn-sketch-ring), var(--sketch-shadow);
+}
+
+.settings-sample-board {
+  margin-top: 12px;
+  max-width: var(--training-board-size);
+}
+
+.settings-save-note {
+  color: var(--ink-muted);
+  font-size: 0.82rem;
+  margin: 8px 0 0;
+}

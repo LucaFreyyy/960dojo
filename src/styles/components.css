@@ -1180,6 +1180,25 @@
   top: 0;
 }
 
+.chessboard-shell cg-board {
+  background-color: #f0d9b5 !important;
+  background-image: var(--board-theme-image) !important;
+  background-size: cover !important;
+}
+
+.chessboard-shell piece.pawn.white { background-image: var(--piece-wp) !important; }
+.chessboard-shell piece.knight.white { background-image: var(--piece-wn) !important; }
+.chessboard-shell piece.bishop.white { background-image: var(--piece-wb) !important; }
+.chessboard-shell piece.rook.white { background-image: var(--piece-wr) !important; }
+.chessboard-shell piece.queen.white { background-image: var(--piece-wq) !important; }
+.chessboard-shell piece.king.white { background-image: var(--piece-wk) !important; }
+.chessboard-shell piece.pawn.black { background-image: var(--piece-bp) !important; }
+.chessboard-shell piece.knight.black { background-image: var(--piece-bn) !important; }
+.chessboard-shell piece.bishop.black { background-image: var(--piece-bb) !important; }
+.chessboard-shell piece.rook.black { background-image: var(--piece-br) !important; }
+.chessboard-shell piece.queen.black { background-image: var(--piece-bq) !important; }
+.chessboard-shell piece.king.black { background-image: var(--piece-bk) !important; }
+
 /* Fixed-size board for training pages (no resize handle) */
 .training-chessboard {
   width: var(--training-board-size);

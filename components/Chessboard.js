@@ -3,6 +3,8 @@ import { parseSquare } from 'chessops/util';
 import { Chessground } from 'chessground';
 import { createPosition, toDests, makeMove, turnColorFromFen } from '../lib/chessopsUtils';
 import { playChessMove, playPieceTouch } from '../lib/soundEffects';
+import { boardThemeAsset, normalizeBoardTheme, normalizePieceSet } from '../lib/boardVisuals';
+import { useBoardVisuals } from '../lib/BoardVisualsContext';
 
 const DBG = process.env.NODE_ENV === 'development';
 const PROMOTION_CHOICES = ['queen', 'rook', 'bishop', 'knight'];
@@ -53,7 +55,11 @@ export default function ChessBoard({
   showCoordinates = true,
   /** Wheel over the board: -1 = previous move, +1 = next (non-passive listener; used with MoveList ref). */
   onWheelNavigate = null,
+  /** Visual theme keys from settings. */
+  pieceSet,
+  boardTheme,
 }) {
+  const globalVisuals = useBoardVisuals();
   const containerRef = useRef(null);
   const shellRef = useRef(null);
   const positionRef = useRef(null);
@@ -379,8 +385,27 @@ export default function ChessBoard({
       })
     : [];
 
+  const pieceTheme = normalizePieceSet(pieceSet || globalVisuals?.pieceSet || 'cburnett');
+  const boardThemeKey = normalizeBoardTheme(boardTheme || globalVisuals?.boardTheme || 'brown');
+  const boardImage = boardThemeAsset(boardThemeKey);
+  const themeStyle = {
+    '--board-theme-image': `url("${boardImage}")`,
+    '--piece-wp': `url("/lichess-assets/piece/${pieceTheme}/wP.svg")`,
+    '--piece-wn': `url("/lichess-assets/piece/${pieceTheme}/wN.svg")`,
+    '--piece-wb': `url("/lichess-assets/piece/${pieceTheme}/wB.svg")`,
+    '--piece-wr': `url("/lichess-assets/piece/${pieceTheme}/wR.svg")`,
+    '--piece-wq': `url("/lichess-assets/piece/${pieceTheme}/wQ.svg")`,
+    '--piece-wk': `url("/lichess-assets/piece/${pieceTheme}/wK.svg")`,
+    '--piece-bp': `url("/lichess-assets/piece/${pieceTheme}/bP.svg")`,
+    '--piece-bn': `url("/lichess-assets/piece/${pieceTheme}/bN.svg")`,
+    '--piece-bb': `url("/lichess-assets/piece/${pieceTheme}/bB.svg")`,
+    '--piece-br': `url("/lichess-assets/piece/${pieceTheme}/bR.svg")`,
+    '--piece-bq': `url("/lichess-assets/piece/${pieceTheme}/bQ.svg")`,
+    '--piece-bk': `url("/lichess-assets/piece/${pieceTheme}/bK.svg")`,
+  };
+
   return (
-    <div ref={shellRef} className="chessboard-shell">
+    <div ref={shellRef} className={`chessboard-shell chessboard-theme--${boardThemeKey}`} style={themeStyle}>
       <div ref={containerRef} className="chessboard-root" />
       {promotionUI ? (
         <div
