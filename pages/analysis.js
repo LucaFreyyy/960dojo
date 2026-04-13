@@ -709,6 +709,20 @@ export default function AnalysisPage() {
     });
   }, [showEngineBestMoves, engineMultipvLines, currentFen]);
 
+  const playEngineLineFirstMove = useCallback((rank) => {
+    const line = engineMultipvLines.find((ln) => ln.multipv === rank);
+    const firstUci = Array.isArray(line?.pvUci) ? line.pvUci[0] : null;
+    if (!firstUci || firstUci.length < 4 || !currentFen) return;
+    const from = firstUci.slice(0, 2);
+    const to = firstUci.slice(2, 4);
+    const promoChar = firstUci[4]?.toLowerCase();
+    const promotion = promoChar ? { q: 'queen', r: 'rook', b: 'bishop', n: 'knight' }[promoChar] : undefined;
+    const g = new Chess(currentFen, { chess960: true });
+    const move = g.move({ from, to, promotion });
+    if (!move?.san) return;
+    onBoardMove({ from, to, san: move.san });
+  }, [engineMultipvLines, currentFen, onBoardMove]);
+
   const whiteToMove = whiteToMoveFromFen(currentFen);
 
   const { analysisAutoShapes, analysisDrawableBrushes } = useMemo(() => {
@@ -820,6 +834,7 @@ export default function AnalysisPage() {
               onBrowsePositionChanged={handleBrowsePositionChanged}
               engineBestLines={engineBestLinesForMoveList}
               onEngineLineHover={showEngineBestMoves ? setHoveredEngineLineRank : null}
+              onEngineLineClick={showEngineBestMoves ? playEngineLineFirstMove : null}
             />
             <AnalysisCommentBox
               value={moveCommentDraft}

@@ -68,6 +68,8 @@ const MoveList = forwardRef(function MoveList(
         engineBestLines = null,
         /** `(rank | null)` — rank is engine multipv index (1-based); null when pointer leaves the block. */
         onEngineLineHover = null,
+        /** Optional click handler for engine lines: `(rank) => void` */
+        onEngineLineClick = null,
     },
     ref
 ) {
@@ -387,6 +389,7 @@ const MoveList = forwardRef(function MoveList(
                                 key={row.rank}
                                 className="move-list__engine-line"
                                 onMouseEnter={() => onEngineLineHover?.(row.rank)}
+                                onClick={() => onEngineLineClick?.(row.rank)}
                             >
                                 <span className="move-list__engine-line-eval">{row.evalText}</span>
                                 <span className="move-list__engine-line-pv">{row.pvText}</span>
