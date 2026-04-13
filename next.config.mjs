@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
     reactStrictMode: false,
+    transpilePackages: ['@supabase/supabase-js'],
     async headers() {
         return [
             {

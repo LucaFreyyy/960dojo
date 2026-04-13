@@ -115,7 +115,6 @@ export default function ProfileHeader({ user, editable = true }) {
                                 onKeyDown={handleBioKeyDown}
                                 onBlur={() => setEditingField(null)}
                                 rows={1}
-                                style={{ resize: 'none', overflow: 'hidden' }}
                                 autoFocus
                             />
                         ) : (

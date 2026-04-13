@@ -7,15 +7,39 @@ import { hashEmail } from '../lib/hashEmail';
 import { fetchUserSettings } from '../lib/openingsDb';
 import { BoardVisualsContext } from '../lib/BoardVisualsContext';
 import { normalizeBoardTheme, normalizePieceSet } from '../lib/boardVisuals';
+import { normalizeUiStyle } from '../lib/uiStyles';
 
 import 'chessground/assets/chessground.base.css';
 import 'chessground/assets/chessground.brown.css';
 import 'chessground/assets/chessground.cburnett.css';
 
+const BOARD_VISUALS_STORAGE_KEY = 'dojo.boardVisuals.v1';
+const DEFAULT_BOARD_VISUALS = {
+  pieceSet: 'cburnett',
+  boardTheme: 'brown',
+  uiStyle: 'dojo-classic',
+};
+
+function readBoardVisualsFromStorage() {
+  if (typeof window === 'undefined') return DEFAULT_BOARD_VISUALS;
+  try {
+    const raw = window.localStorage.getItem(BOARD_VISUALS_STORAGE_KEY);
+    if (!raw) return DEFAULT_BOARD_VISUALS;
+    const parsed = JSON.parse(raw);
+    return {
+      pieceSet: normalizePieceSet(parsed?.pieceSet),
+      boardTheme: normalizeBoardTheme(parsed?.boardTheme),
+      uiStyle: normalizeUiStyle(parsed?.uiStyle),
+    };
+  } catch {
+    return DEFAULT_BOARD_VISUALS;
+  }
+}
+
 export default function App({ Component, pageProps }) {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [boardVisuals, setBoardVisuals] = useState({ pieceSet: 'cburnett', boardTheme: 'brown' });
+  const [boardVisuals, setBoardVisuals] = useState(readBoardVisualsFromStorage);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -41,7 +65,6 @@ export default function App({ Component, pageProps }) {
   useEffect(() => {
     const email = session?.user?.email || null;
     if (!email) {
-      setBoardVisuals({ pieceSet: 'cburnett', boardTheme: 'brown' });
       return;
     }
     (async () => {
@@ -52,9 +75,31 @@ export default function App({ Component, pageProps }) {
       setBoardVisuals({
         pieceSet: normalizePieceSet(s.piece_set),
         boardTheme: normalizeBoardTheme(s.board),
+        uiStyle: normalizeUiStyle(s.style),
       });
     })();
   }, [session?.user?.email]);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    document.documentElement.setAttribute('data-ui-style', normalizeUiStyle(boardVisuals.uiStyle));
+  }, [boardVisuals.uiStyle]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      window.localStorage.setItem(
+        BOARD_VISUALS_STORAGE_KEY,
+        JSON.stringify({
+          pieceSet: normalizePieceSet(boardVisuals.pieceSet),
+          boardTheme: normalizeBoardTheme(boardVisuals.boardTheme),
+          uiStyle: normalizeUiStyle(boardVisuals.uiStyle),
+        })
+      );
+    } catch {
+      // Ignore storage write failures.
+    }
+  }, [boardVisuals]);
 
   return (
     <SessionContext.Provider value={{ session, loading }}>

@@ -14,6 +14,7 @@ import {
   normalizeBoardTheme,
   normalizePieceSet,
 } from '../lib/boardVisuals';
+import { normalizeUiStyle, UI_STYLE_OPTIONS } from '../lib/uiStyles';
 
 export default function SettingsPage({ allPieceSets = [], allBoardThemes = [] }) {
   const session = useSupabaseSession();
@@ -22,7 +23,8 @@ export default function SettingsPage({ allPieceSets = [], allBoardThemes = [] })
   const [loading, setLoading] = useState(true);
   const [openingDeepAnal, setOpeningDeepAnal] = useState(false);
   const [pieceSet, setPieceSet] = useState(allPieceSets[0] || 'cburnett');
-  const [boardTheme, setBoardTheme] = useState(allBoardThemes[0] || 'brown');
+  const [boardTheme, setBoardTheme] = useState(allBoardThemes[0] || 'brown.png');
+  const [uiStyle, setUiStyle] = useState('dojo-classic');
   const settingsReadyRef = useRef(false);
 
   useEffect(() => {
@@ -51,6 +53,7 @@ export default function SettingsPage({ allPieceSets = [], allBoardThemes = [] })
         setOpeningDeepAnal(Boolean(s.opening_deep_anal));
         if (typeof s.piece_set === 'string' && s.piece_set) setPieceSet(normalizePieceSet(s.piece_set));
         if (typeof s.board === 'string' && s.board) setBoardTheme(normalizeBoardTheme(s.board));
+        if (typeof s.style === 'string' && s.style) setUiStyle(normalizeUiStyle(s.style));
       }
       settingsReadyRef.current = true;
       setLoading(false);
@@ -64,13 +67,14 @@ export default function SettingsPage({ allPieceSets = [], allBoardThemes = [] })
         opening_deep_anal: openingDeepAnal,
         piece_set: pieceSet,
         board: boardTheme,
+        style: uiStyle,
       });
     })();
-  }, [userId, openingDeepAnal, pieceSet, boardTheme]);
+  }, [userId, openingDeepAnal, pieceSet, boardTheme, uiStyle]);
 
   useEffect(() => {
-    setBoardVisuals({ pieceSet, boardTheme });
-  }, [pieceSet, boardTheme, setBoardVisuals]);
+    setBoardVisuals((prev) => ({ ...prev, pieceSet, boardTheme, uiStyle }));
+  }, [pieceSet, boardTheme, uiStyle, setBoardVisuals]);
 
   return (
     <>
@@ -84,6 +88,18 @@ export default function SettingsPage({ allPieceSets = [], allBoardThemes = [] })
           <p className="text-warn">Log in to persist your settings.</p>
         ) : null}
         {loading ? <p className="settings-save-note">Loading…</p> : null}
+
+        <section className="settings-section">
+          <h2 className="settings-section__title">Website style</h2>
+          <label className="settings-field">
+            Theme
+            <select value={uiStyle} onChange={(e) => setUiStyle(e.target.value)}>
+              {UI_STYLE_OPTIONS.map((o) => (
+                <option key={o.id} value={o.id}>{o.label}</option>
+              ))}
+            </select>
+          </label>
+        </section>
 
         <section className="settings-section">
           <h2 className="settings-section__title">Board visuals</h2>

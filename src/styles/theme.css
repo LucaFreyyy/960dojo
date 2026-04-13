@@ -137,3 +137,225 @@
   --eval-worst: #ef4444;
   --eval-on-cream: #2a1a10;
 }
+
+:root[data-ui-style='neon-night'] {
+  --ink: #e8f6ff;
+  --ink-muted: rgba(232, 246, 255, 0.72);
+  --ink-faint: rgba(232, 246, 255, 0.5);
+  --bg-deep: #090b16;
+  --bg-page: radial-gradient(120% 95% at 55% 0%, #111a2e 0%, #090b16 52%, #05070e 100%);
+  --surface: rgba(93, 222, 255, 0.14);
+  --surface-raised: #13243d;
+  --surface-active: #173153;
+  --line: rgba(93, 222, 255, 0.45);
+  --line-strong: #42e4ff;
+  --accent: #42e4ff;
+  --accent-soft: rgba(66, 228, 255, 0.3);
+  --gold: #7cf7d4;
+  --bg-hover: #153055;
+  --bg-active: #1a3c67;
+  --focus-ring: 0 0 0 3px rgba(66, 228, 255, 0.58), 0 0 0 5px rgba(16, 40, 70, 0.55);
+  --btn-radius: 10px;
+  --btn-radius-lg: 12px;
+  --sketch-shadow: 0 0 0 rgba(0, 0, 0, 0);
+}
+
+:root[data-ui-style='paper-ink'] {
+  --ink: #020202;
+  --ink-muted: rgba(34, 32, 30, 0.7);
+  --ink-faint: rgba(17, 15, 15, 0.5);
+  --bg-deep: #f1d8a6;
+  --bg-page: linear-gradient(180deg, #f2ebde 0%, #e9deca 100%);
+  --surface: rgba(243, 209, 155, 0.86);
+  --surface-raised: #efe4d2;
+  --surface-active: #e7dac6;
+  --line: rgba(70, 57, 44, 0.3);
+  --line-strong: #3f2f21;
+  --accent: #3f2f21;
+  --accent-soft: rgba(141, 122, 105, 0.16);
+  --gold: #5e4634;
+  --bg-hover: #e9dcc7;
+  --bg-active: #ddbf8f;
+  --bg-dropdown: #9b886a;
+  --text-color-link: #5c4635;
+  --focus-ring: 0 0 0 3px rgba(99, 78, 60, 0.35), 0 0 0 5px rgba(245, 238, 226, 0.74);
+  --btn-radius: 9px 8px 10px 7px;
+  --btn-radius-lg: 11px 9px 12px 8px;
+}
+
+:root[data-ui-style='sunset-arcade'] {
+  --ink: #fff2e9;
+  --ink-muted: rgba(255, 242, 233, 0.75);
+  --ink-faint: rgba(255, 242, 233, 0.5);
+  --bg-deep: #281425;
+  --bg-page: radial-gradient(120% 100% at 50% 0%, #4a1b2c 0%, #281425 58%, #170c16 100%);
+  --surface: rgba(255, 149, 99, 0.14);
+  --surface-raised: #4f2534;
+  --surface-active: #612d3f;
+  --line: rgba(255, 180, 120, 0.38);
+  --line-strong: #ff8b5a;
+  --accent: #ff8b5a;
+  --accent-soft: rgba(255, 139, 90, 0.25);
+  --gold: #ffd26f;
+  --bg-hover: #5f3044;
+  --bg-active: #733a52;
+  --text-color-link: #ffca91;
+  --focus-ring: 0 0 0 3px rgba(255, 139, 90, 0.55), 0 0 0 5px rgba(255, 210, 111, 0.22);
+  --btn-radius: 22px 8px 24px 10px / 10px 24px 8px 18px;
+  --btn-radius-lg: 28px 11px 32px 15px / 13px 30px 11px 20px;
+}
+
+:root[data-ui-style='forest-terminal'] {
+  --ink: #dbf4dd;
+  --ink-muted: rgba(219, 244, 221, 0.74);
+  --ink-faint: rgba(219, 244, 221, 0.5);
+  --bg-deep: #10251a;
+  --bg-page: radial-gradient(120% 95% at 50% 0%, #1f4a2f 0%, #173824 52%, #10251a 100%);
+  --surface: rgba(88, 138, 101, 0.18);
+  --surface-raised: #274433;
+  --surface-active: #315640;
+  --line: rgba(152, 198, 147, 0.32);
+  --line-strong: #7aa874;
+  --accent: #7aa874;
+  --accent-soft: rgba(122, 168, 116, 0.25);
+  --gold: #c7b37a;
+  --bg-hover: #345942;
+  --bg-active: #426c50;
+  --text-color-link: #b7de9e;
+  --focus-ring: 0 0 0 3px rgba(122, 168, 116, 0.5), 0 0 0 5px rgba(199, 179, 122, 0.16);
+  --btn-sketch-ring:
+    0 0 0 2px rgba(122, 168, 116, 0.92),
+    2px -1px 0 0 rgba(122, 168, 116, 0.56),
+    -2px 2px 0 0 rgba(102, 145, 95, 0.52),
+    -3px -2px 0 0 rgba(67, 95, 62, 0.3),
+    3px 2px 0 0 rgba(93, 129, 87, 0.32),
+    1px 2px 0 0 rgba(122, 168, 116, 0.2),
+    -2px -1px 0 0 rgba(78, 112, 74, 0.32),
+    0 2px 0 0 rgba(94, 132, 88, 0.2);
+  --btn-sketch-ring-lg:
+    0 0 0 2px rgba(122, 168, 116, 0.92),
+    3px -2px 0 0 rgba(122, 168, 116, 0.52),
+    -3px 3px 0 0 rgba(102, 145, 95, 0.48),
+    -4px -3px 0 0 rgba(67, 95, 62, 0.3),
+    4px 3px 0 0 rgba(93, 129, 87, 0.28),
+    2px 3px 0 0 rgba(122, 168, 116, 0.22),
+    -2px -3px 0 0 rgba(78, 112, 74, 0.26),
+    0 3px 0 0 rgba(94, 132, 88, 0.2),
+    -3px 0 0 0 rgba(67, 95, 62, 0.18),
+    3px 0 0 0 rgba(93, 129, 87, 0.16);
+  --btn-sketch-ring-primary:
+    0 0 0 2px #56784f,
+    2px -2px 0 0 rgba(86, 120, 79, 0.86),
+    -2px 2px 0 0 rgba(138, 173, 101, 0.66),
+    0 0 0 1px rgba(255, 255, 255, 0.1) inset,
+    3px 1px 0 0 rgba(52, 75, 47, 0.36),
+    -1px -3px 0 0 rgba(108, 139, 86, 0.28);
+  --btn-sketch-ring-primary-lg:
+    0 0 0 2px #56784f,
+    3px -3px 0 0 rgba(86, 120, 79, 0.82),
+    -3px 3px 0 0 rgba(138, 173, 101, 0.62),
+    0 0 0 1px rgba(255, 255, 255, 0.1) inset,
+    4px 2px 0 0 rgba(52, 75, 47, 0.34),
+    -2px -4px 0 0 rgba(108, 139, 86, 0.26),
+    2px 4px 0 0 rgba(38, 56, 35, 0.22);
+  --btn-sketch-ring-muted:
+    0 0 0 2px rgba(167, 192, 134, 0.38),
+    2px -1px 0 0 rgba(167, 192, 134, 0.24),
+    -2px 2px 0 0 rgba(96, 128, 89, 0.36),
+    -1px -2px 0 0 rgba(167, 192, 134, 0.18);
+  --btn-radius: 6px;
+  --btn-radius-lg: 8px;
+}
+
+/* ------------------------------------------------------------------ */
+/* Theme-specific component treatments                                 */
+/* ------------------------------------------------------------------ */
+
+:root[data-ui-style='neon-night'] .btn {
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  border: 1px solid rgba(66, 228, 255, 0.48);
+  box-shadow:
+    0 0 0 1px rgba(66, 228, 255, 0.3),
+    0 0 10px rgba(66, 228, 255, 0.22),
+    0 0 18px rgba(66, 228, 255, 0.14);
+}
+
+:root[data-ui-style='neon-night'] .btn:hover:not(:disabled) {
+  box-shadow:
+    0 0 0 1px rgba(66, 228, 255, 0.58),
+    0 0 14px rgba(66, 228, 255, 0.38),
+    0 0 26px rgba(66, 228, 255, 0.2);
+}
+
+:root[data-ui-style='neon-night'] .rating-display,
+:root[data-ui-style='neon-night'] .tab-content,
+:root[data-ui-style='neon-night'] .settings-section {
+  box-shadow:
+    0 0 0 1px rgba(66, 228, 255, 0.25),
+    0 0 18px rgba(66, 228, 255, 0.12);
+}
+
+:root[data-ui-style='paper-ink'] .btn {
+  border: 1px solid rgba(63, 47, 33, 0.35);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.65) inset,
+    0 0 0 1px rgba(72, 56, 40, 0.15),
+    2px 2px 0 rgba(72, 56, 40, 0.2);
+}
+
+:root[data-ui-style='paper-ink'] .rating-display,
+:root[data-ui-style='paper-ink'] .tab-content,
+:root[data-ui-style='paper-ink'] .settings-section {
+  background-image:
+    linear-gradient(0deg, rgba(55, 40, 26, 0.02), rgba(55, 40, 26, 0.02)),
+    repeating-linear-gradient(
+      0deg,
+      rgba(80, 62, 44, 0.03) 0px,
+      rgba(80, 62, 44, 0.03) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+}
+
+:root[data-ui-style='sunset-arcade'] .btn {
+  border-radius: var(--btn-radius);
+  border: 1px solid rgba(255, 206, 129, 0.38);
+  box-shadow:
+    0 0 0 1px rgba(255, 139, 90, 0.42),
+    3px 3px 0 rgba(30, 12, 25, 0.45);
+}
+
+:root[data-ui-style='sunset-arcade'] .section-title__heading::after {
+  width: 120px;
+  height: 4px;
+  background: linear-gradient(90deg, #ff8b5a 0%, #ffd26f 52%, #ff8b5a 100%);
+}
+
+:root[data-ui-style='forest-terminal'] .btn {
+  border-radius: 6px;
+  border: 1px solid rgba(167, 192, 134, 0.4);
+  box-shadow:
+    0 0 0 1px rgba(122, 168, 116, 0.32),
+    2px 2px 0 rgba(16, 33, 23, 0.48);
+}
+
+:root[data-ui-style='forest-terminal'] .page-shell {
+  position: relative;
+}
+
+:root[data-ui-style='forest-terminal'] .page-shell::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 48px;
+  pointer-events: none;
+  opacity: 0.26;
+  background-image:
+    radial-gradient(circle at 8% 92%, rgba(90, 170, 110, 0.32) 0 10px, transparent 11px),
+    radial-gradient(circle at 18% 88%, rgba(70, 150, 95, 0.3) 0 12px, transparent 13px),
+    radial-gradient(circle at 82% 90%, rgba(90, 170, 110, 0.32) 0 11px, transparent 12px),
+    radial-gradient(circle at 92% 86%, rgba(70, 150, 95, 0.3) 0 13px, transparent 14px);
+}

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Chess } from '../lib/chessCompat';
 import { useSupabaseSession } from '../lib/SessionContext';
+import { useSessionLoading } from '../lib/SessionContext';
 import Chessboard from '../components/Chessboard';
 import MoveList from '../components/MoveList';
 import DifficultySelector from '../components/DifficultySelector';
@@ -77,17 +78,18 @@ function buildPgnFromSan(startFen, mainlineSans, failedVariation = null) {
   return tokens.join(' ');
 }
 
-/** Minimal Chess960 PGN for our analysis page: puzzle start + only the played puzzle line (linear). */
+/** Chess960 PGN for analysis: full solution mainline + failed user move as sideline (if any). */
 function buildPuzzleOnlyPgnForAnalysis(startFen, solutionSans, solved, playedSans, failedVariation) {
   if (!startFen || !Array.isArray(solutionSans) || solutionSans.length === 0) return null;
-  let sans;
-  if (solved) {
-    sans = [...solutionSans];
-  } else {
-    sans = Array.isArray(playedSans) ? [...playedSans] : [];
-    if (failedVariation?.san) sans.push(failedVariation.san);
-  }
-  const movetext = buildPgnFromSan(startFen, sans, null);
+  const mainlineSans = [...solutionSans];
+  const variation =
+    !solved && failedVariation?.san
+      ? {
+          anchorIndex: Number.isInteger(failedVariation.anchorIndex) ? failedVariation.anchorIndex : Math.max(0, (Array.isArray(playedSans) ? playedSans.length : 1) - 1),
+          san: failedVariation.san,
+        }
+      : null;
+  const movetext = buildPgnFromSan(startFen, mainlineSans, variation);
   if (!movetext.trim()) return null;
   return [
     '[Event "960 Dojo tactics puzzle"]',
@@ -131,7 +133,9 @@ function lichessGameUrlAtPly(rawUrl, ply, boardOrientation = 'white') {
 
 export default function TacticsPage() {
   const session = useSupabaseSession();
+  const sessionLoading = useSessionLoading();
   const [userId, setUserId] = useState(null);
+  const [userIdResolved, setUserIdResolved] = useState(false);
   const [difficulty, setDifficulty] = useState('middle');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -173,9 +177,36 @@ export default function TacticsPage() {
   const [ratingSavePending, setRatingSavePending] = useState(false);
 
   useEffect(() => {
-    if (!session?.user?.email) return setUserId(null);
-    hashEmail(session.user.email).then(setUserId).catch(() => setUserId(null));
-  }, [session]);
+    let cancelled = false;
+    if (sessionLoading) {
+      setUserIdResolved(false);
+      return () => {
+        cancelled = true;
+      };
+    }
+    if (!session?.user?.email) {
+      setUserId(null);
+      setUserIdResolved(true);
+      return () => {
+        cancelled = true;
+      };
+    }
+    hashEmail(session.user.email)
+      .then((id) => {
+        if (cancelled) return;
+        setUserId(id || null);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setUserId(null);
+      })
+      .finally(() => {
+        if (!cancelled) setUserIdResolved(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [sessionLoading, session?.user?.email]);
 
   const lineForDisplay = useMemo(() => (finished ? solutionSans : playedSans), [finished, solutionSans, playedSans]);
 
@@ -328,9 +359,10 @@ export default function TacticsPage() {
   }
 
   useEffect(() => {
+    if (!userIdResolved) return;
     loadNextPuzzle();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, difficulty]);
+  }, [userIdResolved, userId, difficulty]);
 
   async function finishPuzzle(didSolve, opts = {}) {
     const { freezeFen = null } = opts;
