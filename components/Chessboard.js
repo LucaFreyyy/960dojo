@@ -86,6 +86,10 @@ export default function ChessBoard({
   const onChessSelect = useMemo(() => (key) => pieceSelectHandlerRef.current(key), []);
   const [ground, setGround] = useState(null);
   const [promotionUI, setPromotionUI] = useState(null);
+  const [pieceAssetExt, setPieceAssetExt] = useState('svg');
+  const pieceTheme = normalizePieceSet(pieceSet || globalVisuals?.pieceSet || 'cburnett');
+  const boardThemeKey = normalizeBoardTheme(boardTheme || globalVisuals?.boardTheme || 'brown');
+  const boardImage = boardThemeAsset(boardThemeKey);
 
   const chessEvents = useMemo(() => ({ select: onChessSelect }), [onChessSelect]);
 
@@ -360,6 +364,33 @@ export default function ChessBoard({
     });
   }, [ground, premoveEnabled, premovableCastle, disabled, chessEvents, lastMove]);
 
+  useEffect(() => {
+    let cancelled = false;
+    if (typeof window === 'undefined') return undefined;
+    const candidates = ['svg', 'png', 'webp'];
+    const probe = (ext) =>
+      new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => resolve(true);
+        img.onerror = () => resolve(false);
+        img.src = `/lichess-assets/piece/${pieceTheme}/wP.${ext}`;
+      });
+    (async () => {
+      for (const ext of candidates) {
+        // eslint-disable-next-line no-await-in-loop
+        const ok = await probe(ext);
+        if (ok) {
+          if (!cancelled) setPieceAssetExt(ext);
+          return;
+        }
+      }
+      if (!cancelled) setPieceAssetExt('svg');
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [pieceTheme]);
+
   if (!fen) {
     return (
       <div className="chessboard-placeholder">
@@ -385,23 +416,20 @@ export default function ChessBoard({
       })
     : [];
 
-  const pieceTheme = normalizePieceSet(pieceSet || globalVisuals?.pieceSet || 'cburnett');
-  const boardThemeKey = normalizeBoardTheme(boardTheme || globalVisuals?.boardTheme || 'brown');
-  const boardImage = boardThemeAsset(boardThemeKey);
   const themeStyle = {
     '--board-theme-image': `url("${boardImage}")`,
-    '--piece-wp': `url("/lichess-assets/piece/${pieceTheme}/wP.svg")`,
-    '--piece-wn': `url("/lichess-assets/piece/${pieceTheme}/wN.svg")`,
-    '--piece-wb': `url("/lichess-assets/piece/${pieceTheme}/wB.svg")`,
-    '--piece-wr': `url("/lichess-assets/piece/${pieceTheme}/wR.svg")`,
-    '--piece-wq': `url("/lichess-assets/piece/${pieceTheme}/wQ.svg")`,
-    '--piece-wk': `url("/lichess-assets/piece/${pieceTheme}/wK.svg")`,
-    '--piece-bp': `url("/lichess-assets/piece/${pieceTheme}/bP.svg")`,
-    '--piece-bn': `url("/lichess-assets/piece/${pieceTheme}/bN.svg")`,
-    '--piece-bb': `url("/lichess-assets/piece/${pieceTheme}/bB.svg")`,
-    '--piece-br': `url("/lichess-assets/piece/${pieceTheme}/bR.svg")`,
-    '--piece-bq': `url("/lichess-assets/piece/${pieceTheme}/bQ.svg")`,
-    '--piece-bk': `url("/lichess-assets/piece/${pieceTheme}/bK.svg")`,
+    '--piece-wp': `url("/lichess-assets/piece/${pieceTheme}/wP.${pieceAssetExt}")`,
+    '--piece-wn': `url("/lichess-assets/piece/${pieceTheme}/wN.${pieceAssetExt}")`,
+    '--piece-wb': `url("/lichess-assets/piece/${pieceTheme}/wB.${pieceAssetExt}")`,
+    '--piece-wr': `url("/lichess-assets/piece/${pieceTheme}/wR.${pieceAssetExt}")`,
+    '--piece-wq': `url("/lichess-assets/piece/${pieceTheme}/wQ.${pieceAssetExt}")`,
+    '--piece-wk': `url("/lichess-assets/piece/${pieceTheme}/wK.${pieceAssetExt}")`,
+    '--piece-bp': `url("/lichess-assets/piece/${pieceTheme}/bP.${pieceAssetExt}")`,
+    '--piece-bn': `url("/lichess-assets/piece/${pieceTheme}/bN.${pieceAssetExt}")`,
+    '--piece-bb': `url("/lichess-assets/piece/${pieceTheme}/bB.${pieceAssetExt}")`,
+    '--piece-br': `url("/lichess-assets/piece/${pieceTheme}/bR.${pieceAssetExt}")`,
+    '--piece-bq': `url("/lichess-assets/piece/${pieceTheme}/bQ.${pieceAssetExt}")`,
+    '--piece-bk': `url("/lichess-assets/piece/${pieceTheme}/bK.${pieceAssetExt}")`,
   };
 
   return (

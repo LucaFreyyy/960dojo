@@ -79,32 +79,11 @@ export default function SettingsPage({ allPieceSets = [], allBoardThemes = [] })
       </Head>
       <main className="page-shell settings-page">
         <h1 className="page-title">Settings</h1>
-        <p className="page-lead">
-          Tune your openings defaults and board visuals.
-        </p>
 
         {!session?.user ? (
           <p className="text-warn">Log in to persist your settings.</p>
         ) : null}
         {loading ? <p className="settings-save-note">Loading…</p> : null}
-
-        <section className="settings-section">
-          <h2 className="settings-section__title">Openings</h2>
-          <label className="opening-deep-anal-toggle">
-            <input
-              type="checkbox"
-              checked={openingDeepAnal}
-              onChange={(e) => {
-                playButtonClick();
-                setOpeningDeepAnal(e.target.checked);
-              }}
-            />
-            <span className="slider-toggle__track" aria-hidden>
-              <span className="slider-toggle__thumb" />
-            </span>
-            <span>analyze each move [not recommended on phone]</span>
-          </label>
-        </section>
 
         <section className="settings-section">
           <h2 className="settings-section__title">Board visuals</h2>
@@ -121,7 +100,7 @@ export default function SettingsPage({ allPieceSets = [], allBoardThemes = [] })
               Board theme
               <select value={boardTheme} onChange={(e) => setBoardTheme(e.target.value)}>
                 {allBoardThemes.map((v) => (
-                  <option key={v} value={v}>{v.replace(/\.(png|jpg|jpeg|svg)$/i, '')}</option>
+                  <option key={v} value={v}>{v.replace(/\.(png|jpg|jpeg|svg|webp)$/i, '')}</option>
                 ))}
               </select>
             </label>
@@ -139,15 +118,23 @@ export default function SettingsPage({ allPieceSets = [], allBoardThemes = [] })
           </div>
         </section>
 
-        <a
-          href="https://www.paypal.com/donate/?hosted_button_id=RJTRFEN2ZF4PJ"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="buy-coffee"
-        >
-          <FaCoffee className="coffee-icon" />
-          Buy me a coffee
-        </a>
+        <section className="settings-section">
+          <h2 className="settings-section__title">Openings Page Settings</h2>
+          <label className="opening-deep-anal-toggle">
+            <input
+              type="checkbox"
+              checked={openingDeepAnal}
+              onChange={(e) => {
+                playButtonClick();
+                setOpeningDeepAnal(e.target.checked);
+              }}
+            />
+            <span className="slider-toggle__track" aria-hidden>
+              <span className="slider-toggle__thumb" />
+            </span>
+            <span>analyze each move [not recommended on phone]</span>
+          </label>
+        </section>
       </main>
     </>
   );
@@ -173,7 +160,7 @@ export async function getStaticProps() {
     allBoardThemes = boardEntries
       .filter((d) => d.isFile())
       .map((d) => d.name)
-      .filter((n) => /\.(png|jpg|jpeg|svg)$/i.test(n))
+      .filter((n) => /\.(png|jpg|jpeg|svg|webp)$/i.test(n))
       .filter((n) => !n.includes('.thumbnail.') && !n.includes('.orig.'))
       .filter((n) => !n.endsWith('.last-move.png') && !n.endsWith('.move-dest.png') && !n.endsWith('.current-premove.png') && !n.endsWith('.selected.png'))
       .filter((name, idx, arr) => arr.indexOf(name) === idx)
