@@ -21,7 +21,7 @@ export function OpenInLichessBtn({ onClick, disabled = false }) {
 export function OpenInAnalysisBtn({ onClick, disabled = false }) {
   return (
     <Button onClick={onClick} disabled={disabled} variant="tactic-analysis" className="btn--block">
-      Open in analysis
+      Open Analysis
     </Button>
   );
 }

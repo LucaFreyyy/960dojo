@@ -6,7 +6,7 @@ import Chessboard from '../components/Chessboard';
 import MoveList from '../components/MoveList';
 import RatingDisplay from '../components/RatingDisplay';
 import { ESTABLISHED_RATING_MIN_ENTRIES } from '../lib/ratingConstants';
-import { OpenInLichessBtn } from '../components/PostTacticDisplay';
+import { OpenInAnalysisBtn } from '../components/PostTacticDisplay';
 import SectionTitle from '../components/SectionTitle';
 import PositionSelector from '../components/PositionSelector';
 import PositionDisplay from '../components/PositionDisplay';
@@ -44,24 +44,9 @@ import {
 import { hashEmail } from '../lib/hashEmail';
 import { lastMoveSquaresAtMainlineSansIndex } from '../lib/trainingBrowseHighlight';
 import { useMoveListWheelNavigation } from '../lib/useMoveListWheelNavigation';
+import { stashPgnAndOpenAnalysis } from '../lib/analysisSessionImport';
 
 const USER_TARGET_MOVES = 11;
-
-function buildOpeningsLichessUrl({ openingNr, startFen, pgnMovetext, orientation }) {
-  if (!startFen || !pgnMovetext) return null;
-  const color = orientation === 'black' ? 'black' : 'white';
-  const pgn = [
-    '[Event "960 Dojo Openings"]',
-    '[Site "https://lichess.org"]',
-    '[Variant "Chess960"]',
-    `[FEN "${startFen}"]`,
-    '[SetUp "1"]',
-    `[Opening "Chess960 #${openingNr}"]`,
-    '',
-    pgnMovetext,
-  ].join('\n');
-  return `https://lichess.org/analysis/pgn/${encodeURIComponent(pgn)}?color=${color}`;
-}
 
 export default function OpeningsPage() {
   const session = useSupabaseSession();
@@ -118,14 +103,18 @@ export default function OpeningsPage() {
   const lastBoardMoveKeyRef = useRef('');
   const openingDeepAnalRef = useRef(false);
   const openingDeepAnalHydratedRef = useRef(false);
+  const settingsAccessDeniedRef = useRef(false);
 
   useEffect(() => {
-    if (!session?.user?.email) {
-      setUserId(null);
+    const email = session?.user?.email || null;
+    if (!email) {
+      setUserId((prev) => (prev === null ? prev : null));
       return;
     }
-    hashEmail(session.user.email).then(setUserId).catch(() => setUserId(null));
-  }, [session]);
+    hashEmail(email)
+      .then((id) => setUserId((prev) => (prev === id ? prev : id)))
+      .catch(() => setUserId((prev) => (prev === null ? prev : null)));
+  }, [session?.user?.email]);
 
   useEffect(() => {
     playedSansRef.current = playedSans;
@@ -161,6 +150,7 @@ export default function OpeningsPage() {
   useEffect(() => {
     if (!userId) {
       setGameMode('training');
+      settingsAccessDeniedRef.current = false;
       return;
     }
     (async () => {
@@ -171,27 +161,38 @@ export default function OpeningsPage() {
       setDbRating(r);
       setTrainingRating(r);
       setOpeningsRatingCount(c);
-      setGameMode('ranked');
+      setGameMode((prev) => (prev === 'ranked' ? prev : 'ranked'));
     })();
   }, [userId]);
 
   useEffect(() => {
     if (!userId) {
       openingDeepAnalHydratedRef.current = false;
-      setOpeningDeepAnal(false);
+      setOpeningDeepAnal((prev) => (prev === false ? prev : false));
       return;
     }
+    if (settingsAccessDeniedRef.current) return;
     openingDeepAnalHydratedRef.current = false;
     (async () => {
       const enabled = await fetchUserOpeningDeepAnal(userId);
-      setOpeningDeepAnal(enabled);
+      if (enabled === null) {
+        // RLS may block UserSettings in some environments (403).
+        // Stop retry loops; keep local default false for this session.
+        settingsAccessDeniedRef.current = true;
+        setOpeningDeepAnal((prev) => (prev === false ? prev : false));
+        openingDeepAnalHydratedRef.current = true;
+        return;
+      }
+      setOpeningDeepAnal((prev) => (prev === enabled ? prev : enabled));
       openingDeepAnalHydratedRef.current = true;
     })();
   }, [userId]);
 
   useEffect(() => {
-    if (!userId || !openingDeepAnalHydratedRef.current) return;
-    upsertUserOpeningDeepAnal(userId, openingDeepAnal);
+    if (!userId || !openingDeepAnalHydratedRef.current || settingsAccessDeniedRef.current) return;
+    upsertUserOpeningDeepAnal(userId, openingDeepAnal).then((ok) => {
+      if (!ok) settingsAccessDeniedRef.current = true;
+    });
   }, [userId, openingDeepAnal]);
 
   const rankedMode = gameMode === 'ranked';
@@ -203,16 +204,18 @@ export default function OpeningsPage() {
     return buildPgnFromSans(startFen, playedSans);
   }, [startFen, playedSans]);
 
-  const openingsLichessUrl = useMemo(
-    () =>
-      buildOpeningsLichessUrl({
-        openingNr,
-        startFen,
-        pgnMovetext: moveListPgn,
-        orientation: userColor,
-      }),
-    [openingNr, startFen, moveListPgn, userColor]
-  );
+  const openingAnalysisPgn = useMemo(() => {
+    if (!startFen || !moveListPgn) return '';
+    return [
+      '[Event "960 Dojo Openings"]',
+      '[Variant "Chess960"]',
+      `[FEN "${startFen}"]`,
+      '[SetUp "1"]',
+      `[Opening "Chess960 #${openingNr}"]`,
+      '',
+      moveListPgn,
+    ].join('\n');
+  }, [startFen, moveListPgn, openingNr]);
 
   const fenTrail = useMemo(
     () => (startFen ? computeFenTrail(startFen, playedSans) : []),
@@ -951,9 +954,15 @@ export default function OpeningsPage() {
               </>
             ) : (
               <>
-                {phase === 'done' && openingsLichessUrl ? (
+                {phase === 'done' && openingAnalysisPgn ? (
                   <div className="narrow-action">
-                    <OpenInLichessBtn onClick={() => window.open(openingsLichessUrl, '_blank')} />
+                    <OpenInAnalysisBtn
+                      onClick={() =>
+                        stashPgnAndOpenAnalysis(openingAnalysisPgn, {
+                          evalMainlinePawns: Array.isArray(moveListEvalData) ? moveListEvalData : null,
+                        })
+                      }
+                    />
                   </div>
                 ) : null}
                 {(phase === 'playing' || phase === 'finishing') ? (

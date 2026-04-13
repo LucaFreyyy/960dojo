@@ -127,8 +127,16 @@ const PositionSelector = forwardRef(function PositionSelector(
   useEffect(() => {
     if (minimal) return;
     if (positionMode === 'number' && !rankedMode) return;
-    generatePosition();
-  }, [minimal, rankedMode, positionMode, fixedPiece, fixedFiles, generatePosition]);
+    if (rankedMode || positionMode === 'random') {
+      onOpeningNrChange(randomInt(960));
+      return;
+    }
+    const files = CHESS960_FILES.filter((f) => fixedFiles.has(f));
+    const pool = filterPositionNrsByPieceFiles(fixedPiece, files);
+    const pick = pool.length ? pickRandom(pool) : randomInt(960);
+    const n = pick === null ? randomInt(960) : pick;
+    onOpeningNrChange(n);
+  }, [minimal, rankedMode, positionMode, fixedPiece, fixedFiles, onOpeningNrChange]);
 
   if (minimal) return null;
 

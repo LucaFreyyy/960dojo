@@ -30,10 +30,19 @@ export default async function handler(req, res) {
     if (error) return res.status(400).json({ error: error.message });
 
     const id = email ? await hashEmail(email) : null;
+    if (!id) return res.status(400).json({ error: 'Could not create user id' });
     const { data: existing } = await supabaseAdmin.from('User').select('id').eq('id', id).maybeSingle();
 
     if (!existing) {
         const { error: userError } = await supabaseAdmin.from('User').insert({ id, email, name: username.trim(), bio: '' });
+        if (userError) return res.status(400).json({ error: userError.message || 'Could not create user' });
+
+        const { error: settingsError } = await supabaseAdmin.from('UserSettings').insert({
+            userId: id,
+            opening_deep_anal: false,
+        });
+        if (settingsError) return res.status(400).json({ error: settingsError.message || 'Could not create user settings' });
+
         const ratings = ['bullet', 'blitz', 'rapid', 'classical', 'tactics', 'openings'].map(type => ({
             id: crypto.randomUUID(),
             userId: id,
@@ -41,6 +50,7 @@ export default async function handler(req, res) {
             value: 1500,
         }));
         const { error: ratingError } = await supabaseAdmin.from('Rating').insert(ratings);
+        if (ratingError) return res.status(400).json({ error: ratingError.message || 'Could not create ratings' });
 
         let tacticId = null;
         try { tacticId = await fetchNewTactic(supabaseAdmin, id); } catch {}
@@ -60,6 +70,12 @@ export default async function handler(req, res) {
                 openingNr,
                 color,
             })
+        );
+    } else {
+        // Ensure legacy users also have a settings row.
+        await supabaseAdmin.from('UserSettings').upsert(
+            { userId: id, opening_deep_anal: false },
+            { onConflict: 'userId' }
         );
     }
 

@@ -13,7 +13,7 @@ import { Chess } from '../lib/chessCompat';
 import { applyBoardMoveToChessGame } from '../lib/openingsGame';
 import { analyzeFenMultipvStream, uciPvToSanString, warmStockfish } from '../lib/stockfishUtils';
 import { parsePgnTree } from '../lib/moveListEval';
-import { takePgnForImportNonce } from '../lib/analysisSessionImport';
+import { takeAnalysisImportForNonce } from '../lib/analysisSessionImport';
 import { useMoveListWheelNavigation } from '../lib/useMoveListWheelNavigation';
 
 const EXAMPLE_BACKRANK = 'bbnnrkqr';
@@ -201,7 +201,25 @@ function buildEvalDataFromMap(tree, evalByKey) {
 }
 
 function getPositionAtSelection(startFen, mainline, selection) {
-  const game = new Chess(startFen, { chess960: true });
+  const game = new Chess(startFen);
+  const playSanSafe = (rawSan) => {
+    if (!rawSan) return null;
+    const san = String(rawSan).trim();
+    const candidates = [
+      san,
+      // Imported PGNs can carry annotation suffixes like "?!", "!!", etc.
+      san.replace(/[!?]+$/g, ''),
+    ];
+    for (const cand of candidates) {
+      if (!cand) continue;
+      try {
+        return game.move(cand) || null;
+      } catch {
+        // try next candidate
+      }
+    }
+    return null;
+  };
   let last = null;
   const path = Array.isArray(selection?.variationPath) ? selection.variationPath : [];
   for (let p = 0; p < path.length; p += 1) {
@@ -213,7 +231,9 @@ function getPositionAtSelection(startFen, mainline, selection) {
     for (let i = 0; i <= mi; i += 1) {
       const n = parent[i];
       if (!n) break;
-      last = game.move(n.san, { sloppy: true }) || last;
+      const mv = playSanSafe(n.san);
+      if (!mv) break;
+      last = mv;
     }
     const anchor = parent[mi];
     const varLine = anchor?.variations?.[vi] || [];
@@ -222,14 +242,18 @@ function getPositionAtSelection(startFen, mainline, selection) {
       const [nextMiRaw] = String(nextSeg).split(':');
       const nextMi = Number(nextMiRaw);
       for (let i = 0; i <= nextMi && i < varLine.length; i += 1) {
-        last = game.move(varLine[i].san, { sloppy: true }) || last;
+        const mv = playSanSafe(varLine[i].san);
+        if (!mv) break;
+        last = mv;
       }
     }
   }
   const line = getLineByPath(mainline, path);
   const index = Number.isInteger(selection?.index) ? selection.index : -1;
   for (let i = 0; i <= index && i < line.length; i += 1) {
-    last = game.move(line[i].san, { sloppy: true }) || last;
+    const mv = playSanSafe(line[i].san);
+    if (!mv) break;
+    last = mv;
   }
   const lastMove = last?.from && last?.to ? [last.from, last.to] : undefined;
   return { fen: game.fen(), lastMove };
@@ -238,7 +262,7 @@ function getPositionAtSelection(startFen, mainline, selection) {
 export default function AnalysisPage() {
   const router = useRouter();
   /** Survives React Strict Mode remount after takePgnForImportNonce removed the payload from localStorage. */
-  const tacticImportPgnStashRef = useRef({ nonce: null, pgn: '' });
+  const tacticImportPgnStashRef = useRef({ nonce: null, pgn: '', evalMainlinePawns: null });
   const numberToBackrank = useMemo(buildNumberToBackrankMap, []);
   const backrankToNumber = useMemo(() => buildBackrankToNumberMap(numberToBackrank), [numberToBackrank]);
 
@@ -567,7 +591,10 @@ export default function AnalysisPage() {
   }, [fenInput, backrankToNumber]);
 
   const applyImportedPgnText = useCallback(
-    (rawText, { infoMessage: msg = 'Imported PGN.', browseAtStart = false } = {}) => {
+    (
+      rawText,
+      { infoMessage: msg = 'Imported PGN.', browseAtStart = false, evalMainlinePawns = null } = {}
+    ) => {
       const raw = String(rawText || '').trim();
       if (!raw) {
         setInfoMessage('Empty PGN.');
@@ -596,8 +623,24 @@ export default function AnalysisPage() {
           ? { index: -1, variationPath: [] }
           : { index: Math.max(-1, tree.length - 1), variationPath: [] }
       );
-      setEvalByKey(new Map());
-      setDepthByKey(new Map());
+      const seedEvalByKey = new Map();
+      const seedDepthByKey = new Map();
+      if (Array.isArray(evalMainlinePawns)) {
+        const first = evalMainlinePawns[0];
+        if (Number.isFinite(first)) {
+          seedEvalByKey.set('main:initial', Number(first));
+          seedDepthByKey.set('main:initial', 1);
+        }
+        for (let i = 1; i < evalMainlinePawns.length && i <= tree.length; i += 1) {
+          const v = evalMainlinePawns[i];
+          if (!Number.isFinite(v)) continue;
+          const k = `main:${i - 1}`;
+          seedEvalByKey.set(k, Number(v));
+          seedDepthByKey.set(k, 1);
+        }
+      }
+      setEvalByKey(seedEvalByKey);
+      setDepthByKey(seedDepthByKey);
       setDepthReached(0);
       setEngineEvalCp(null);
       setEngineMultipvLines([]);
@@ -620,12 +663,20 @@ export default function AnalysisPage() {
     if (!n) return;
 
     let raw = '';
+    let importedEvalMainlinePawns = null;
     if (tacticImportPgnStashRef.current.nonce === n && tacticImportPgnStashRef.current.pgn) {
       raw = tacticImportPgnStashRef.current.pgn;
+      importedEvalMainlinePawns = tacticImportPgnStashRef.current.evalMainlinePawns || null;
     } else {
-      raw = takePgnForImportNonce(n);
+      const payload = takeAnalysisImportForNonce(n);
+      raw = payload?.pgn || '';
+      importedEvalMainlinePawns = payload?.evalMainlinePawns || null;
       if (raw) {
-        tacticImportPgnStashRef.current = { nonce: n, pgn: raw };
+        tacticImportPgnStashRef.current = {
+          nonce: n,
+          pgn: raw,
+          evalMainlinePawns: importedEvalMainlinePawns,
+        };
       }
     }
 
@@ -634,7 +685,11 @@ export default function AnalysisPage() {
     const browseAtStart = at === 'start';
 
     if (raw) {
-      applyImportedPgnText(raw, { infoMessage: 'Loaded PGN in analysis.', browseAtStart });
+      applyImportedPgnText(raw, {
+        infoMessage: 'Loaded PGN in analysis.',
+        browseAtStart,
+        evalMainlinePawns: importedEvalMainlinePawns,
+      });
     } else {
       setInfoMessage('No imported PGN found. Open from tactics or profile history again.');
     }
