@@ -16,11 +16,10 @@ import PlayAgainBtn from '../components/PlayAgainBtn';
 import { positionNrToStartFen, randomInt } from '../lib/chess960';
 import { buildPgnFromSans, replaySansFromStoredPgn } from '../lib/openingsPgn';
 import { getOpponentSanAndFen } from '../lib/openingsOpponent';
-import { evalFenDepthCpWhite } from '../lib/stockfishUtils';
+import { analyzeFenCpWhiteStream, evalFenDepthCpWhite } from '../lib/stockfishUtils';
 import {
   OPENINGS_EVAL_DEPTH_FINAL,
   OPENINGS_EVAL_DEPTH_MOVE,
-  buildMoveListEvalDataFromTrail,
 } from '../lib/openingsEval';
 import { createPosition } from '../lib/chessopsUtils';
 import {
@@ -30,14 +29,16 @@ import {
   countUserMovesFromSans,
   sideToMoveFromFen,
 } from '../lib/openingsGame';
-import { playChessMove, playLoseSound, playWinSound } from '../lib/soundEffects';
+import { playButtonClick, playChessMove, playLoseSound, playWinSound } from '../lib/soundEffects';
 import { computeOpeningsRatingDelta } from '../lib/openingsRating';
 import { createRatedOpeningRow } from '../lib/openingsUserOpening';
 import {
   countOpeningsRatings,
+  fetchUserOpeningDeepAnal,
   fetchLatestOpeningsRating,
   fetchUnfinishedOpeningRow,
   insertUserOpening,
+  upsertUserOpeningDeepAnal,
   updateUserOpening,
 } from '../lib/openingsDb';
 import { hashEmail } from '../lib/hashEmail';
@@ -93,6 +94,7 @@ export default function OpeningsPage() {
 
   const [moveListLoading, setMoveListLoading] = useState(false);
   const [moveListEvalData, setMoveListEvalData] = useState(null);
+  const [openingDeepAnal, setOpeningDeepAnal] = useState(false);
 
   const playedSansRef = useRef([]);
   const currentFenRef = useRef(null);
@@ -109,11 +111,13 @@ export default function OpeningsPage() {
   const dbRatingRef = useRef(1500);
   /** Parallel to positions along the mainline; pawns from White POV, or ±(100+mateIn). */
   const evalHistoryTrailRef = useRef([]);
-  const evalJobsRef = useRef([]);
+  const evalTasksRef = useRef(new Map());
   const opponentBusyRef = useRef(false);
   const isBrowsingLiveRef = useRef(true);
   const endingGameRef = useRef(false);
   const lastBoardMoveKeyRef = useRef('');
+  const openingDeepAnalRef = useRef(false);
+  const openingDeepAnalHydratedRef = useRef(false);
 
   useEffect(() => {
     if (!session?.user?.email) {
@@ -150,6 +154,9 @@ export default function OpeningsPage() {
   useEffect(() => {
     dbRatingRef.current = dbRating;
   }, [dbRating]);
+  useEffect(() => {
+    openingDeepAnalRef.current = openingDeepAnal;
+  }, [openingDeepAnal]);
 
   useEffect(() => {
     if (!userId) {
@@ -167,6 +174,25 @@ export default function OpeningsPage() {
       setGameMode('ranked');
     })();
   }, [userId]);
+
+  useEffect(() => {
+    if (!userId) {
+      openingDeepAnalHydratedRef.current = false;
+      setOpeningDeepAnal(false);
+      return;
+    }
+    openingDeepAnalHydratedRef.current = false;
+    (async () => {
+      const enabled = await fetchUserOpeningDeepAnal(userId);
+      setOpeningDeepAnal(enabled);
+      openingDeepAnalHydratedRef.current = true;
+    })();
+  }, [userId]);
+
+  useEffect(() => {
+    if (!userId || !openingDeepAnalHydratedRef.current) return;
+    upsertUserOpeningDeepAnal(userId, openingDeepAnal);
+  }, [userId, openingDeepAnal]);
 
   const rankedMode = gameMode === 'ranked';
   const showSetup = phase === 'setup';
@@ -250,20 +276,71 @@ export default function OpeningsPage() {
     await updateUserOpening(id, { evalHistory: payload });
   }, []);
 
+  const cancelAllEvalTasks = useCallback(() => {
+    const tasks = Array.from(evalTasksRef.current.values());
+    for (const task of tasks) task.cancel();
+    evalTasksRef.current.clear();
+  }, []);
+
   const queuePositionEval = useCallback(
     (fen, index) => {
-      const job = evalFenDepthCpWhite(fen, OPENINGS_EVAL_DEPTH_MOVE).then(async (cp) => {
-        if (!Number.isFinite(cp)) return;
-        const trail = evalHistoryTrailRef.current;
-        while (trail.length <= index) trail.push(null);
-        trail[index] = cp;
-        evalHistoryTrailRef.current = trail;
-        await syncEvalHistoryToDb(trail);
+      if (!Number.isFinite(index) || index < 0) return null;
+      const trail = evalHistoryTrailRef.current;
+      if (Number.isFinite(trail[index])) return null;
+      const existing = evalTasksRef.current.get(index);
+      if (existing) return existing.promise;
+
+      let settled = false;
+      let resolveTask = () => {};
+      const promise = new Promise((resolve) => {
+        resolveTask = resolve;
       });
-      evalJobsRef.current.push(job);
+      const task = {
+        cancel: () => {},
+        promise,
+      };
+      const settle = () => {
+        if (settled) return;
+        settled = true;
+        evalTasksRef.current.delete(index);
+        resolveTask();
+      };
+      task.cancel = () => {
+        cancelStream?.();
+        settle();
+      };
+
+      const cancelStream = analyzeFenCpWhiteStream(fen, OPENINGS_EVAL_DEPTH_MOVE, {
+        onDone: async ({ cpWhite }) => {
+          if (settled) return;
+          if (Number.isFinite(cpWhite)) {
+            const nextTrail = evalHistoryTrailRef.current;
+            while (nextTrail.length <= index) nextTrail.push(null);
+            nextTrail[index] = cpWhite;
+            evalHistoryTrailRef.current = nextTrail;
+            await syncEvalHistoryToDb(nextTrail);
+          }
+          settle();
+        },
+      });
+      evalTasksRef.current.set(index, task);
+      return promise;
     },
     [syncEvalHistoryToDb]
   );
+
+  useEffect(() => {
+    if (phase !== 'playing' || !startFen) return;
+    if (!openingDeepAnal) {
+      cancelAllEvalTasks();
+      return;
+    }
+    const fens = computeFenTrail(startFen, playedSans);
+    const trail = evalHistoryTrailRef.current;
+    for (let i = 0; i < fens.length; i += 1) {
+      if (!Number.isFinite(trail[i])) queuePositionEval(fens[i], i);
+    }
+  }, [phase, startFen, playedSans, openingDeepAnal, queuePositionEval, cancelAllEvalTasks]);
 
   const finalizeGame = useCallback(async () => {
     if (endingGameRef.current) return;
@@ -274,8 +351,8 @@ export default function OpeningsPage() {
       setOpponentBusy(false);
       opponentBusyRef.current = false;
 
-      await Promise.allSettled(evalJobsRef.current);
-      evalJobsRef.current = [];
+      await Promise.allSettled(Array.from(evalTasksRef.current.values(), (task) => task.promise));
+      evalTasksRef.current.clear();
 
       const start = startFenRef.current;
       const sans = playedSansRef.current;
@@ -287,15 +364,23 @@ export default function OpeningsPage() {
 
       const trailFens = computeFenTrail(start, sans);
       const lastFen = trailFens[trailFens.length - 1] || start;
-      const finalCp = await evalFenDepthCpWhite(lastFen, OPENINGS_EVAL_DEPTH_FINAL);
+      let finalCp = await evalFenDepthCpWhite(lastFen, OPENINGS_EVAL_DEPTH_FINAL);
+      if (!Number.isFinite(finalCp)) {
+        // Fallback so the last move always has a displayable eval entry.
+        finalCp = await evalFenDepthCpWhite(lastFen, OPENINGS_EVAL_DEPTH_MOVE);
+      }
 
       const trail = [...evalHistoryTrailRef.current];
       while (trail.length < trailFens.length) trail.push(null);
       const lastIdx = trailFens.length - 1;
-      if (Number.isFinite(finalCp)) trail[lastIdx] = finalCp;
+      trail[lastIdx] = Number.isFinite(finalCp) ? finalCp : 0;
       evalHistoryTrailRef.current = trail;
 
-      const evalData = buildMoveListEvalDataFromTrail(start, sans, trail);
+      // Keep PGN/selection/eval lengths in sync on the done screen.
+      setBrowsePosition({ index: Math.max(-1, sans.length - 1), variationPath: [] });
+      const evalData = Array.from({ length: Math.max(1, sans.length + 1) }, (_, i) =>
+        Number.isFinite(trail[i]) ? trail[i] / 100 : null
+      );
       setMoveListEvalData(evalData);
 
       const finishedAt = new Date().toISOString();
@@ -397,11 +482,13 @@ export default function OpeningsPage() {
 
       const newSans = [...playedSansRef.current, res.san];
       const newFen = res.newFen;
-
       const idx = newSans.length;
-      queuePositionEval(newFen, idx);
+      if (openingDeepAnalRef.current) {
+        queuePositionEval(newFen, idx);
+      }
 
       setPlayedSans(newSans);
+      playedSansRef.current = newSans;
       setCurrentFen(newFen);
       currentFenRef.current = newFen;
       setBrowsePosition({ index: newSans.length - 1, variationPath: [] });
@@ -509,9 +596,12 @@ export default function OpeningsPage() {
 
       const newSans = [...playedSansRef.current, m.san];
       const idx = newSans.length;
-      queuePositionEval(newFen, idx);
+      if (openingDeepAnalRef.current) {
+        queuePositionEval(newFen, idx);
+      }
 
       setPlayedSans(newSans);
+      playedSansRef.current = newSans;
       setCurrentFen(newFen);
       currentFenRef.current = newFen;
       setBrowsePosition({ index: newSans.length - 1, variationPath: [] });
@@ -534,7 +624,7 @@ export default function OpeningsPage() {
     setInfoMessage('');
     setRatingDelta(null);
     setMoveListEvalData(null);
-    evalJobsRef.current = [];
+    cancelAllEvalTasks();
     evalHistoryTrailRef.current = [];
 
     if (gameMode === 'ranked' && !userId) {
@@ -578,6 +668,7 @@ export default function OpeningsPage() {
         userColorRef.current = storedColor;
         userMovesDoneRef.current = countUserMovesFromSans(sf, sans, storedColor);
         setPlayedSans(sans);
+        playedSansRef.current = sans;
         const trail = computeFenTrail(sf, sans);
         setCurrentFen(trail[trail.length - 1] || sf);
         currentFenRef.current = trail[trail.length - 1] || sf;
@@ -592,7 +683,6 @@ export default function OpeningsPage() {
 
         setPhase('playing');
         phaseRef.current = 'playing';
-        queuePositionEval(trail[trail.length - 1] || sf, trail.length - 1);
         if (sideToMoveFromFen(currentFenRef.current) !== storedColor) {
           setOpponentBusy(true);
           opponentBusyRef.current = true;
@@ -631,12 +721,12 @@ export default function OpeningsPage() {
     setStartFen(startPosFen);
     startFenRef.current = startPosFen;
     setPlayedSans([]);
+    playedSansRef.current = [];
     setCurrentFen(startPosFen);
     currentFenRef.current = startPosFen;
     setBrowsePosition({ index: -1, variationPath: [] });
 
     evalHistoryTrailRef.current = [];
-    queuePositionEval(startPosFen, 0);
 
     setPhase('playing');
     phaseRef.current = 'playing';
@@ -659,6 +749,7 @@ export default function OpeningsPage() {
     openingNr,
     colorChoice,
     queuePositionEval,
+    cancelAllEvalTasks,
     playOpponentOnce,
   ]);
 
@@ -666,9 +757,10 @@ export default function OpeningsPage() {
     lastBoardMoveKeyRef.current = '';
     setMoveListEvalData(null);
     setRatingDelta(null);
-    evalJobsRef.current = [];
+    cancelAllEvalTasks();
     evalHistoryTrailRef.current = [];
     setPlayedSans([]);
+    playedSansRef.current = [];
     setBrowsePosition({ index: -1, variationPath: [] });
     userMovesDoneRef.current = 0;
 
@@ -718,7 +810,6 @@ export default function OpeningsPage() {
 
     setPhase('playing');
     phaseRef.current = 'playing';
-    queuePositionEval(sf, 0);
 
     if (sideToMoveFromFen(sf) !== uc) {
       setOpponentBusy(true);
@@ -732,7 +823,7 @@ export default function OpeningsPage() {
         }
       }, 0);
     }
-  }, [userId, gameMode, colorChoice, openingNr, rankedMode, queuePositionEval, playOpponentOnce]);
+  }, [userId, gameMode, colorChoice, openingNr, rankedMode, cancelAllEvalTasks, playOpponentOnce]);
 
   const onTrainingNotice = useCallback(() => {
     setInfoMessage('Switch to training mode to customize.');
@@ -865,10 +956,24 @@ export default function OpeningsPage() {
                     <OpenInLichessBtn onClick={() => window.open(openingsLichessUrl, '_blank')} />
                   </div>
                 ) : null}
+                {(phase === 'playing' || phase === 'finishing') ? (
+                  <label className="opening-deep-anal-toggle">
+                    <input
+                      type="checkbox"
+                      checked={openingDeepAnal}
+                      onChange={(e) => {
+                        playButtonClick();
+                        setOpeningDeepAnal(e.target.checked);
+                      }}
+                    />
+                    <span>analyze each move [not recommended on phone]</span>
+                  </label>
+                ) : null}
                 <MoveList
                   ref={moveListNavRef}
                   pgn={moveListPgn}
                   evalData={moveListEvalData}
+                  allowSparseEvalData
                   userColor={userColor}
                   startTurn={startFen ? sideToMoveFromFen(startFen) : 'white'}
                   loading={moveListLoading}

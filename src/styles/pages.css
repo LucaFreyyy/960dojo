@@ -215,6 +215,61 @@
   max-width: 280px;
 }
 
+.opening-deep-anal-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink);
+  font-size: 0.82rem;
+  margin-bottom: 8px;
+  font-weight: 700;
+}
+
+.opening-deep-anal-toggle input {
+  appearance: none;
+  -webkit-appearance: none;
+  margin: 0;
+  width: 18px;
+  height: 18px;
+  border-radius: 6px 4px 5px 7px;
+  background: var(--surface);
+  box-shadow: var(--btn-sketch-ring), 2px 2px 0 rgba(0, 0, 0, 0.35);
+  position: relative;
+  cursor: pointer;
+  display: inline-grid;
+  place-items: center;
+  transition: background 0.14s ease, box-shadow 0.14s ease;
+}
+
+.opening-deep-anal-toggle input::before {
+  content: '';
+  width: 9px;
+  height: 5px;
+  border-left: 2px solid var(--gold);
+  border-bottom: 2px solid var(--gold);
+  transform: rotate(-45deg) scale(0.75);
+  opacity: 0;
+  transition: opacity 0.14s ease, transform 0.14s ease;
+}
+
+.opening-deep-anal-toggle input:checked {
+  background: var(--surface-active);
+  box-shadow: var(--btn-sketch-ring-primary), 2px 2px 0 rgba(0, 0, 0, 0.35);
+}
+
+.opening-deep-anal-toggle input:checked::before {
+  opacity: 1;
+  transform: rotate(-45deg) scale(1);
+}
+
+.opening-deep-anal-toggle input:focus-visible {
+  box-shadow: var(--focus-ring), var(--btn-sketch-ring), 2px 2px 0 rgba(0, 0, 0, 0.35);
+}
+
+.opening-deep-anal-toggle input:checked:focus-visible {
+  box-shadow: var(--focus-ring), var(--btn-sketch-ring-primary), 2px 2px 0 rgba(0, 0, 0, 0.35);
+}
+
 .training-rating-field {
   display: flex;
   flex-direction: column;
@@ -223,14 +278,45 @@
   font-size: 0.82rem;
 }
 
-.training-rating-field input {
+.training-rating-field input[type='number'] {
   padding: 8px 10px;
-  border-radius: var(--sketch-radius);
-  border: var(--border-muted);
+  border: none;
+  border-radius: 12px 6px 10px 14px / 9px 14px 8px 12px;
   background: var(--bg-deep);
   color: var(--ink);
   font-weight: 700;
   font-family: var(--font-ui);
+  box-shadow: var(--btn-sketch-ring), var(--sketch-shadow);
+  min-height: 38px;
+  width: 170px;
+}
+
+.training-rating-field input[type='number']:hover {
+  background: var(--bg-hover);
+}
+
+.training-rating-field input[type='number']:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring), var(--btn-sketch-ring), var(--sketch-shadow);
+}
+
+/* Firefox spinner area */
+.training-rating-field input[type='number'] {
+  -moz-appearance: textfield;
+}
+
+/* Chromium/WebKit spin buttons */
+.training-rating-field input[type='number']::-webkit-inner-spin-button,
+.training-rating-field input[type='number']::-webkit-outer-spin-button {
+  opacity: 1;
+  margin: 0;
+  min-height: 30px;
+  border-left: 1px solid rgba(255, 228, 196, 0.28);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(0, 0, 0, 0.08)),
+    var(--surface);
+  border-radius: 0 8px 8px 0;
+  cursor: ns-resize;
 }
 
 .difficulty-row {
