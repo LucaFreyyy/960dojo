@@ -7,10 +7,9 @@
 html {
   -webkit-font-smoothing: antialiased;
   background-color: var(--bg-deep);
-  /* Avoid rubber-band scroll revealing a default white canvas above the header */
-  overscroll-behavior-y: none;
+  overscroll-behavior-y: auto;
   overflow-x: hidden;
-  overflow-y: auto;
+  overflow-y: visible;
 }
 
 body {
@@ -22,19 +21,21 @@ body {
   color: var(--ink);
   background: var(--bg-page);
   background-color: var(--bg-deep);
-  overscroll-behavior-y: none;
+  overscroll-behavior-y: auto;
   overflow-x: hidden;
-  overflow-y: auto;
+  overflow-y: visible;
   -webkit-overflow-scrolling: touch;
   padding-bottom: calc(var(--page-scroll-past) + env(safe-area-inset-bottom, 0px));
 }
 
 #__next {
   overflow-x: hidden;
+  overflow-y: visible;
 }
 
 main {
   min-height: calc(100vh - var(--header-height));
+  overflow: visible;
 }
 
 a {
