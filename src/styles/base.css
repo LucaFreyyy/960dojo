@@ -9,8 +9,8 @@ html {
   background-color: var(--bg-deep);
   /* Avoid rubber-band scroll revealing a default white canvas above the header */
   overscroll-behavior-y: none;
-  overflow-x: hidden; /* fallback for mobile browsers that ignore `clip` */
-  overflow-x: clip;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 body {
@@ -24,6 +24,8 @@ body {
   background-color: var(--bg-deep);
   overscroll-behavior-y: none;
   overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   padding-bottom: calc(var(--page-scroll-past) + env(safe-area-inset-bottom, 0px));
 }
 
