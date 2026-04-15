@@ -1066,7 +1066,7 @@ export default function OpeningsPage() {
                 <StartBtn onClick={startGame} disabled={gameMode === 'ranked' && !userId} />
                 {!rankedMode ? (
                   <label className="training-rating-field">
-                    Training rating (used for Lichess explorer + Stockfish)
+                    Training rating
                     <input
                       type="number"
                       value={trainingRating}

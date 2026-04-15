@@ -7,13 +7,15 @@ import {
 } from 'react';
 import PositionDisplay from './PositionDisplay';
 import { CHESS960_FILES, filterPositionNrsByPieceFiles, pickRandom, randomInt } from '../lib/chess960';
+import { useBoardVisuals } from '../lib/BoardVisualsContext';
+import { normalizePieceSet } from '../lib/boardVisuals';
 
 const PIECE_OPTIONS = [
-  { key: 'knight', label: 'Knight' },
-  { key: 'bishop', label: 'Bishop' },
-  { key: 'rook', label: 'Rook' },
-  { key: 'queen', label: 'Queen' },
-  { key: 'king', label: 'King' },
+  { key: 'knight', label: 'Knight', code: 'N' },
+  { key: 'bishop', label: 'Bishop', code: 'B' },
+  { key: 'rook', label: 'Rook', code: 'R' },
+  { key: 'queen', label: 'Queen', code: 'Q' },
+  { key: 'king', label: 'King', code: 'K' },
 ];
 
 const POSITION_MODES = [
@@ -53,9 +55,39 @@ const PositionSelector = forwardRef(function PositionSelector(
   { rankedMode, openingNr, onOpeningNrChange, onTrainingOnlyNotice, disabled, minimal },
   ref
 ) {
+  const { pieceSet: globalPieceSet } = useBoardVisuals();
   const [positionMode, setPositionMode] = useState('random');
   const [fixedPiece, setFixedPiece] = useState('knight');
   const [fixedFiles, setFixedFiles] = useState(() => new Set(['e']));
+  const [pieceAssetExt, setPieceAssetExt] = useState('svg');
+  const pieceTheme = normalizePieceSet(globalPieceSet || 'cburnett');
+
+  useEffect(() => {
+    let cancelled = false;
+    if (typeof window === 'undefined') return undefined;
+    const candidates = ['svg', 'png', 'webp'];
+    const probe = (theme, ext) =>
+      new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => resolve(true);
+        img.onerror = () => resolve(false);
+        img.src = `/lichess-assets/piece/${theme}/wP.${ext}`;
+      });
+    (async () => {
+      for (const ext of candidates) {
+        // eslint-disable-next-line no-await-in-loop
+        const ok = await probe(pieceTheme, ext);
+        if (ok) {
+          if (!cancelled) setPieceAssetExt(ext);
+          return;
+        }
+      }
+      if (!cancelled) setPieceAssetExt('svg');
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [pieceTheme]);
 
   useEffect(() => {
     setFixedFiles((prev) => normalizeFixedFilesForPiece(fixedPiece, prev));
@@ -164,20 +196,39 @@ const PositionSelector = forwardRef(function PositionSelector(
         <div className="stack stack--gap-md">
           <div className="chip-row chip-row--center">
             <span className="hint">Piece</span>
-            <select
-              value={fixedPiece}
-              disabled={disabled}
-              onChange={(e) => setFixedPiece(e.target.value)}
-              className="file-select"
-            >
-              {PIECE_OPTIONS.map((p) => (
-                <option key={p.key} value={p.key}>
-                  {p.label}
-                </option>
-              ))}
-            </select>
+            <div className="piece-choice-row" role="radiogroup" aria-label="Fixed piece">
+              {PIECE_OPTIONS.map((p) => {
+                const selected = fixedPiece === p.key;
+                const src = `/lichess-assets/piece/${pieceTheme}/w${p.code}.${pieceAssetExt}`;
+                return (
+                  <button
+                    key={p.key}
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    aria-label={p.label}
+                    title={p.label}
+                    disabled={disabled}
+                    onClick={() => setFixedPiece(p.key)}
+                    className={`piece-choice-btn ${selected ? 'piece-choice-btn--on' : ''}`.trim()}
+                  >
+                    <img
+                      src={src}
+                      alt=""
+                      draggable="false"
+                      className="piece-choice-btn__img"
+                      onError={(e) => {
+                        const img = e.currentTarget;
+                        if (img.dataset.fallback === '1') return;
+                        img.dataset.fallback = '1';
+                        img.src = `/lichess-assets/piece/cburnett/w${p.code}.svg`;
+                      }}
+                    />
+                  </button>
+                );
+              })}
+            </div>
           </div>
-          <div className="hint">Files (all must match)</div>
           <div className="chip-row">
             {CHESS960_FILES.map((f) => {
               const on = fixedFiles.has(f);
@@ -217,6 +268,7 @@ const PositionSelector = forwardRef(function PositionSelector(
           editable={numberEditable && !disabled}
           onChange={onOpeningNrChange}
           disabled={disabled}
+          compact
         />
       ) : null}
     </div>

@@ -24,6 +24,22 @@ export default function ModeSelector({
     </button>
   );
 
+  const colorBtn = (color) => {
+    const active = colorChoice === color;
+    const label = color === 'white' ? 'Play as white' : color === 'black' ? 'Play as black' : 'Play random color';
+    return (
+      <button
+        type="button"
+        onClick={() => onColorChange(color)}
+        className={`mode-chip mode-chip--color mode-chip--color-${color} ${active ? 'mode-chip--active' : ''}`.trim()}
+        aria-label={label}
+        title={label}
+      >
+        <span className="sr-only">{label}</span>
+      </button>
+    );
+  };
+
   return (
     <div className="mode-block">
       <div className="panel-label">Mode</div>
@@ -39,9 +55,9 @@ export default function ModeSelector({
         <>
           <div className="panel-label panel-label--spaced">Your color</div>
           <div className="chip-row">
-            {btn(colorChoice === 'white', () => onColorChange('white'), 'White', false)}
-            {btn(colorChoice === 'black', () => onColorChange('black'), 'Black', false)}
-            {btn(colorChoice === 'random', () => onColorChange('random'), 'Random', false)}
+            {colorBtn('white')}
+            {colorBtn('black')}
+            {colorBtn('random')}
           </div>
         </>
       ) : null}

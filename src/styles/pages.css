@@ -20,7 +20,7 @@
   grid-template-columns: minmax(0, min(560px, 100%)) minmax(0, 1fr);
   gap: 20px;
   align-items: start;
-  transform: translateX(clamp(-36px, -2.4vw, 0px));
+  transform: none;
 }
 
 .openings-layout > * {
@@ -364,6 +364,16 @@
     var(--surface);
   border-radius: 0 8px 8px 0;
   cursor: ns-resize;
+}
+
+/* Openings setup: make training controls narrower. */
+.openings-col-side .start-btn {
+  width: 250px;
+  min-width: 80px;
+}
+
+.openings-col-side .training-rating-field input[type='number'] {
+  width: 85px;
 }
 
 .training-chessboard--openings-eval-loading .chessboard-shell {

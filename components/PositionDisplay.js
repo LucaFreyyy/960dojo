@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-export default function PositionDisplay({ value, editable, onChange, disabled }) {
+export default function PositionDisplay({ value, editable, onChange, disabled, compact = false }) {
   const [text, setText] = useState(String(value ?? 0));
 
   useEffect(() => {
@@ -15,25 +15,30 @@ export default function PositionDisplay({ value, editable, onChange, disabled })
     if (onChange) onChange(clamped);
   }
 
+  const control = editable ? (
+    <input
+      type="text"
+      inputMode="numeric"
+      value={text}
+      disabled={disabled}
+      onChange={(e) => setText(e.target.value)}
+      onBlur={() => commit(text)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') commit(text);
+      }}
+      className="position-display__input-inline"
+      aria-label="Position number"
+    />
+  ) : (
+    <span className="position-display__value-static">{value}</span>
+  );
+
+  if (compact) return control;
+
   return (
     <div className="position-display__wrap">
       <span className="position-display__label">Position</span>
-      {editable ? (
-        <input
-          type="text"
-          inputMode="numeric"
-          value={text}
-          disabled={disabled}
-          onChange={(e) => setText(e.target.value)}
-          onBlur={() => commit(text)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') commit(text);
-          }}
-          className="position-display__input-inline"
-        />
-      ) : (
-        <span className="position-display__value-static">{value}</span>
-      )}
+      {control}
     </div>
   );
 }
