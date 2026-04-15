@@ -1,17 +1,20 @@
 /* Daily streak flames (profile, leaderboard, header) */
 
 .streak-flame-badge {
+  position: relative;
   display: inline-flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
-  gap: 0.12rem;
-  min-height: 2.55rem;
+  gap: 0.4rem;
   cursor: default;
 }
 
 .streak-flame-badge .streak-flame-svg {
   position: relative;
+  width: 28px;
+  height: auto;
+  flex-shrink: 0;
   filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.18));
 }
 
@@ -55,13 +58,9 @@
   margin-top: 0;
 }
 
-.profile-name-with-streak .profile-streak-row .streak-flame-badge {
-  min-height: 3rem;
-}
-
 .profile-name-with-streak .profile-streak-row .streak-flame-svg {
   width: 36px;
-  height: 45px;
+  height: auto;
 }
 
 .profile-name-with-streak .profile-streak-row .streak-flame-badge__value {
@@ -74,8 +73,9 @@
   margin-right: 0.15rem;
 }
 
-.header-streak-badge .streak-flame-badge {
-  min-height: 2.35rem;
+.header-streak-badge .streak-flame-svg {
+  width: 24px;
+  height: auto;
 }
 
 .header-streak-badge .streak-flame-badge__value {
@@ -91,8 +91,9 @@
   min-height: 2.5rem;
 }
 
-.leaderboard-streak-cell .streak-flame-badge {
-  min-height: 2.35rem;
+.leaderboard-streak-cell .streak-flame-svg {
+  width: 26px;
+  height: auto;
 }
 
 .leaderboard-streak-cell .streak-flame-badge__value {

@@ -1,24 +1,22 @@
 import Image from 'next/image';
+import { STREAK_SYMBOL_NATIVE_H, STREAK_SYMBOL_NATIVE_W, streakSymbolSrc } from '../../lib/streakCompute';
 
 /**
- * Flame glyph: `full` (active + played today), `half` (active, not yet today), `muted` (record only).
+ * Piece + flame glyph: `full` (active + played today), `half` (active, not yet today), `muted` (record only).
+ * Tier (pawn → king) is chosen from `streakValue`; variant picks the sprite column (0–2).
  */
-export default function StreakFlameIcon({ variant = 'full', className = '', title }) {
+export default function StreakFlameIcon({ variant = 'full', className = '', title, streakValue }) {
   const baseClass = `streak-flame-svg streak-flame-svg--${variant} ${className}`.trim();
-  const src =
-    variant === 'half'
-      ? '/streak-symbols/half_flame_pawn.png'
-      : variant === 'muted'
-        ? '/streak-symbols/burned_out_pawn.png'
-        : '/streak-symbols/full_flame_pawn.png';
+  const src = streakSymbolSrc(streakValue, variant);
+  if (!src) return null;
 
   return (
     <Image
       className={baseClass}
       src={src}
       alt={title || 'Streak symbol'}
-      width={28}
-      height={35}
+      width={STREAK_SYMBOL_NATIVE_W}
+      height={STREAK_SYMBOL_NATIVE_H}
       aria-hidden={title ? undefined : true}
     />
   );

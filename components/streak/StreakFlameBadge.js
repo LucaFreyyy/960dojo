@@ -9,7 +9,7 @@ export default function StreakFlameBadge({ variant, value, tooltip }) {
 
   return (
     <span className="streak-flame-badge" data-streak-tooltip={tooltip}>
-      <StreakFlameIcon variant={variant} />
+      <StreakFlameIcon variant={variant} streakValue={value} />
       <span className="streak-flame-badge__value" aria-hidden>
         {value}
       </span>
