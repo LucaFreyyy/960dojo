@@ -434,6 +434,15 @@
   font-size: 0.88rem;
 }
 
+.rating-display__label-link {
+  text-decoration: none;
+}
+
+.rating-display__label-link:hover {
+  color: var(--text-color-link);
+  text-decoration: underline;
+}
+
 .rating-display__value {
   display: inline-flex;
   align-items: center;
@@ -449,6 +458,13 @@
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
+}
+
+.rating-display__secondary {
+  font-size: 0.95rem;
+  font-family: var(--font-ui);
+  font-weight: 700;
+  color: var(--ink-muted);
 }
 
 .rating-established-hint {
@@ -866,6 +882,13 @@
   display: flex;
   gap: 0.5rem;
   margin-bottom: 0.65rem;
+  align-items: center;
+}
+
+.move-list__nav-right {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
 }
 
 .move-list__engine-lines {

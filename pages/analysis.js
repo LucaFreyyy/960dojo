@@ -7,6 +7,7 @@ import PositionDisplay from '../components/PositionDisplay';
 import SectionTitle from '../components/SectionTitle';
 import BackrankInput from '../components/BackrankInput';
 import AnalysisCommentBox from '../components/AnalysisCommentBox';
+import RatingDisplay from '../components/RatingDisplay';
 import { positionNrToStartFen } from '../lib/chess960';
 import STARTING_POSITIONS from '../lib/chess960Positions.json';
 import { Chess } from '../lib/chessCompat';
@@ -15,6 +16,7 @@ import { analyzeFenMultipvStream, uciPvToSanString, warmStockfish } from '../lib
 import { parsePgnTree } from '../lib/moveListEval';
 import { takeAnalysisImportForNonce } from '../lib/analysisSessionImport';
 import { useMoveListWheelNavigation } from '../lib/useMoveListWheelNavigation';
+import { extractPgnTag } from '../lib/tacticPgnUtils';
 
 const EXAMPLE_BACKRANK = 'bbnnrkqr';
 const MAX_DEPTH_CAP = 50;
@@ -200,6 +202,33 @@ function buildEvalDataFromMap(tree, evalByKey) {
   return buildFromLine(tree, [], true);
 }
 
+function parsePgnPlayerPanels(pgnText) {
+  const whiteName = extractPgnTag(pgnText, 'White');
+  const blackName = extractPgnTag(pgnText, 'Black');
+  const whiteEloRaw = extractPgnTag(pgnText, 'WhiteElo');
+  const blackEloRaw = extractPgnTag(pgnText, 'BlackElo');
+  const whiteElo = Number.parseInt(String(whiteEloRaw || ''), 10);
+  const blackElo = Number.parseInt(String(blackEloRaw || ''), 10);
+
+  const white = whiteName
+    ? {
+        name: whiteName,
+        userId: null,
+        atTimeRating: Number.isFinite(whiteElo) ? whiteElo : null,
+        currentRating: null,
+      }
+    : null;
+  const black = blackName
+    ? {
+        name: blackName,
+        userId: null,
+        atTimeRating: Number.isFinite(blackElo) ? blackElo : null,
+        currentRating: null,
+      }
+    : null;
+  return { white, black };
+}
+
 function getPositionAtSelection(startFen, mainline, selection) {
   const game = new Chess(startFen);
   const playSanSafe = (rawSan) => {
@@ -286,6 +315,8 @@ export default function AnalysisPage() {
   const [engineMultipvLines, setEngineMultipvLines] = useState([]);
   const [showEngineBestMoves, setShowEngineBestMoves] = useState(true);
   const [hoveredEngineLineRank, setHoveredEngineLineRank] = useState(null);
+  const [boardOrientation, setBoardOrientation] = useState('white');
+  const [analysisPlayers, setAnalysisPlayers] = useState({ white: null, black: null });
   const engineCancelRef = useRef(null);
   const engineStateRef = useRef({ key: null, depth: 0, cpWhite: null });
   const { moveListNavRef, onWheelNavigate } = useMoveListWheelNavigation();
@@ -579,6 +610,7 @@ export default function AnalysisPage() {
       setDepthReached(0);
       engineStateRef.current = { key: null, depth: 0, cpWhite: null };
       setInfoMessage('Imported FEN.');
+      setAnalysisPlayers({ white: null, black: null });
     } catch {
       setInfoMessage('Invalid FEN.');
     }
@@ -640,6 +672,7 @@ export default function AnalysisPage() {
       setEngineMultipvLines([]);
       engineStateRef.current = { key: null, depth: 0, cpWhite: null };
       setInfoMessage(msg);
+      setAnalysisPlayers(parsePgnPlayerPanels(raw));
       return true;
     },
     [backrankToNumber]
@@ -689,6 +722,66 @@ export default function AnalysisPage() {
     }
     router.replace('/analysis', undefined, { shallow: true }).catch(() => {});
   }, [router.isReady, router.query.importPgn, router.query.n, router.query.at, applyImportedPgnText, router]);
+
+  useEffect(() => {
+    if (!router.isReady) return;
+    const rawId = router.query.openingShare;
+    const openingShareId = Array.isArray(rawId) ? rawId[0] : rawId;
+    if (!openingShareId) return;
+    if (!/^[0-9a-f-]{36}$/i.test(openingShareId)) {
+      setInfoMessage('Invalid opening share link.');
+      router.replace('/analysis', undefined, { shallow: true }).catch(() => {});
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/opening-share/${encodeURIComponent(openingShareId)}`);
+        const payload = await res.json().catch(() => ({}));
+        if (cancelled) return;
+        if (!res.ok || !payload?.analysisPgn) {
+          setInfoMessage(payload?.error || 'Failed to load shared opening.');
+          router.replace('/analysis', undefined, { shallow: true }).catch(() => {});
+          return;
+        }
+        applyImportedPgnText(payload.analysisPgn, {
+          infoMessage: 'Loaded shared opening in analysis.',
+          browseAtStart: false,
+        });
+        const whitePanel = payload.color === 'white'
+          ? {
+              name: payload.playerName || 'Player',
+              userId: payload.userId || null,
+              atTimeRating: Number.isFinite(payload.ratingAtTime) ? payload.ratingAtTime : null,
+              currentRating: Number.isFinite(payload.currentRating) ? payload.currentRating : null,
+            }
+          : null;
+        const blackPanel = payload.color === 'black'
+          ? {
+              name: payload.playerName || 'Player',
+              userId: payload.userId || null,
+              atTimeRating: Number.isFinite(payload.ratingAtTime) ? payload.ratingAtTime : null,
+              currentRating: Number.isFinite(payload.currentRating) ? payload.currentRating : null,
+            }
+          : null;
+        setAnalysisPlayers({ white: whitePanel, black: blackPanel });
+      } catch {
+        if (!cancelled) setInfoMessage('Failed to load shared opening.');
+      } finally {
+        if (!cancelled) {
+          router.replace('/analysis', undefined, { shallow: true }).catch(() => {});
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [router.isReady, router.query.openingShare, applyImportedPgnText, router]);
+
+  const topPanel = boardOrientation === 'white' ? analysisPlayers.black : analysisPlayers.white;
+  const bottomPanel = boardOrientation === 'white' ? analysisPlayers.white : analysisPlayers.black;
 
   const engineBestLinesForMoveList = useMemo(() => {
     if (!showEngineBestMoves || !engineMultipvLines.length) return null;
@@ -758,15 +851,37 @@ export default function AnalysisPage() {
         <div className="openings-layout">
           <div className="openings-col-board">
             <div className="training-chessboard">
+              {topPanel ? (
+                <div className="analysis-player-panel analysis-player-panel--top">
+                  <RatingDisplay
+                    className="rating-display--panel"
+                    label={`${topPanel.name} (openings)`}
+                    rating={topPanel.atTimeRating}
+                    secondaryRating={topPanel.currentRating}
+                    profileUserId={topPanel.userId}
+                  />
+                </div>
+              ) : null}
               <Chessboard
                 fen={currentFen}
-                orientation="white"
+                orientation={boardOrientation}
                 onMove={onBoardMove}
                 lastMove={lastMove}
                 onWheelNavigate={onWheelNavigate}
                 autoShapes={analysisAutoShapes}
                 extraDrawableBrushes={analysisDrawableBrushes}
               />
+              {bottomPanel ? (
+                <div className="analysis-player-panel analysis-player-panel--bottom">
+                  <RatingDisplay
+                    className="rating-display--panel"
+                    label={`${bottomPanel.name} (openings)`}
+                    rating={bottomPanel.atTimeRating}
+                    secondaryRating={bottomPanel.currentRating}
+                    profileUserId={bottomPanel.userId}
+                  />
+                </div>
+              ) : null}
             </div>
             <div className="openings-board-head">
               <PositionDisplay value={positionNr} editable onChange={syncFromPositionNr} />
@@ -828,6 +943,17 @@ export default function AnalysisPage() {
               engineBestLines={engineBestLinesForMoveList}
               onEngineLineHover={showEngineBestMoves ? setHoveredEngineLineRank : null}
               onEngineLineClick={showEngineBestMoves ? playEngineLineFirstMove : null}
+              navRight={
+                <button
+                  type="button"
+                  className="ml-btn"
+                  onClick={() => setBoardOrientation((o) => (o === 'white' ? 'black' : 'white'))}
+                  aria-label="Flip board"
+                  title="Flip board"
+                >
+                  ↻
+                </button>
+              }
             />
             <AnalysisCommentBox
               value={moveCommentDraft}

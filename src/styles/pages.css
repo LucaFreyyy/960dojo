@@ -174,6 +174,23 @@
   color: var(--ink-muted);
 }
 
+.analysis-player-panel {
+  width: 100%;
+  display: flex;
+}
+
+.analysis-player-panel--top {
+  margin-bottom: 0.5rem;
+}
+
+.analysis-player-panel--bottom {
+  margin-top: 0.5rem;
+}
+
+.analysis-player-panel .rating-display {
+  width: 100%;
+}
+
 .analysis-import-export {
   margin-top: 1rem;
   display: flex;

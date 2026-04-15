@@ -1,8 +1,9 @@
 import { createSupabaseAdmin } from '../../../lib/supabaseAdmin';
 import { positionNrToStartFen } from '../../../lib/chess960';
-import { buildPgnFromSans, replaySansFromStoredPgn } from '../../../lib/openingsPgn';
+import { replaySansFromStoredPgn } from '../../../lib/openingsPgn';
 import { Chess } from '../../../lib/chessCompat';
 import { extractPgnTag } from '../../../lib/tacticPgnUtils';
+import { buildOpeningAnalysisPgn } from '../../../lib/openingAnalysisPgn';
 
 function openingLastFen(openingNr, pgnText) {
   try {
@@ -28,25 +29,6 @@ function finalEvalCpFromHistory(evalHistory) {
   const last = evalHistory[evalHistory.length - 1];
   if (!Number.isFinite(last)) return null;
   return last;
-}
-
-function buildOpeningAnalysisPgn(openingNr, pgnText) {
-  let startFen;
-  try {
-    startFen = positionNrToStartFen(openingNr);
-  } catch {
-    return null;
-  }
-  const sans = replaySansFromStoredPgn(pgnText || '', startFen);
-  const movetext = buildPgnFromSans(startFen, sans);
-  return [
-    '[Event "960 Dojo opening session"]',
-    '[Variant "Chess960"]',
-    `[FEN "${startFen}"]`,
-    '[SetUp "1"]',
-    '',
-    movetext.trim(),
-  ].join('\n').trim();
 }
 
 function buildTacticItems(tacticRows, fenByTacticId, pgnByTacticId) {

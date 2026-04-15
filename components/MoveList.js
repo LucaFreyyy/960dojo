@@ -70,6 +70,8 @@ const MoveList = forwardRef(function MoveList(
         onEngineLineHover = null,
         /** Optional click handler for engine lines: `(rank) => void` */
         onEngineLineClick = null,
+        /** Optional content displayed on right side of the nav row (analysis board flip). */
+        navRight = null,
     },
     ref
 ) {
@@ -375,6 +377,7 @@ const MoveList = forwardRef(function MoveList(
                 <button type="button" onClick={goPrev} className="ml-btn">{'<'}</button>
                 <button type="button" onClick={goNext} className="ml-btn">{'>'}</button>
                 <button type="button" onClick={goToMainlineEnd} className="ml-btn">{'>>'}</button>
+                {navRight ? <div className="move-list__nav-right">{navRight}</div> : null}
             </div>
 
             {Array.isArray(engineBestLines) && engineBestLines.length > 0 ? (
