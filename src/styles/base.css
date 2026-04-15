@@ -26,6 +26,8 @@ body {
   overflow-y: visible;
   -webkit-overflow-scrolling: touch;
   padding-bottom: calc(var(--page-scroll-past) + env(safe-area-inset-bottom, 0px));
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 #__next {
@@ -86,6 +88,13 @@ input,
 textarea,
 [contenteditable] {
   caret-color: var(--ink);
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+select {
+  -webkit-user-select: auto;
+  user-select: auto;
 }
 
 #fullScreenLoadingOverlay {
