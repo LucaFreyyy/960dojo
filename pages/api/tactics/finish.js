@@ -16,9 +16,19 @@ function kFactor({ gamesPlayed, baseK }) {
   return Math.round(baseK * multiplier);
 }
 
-function parseDislikesArray(val) {
-  if (Array.isArray(val) && val.length === 4) return val.map((n) => (Number.isFinite(n) ? n : 0));
-  return [0, 0, 0, 0];
+function feedbackCountsFromRow(row) {
+  return {
+    winLike: Number.isFinite(row?.winLike) ? row.winLike : 0,
+    winDislike: Number.isFinite(row?.winDislike) ? row.winDislike : 0,
+    lossLike: Number.isFinite(row?.lossLike) ? row.lossLike : 0,
+    lossDislike: Number.isFinite(row?.lossDislike) ? row.lossDislike : 0,
+  };
+}
+
+function computeTacticScore(counts) {
+  const total = counts.winLike + counts.winDislike + counts.lossLike + counts.lossDislike;
+  if (total <= 0) return 0;
+  return (2 * counts.winLike + 3 * counts.lossLike - 2 * counts.winDislike - 0.5 * counts.lossDislike) / total;
 }
 
 export default async function handler(req, res) {
@@ -50,7 +60,7 @@ export default async function handler(req, res) {
 
     const { data: tacticRow, error: tacticErr } = await supabaseAdmin
       .from('Tactic')
-      .select('id, rating, numTimesPlayed, disLikes')
+      .select('id, rating, numTimesPlayed, winLike, winDislike, lossLike, lossDislike')
       .eq('id', tacticIdNum)
       .maybeSingle();
     if (tacticErr) return res.status(500).json({ error: tacticErr.message });
@@ -122,11 +132,17 @@ export default async function handler(req, res) {
     });
     if (ratingInsertErr) return res.status(500).json({ error: ratingInsertErr.message });
 
-    let disLikes = parseDislikesArray(tacticRow.disLikes);
-    if (liked === true) disLikes[solved ? 0 : 2] += 1;
-    if (liked === false) disLikes[solved ? 1 : 3] += 1;
+    const feedbackCounts = feedbackCountsFromRow(tacticRow);
+    if (liked === true) {
+      if (solved) feedbackCounts.winLike += 1;
+      else feedbackCounts.lossLike += 1;
+    }
+    if (liked === false) {
+      if (solved) feedbackCounts.winDislike += 1;
+      else feedbackCounts.lossDislike += 1;
+    }
 
-    const tacticUpdate = { disLikes };
+    const tacticUpdate = { ...feedbackCounts, score: computeTacticScore(feedbackCounts) };
     if (!isFailedQueueRetry) {
       tacticUpdate.rating = newTacticRating;
       tacticUpdate.numTimesPlayed = tacticTimesPlayed + 1;

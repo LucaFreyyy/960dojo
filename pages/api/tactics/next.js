@@ -60,6 +60,30 @@ function inDifficultyBand(tacticRating, userRating, difficulty) {
   return tacticRating >= userRating + min && tacticRating <= userRating + max;
 }
 
+function feedbackCountsFromRow(row) {
+  return [
+    Number.isFinite(row?.winLike) ? row.winLike : 0,
+    Number.isFinite(row?.winDislike) ? row.winDislike : 0,
+    Number.isFinite(row?.lossLike) ? row.lossLike : 0,
+    Number.isFinite(row?.lossDislike) ? row.lossDislike : 0,
+  ];
+}
+
+function computeTacticScoreFromRow(row) {
+  const winLike = Number.isFinite(row?.winLike) ? row.winLike : 0;
+  const winDislike = Number.isFinite(row?.winDislike) ? row.winDislike : 0;
+  const lossLike = Number.isFinite(row?.lossLike) ? row.lossLike : 0;
+  const lossDislike = Number.isFinite(row?.lossDislike) ? row.lossDislike : 0;
+  const total = winLike + winDislike + lossLike + lossDislike;
+  if (total <= 0) return 0;
+  return (2 * winLike + 3 * lossLike - 2 * winDislike - 0.5 * lossDislike) / total;
+}
+
+function tacticScore(row) {
+  if (Number.isFinite(row?.score)) return row.score;
+  return computeTacticScoreFromRow(row);
+}
+
 async function chooseNewTactic({ userRating, difficulty, finishedIds, unfinishedIds }) {
   const { min, max } = parseDifficulty(difficulty);
   const minRating = userRating + min;
@@ -67,20 +91,25 @@ async function chooseNewTactic({ userRating, difficulty, finishedIds, unfinished
 
   const { data: inBand, error: inBandErr } = await supabaseAdmin
     .from('Tactic')
-    .select('id, rating, pgn, numTimesPlayed, disLikes')
+    .select('id, rating, score, pgn, numTimesPlayed, winLike, winDislike, lossLike, lossDislike')
     .gte('rating', minRating)
     .lte('rating', maxRating);
   if (inBandErr) throw new Error(inBandErr.message);
 
   const freshInBand = (inBand || []).filter((t) => !finishedIds.has(t.id) && !unfinishedIds.has(t.id));
   if (freshInBand.length) {
-    return { tactic: freshInBand[Math.floor(Math.random() * freshInBand.length)], usedFallback: false };
+    const maxScore = freshInBand.reduce(
+      (best, t) => Math.max(best, tacticScore(t)),
+      Number.NEGATIVE_INFINITY
+    );
+    const topScored = freshInBand.filter((t) => tacticScore(t) === maxScore);
+    return { tactic: topScored[Math.floor(Math.random() * topScored.length)], usedFallback: false };
   }
 
   // Fallback: closest non-finished, non-unfinished puzzle.
   const { data: allTactics, error: allErr } = await supabaseAdmin
     .from('Tactic')
-    .select('id, rating, pgn, numTimesPlayed, disLikes');
+    .select('id, rating, score, pgn, numTimesPlayed, winLike, winDislike, lossLike, lossDislike');
   if (allErr) throw new Error(allErr.message);
 
   const candidates = (allTactics || []).filter((t) => !finishedIds.has(t.id) && !unfinishedIds.has(t.id));
@@ -120,7 +149,7 @@ export default async function handler(req, res) {
           rating: chosen.rating,
           pgn: chosen.pgn,
           numTimesPlayed: chosen.numTimesPlayed,
-          disLikes: chosen.disLikes,
+          disLikes: feedbackCountsFromRow(chosen),
           startFen,
           puzzleLine,
           linkToGame: extractPgnTag(chosen.pgn, 'Site'),
@@ -172,7 +201,7 @@ export default async function handler(req, res) {
     if (failedCountErr) return res.status(500).json({ error: failedCountErr.message });
 
     if (
-      (failedFinishedCount || 0) > 20
+      (failedFinishedCount || 0) >= 10
       && Math.random() < 1 / 3
     ) {
       const { data: oldestFailedRow, error: oldestErr } = await supabaseAdmin
@@ -189,7 +218,7 @@ export default async function handler(req, res) {
       if (oldestFailedRow?.tacticId != null) {
         const { data: retryTactic, error: retryTacticErr } = await supabaseAdmin
           .from('Tactic')
-          .select('id, rating, pgn, numTimesPlayed, disLikes')
+          .select('id, rating, score, pgn, numTimesPlayed, winLike, winDislike, lossLike, lossDislike')
           .eq('id', oldestFailedRow.tacticId)
           .maybeSingle();
         if (retryTacticErr) return res.status(500).json({ error: retryTacticErr.message });
@@ -219,7 +248,7 @@ export default async function handler(req, res) {
               rating: chosen.rating,
               pgn: chosen.pgn,
               numTimesPlayed: chosen.numTimesPlayed,
-              disLikes: chosen.disLikes,
+              disLikes: feedbackCountsFromRow(chosen),
               startFen,
               puzzleLine,
               linkToGame: extractPgnTag(chosen.pgn, 'Site'),
@@ -242,7 +271,7 @@ export default async function handler(req, res) {
     if (unfinishedTacticIds.length) {
       const { data: unfinishedTacticsRows, error: unfinishedTacticsErr } = await supabaseAdmin
         .from('Tactic')
-        .select('id, rating, pgn, numTimesPlayed, disLikes')
+        .select('id, rating, score, pgn, numTimesPlayed, winLike, winDislike, lossLike, lossDislike')
         .in('id', unfinishedTacticIds);
       if (unfinishedTacticsErr) return res.status(500).json({ error: unfinishedTacticsErr.message });
       unfinishedTactics = unfinishedTacticsRows || [];
@@ -311,7 +340,7 @@ export default async function handler(req, res) {
         rating: chosen.rating,
         pgn: chosen.pgn,
         numTimesPlayed: chosen.numTimesPlayed,
-        disLikes: chosen.disLikes,
+        disLikes: feedbackCountsFromRow(chosen),
         startFen,
         puzzleLine,
         linkToGame: extractPgnTag(chosen.pgn, 'Site'),
