@@ -87,9 +87,11 @@ export default function ChessBoard({
   const [ground, setGround] = useState(null);
   const [promotionUI, setPromotionUI] = useState(null);
   const [pieceAssetExt, setPieceAssetExt] = useState('svg');
+  const [resolvedPieceTheme, setResolvedPieceTheme] = useState('cburnett');
+  const [resolvedBoardTheme, setResolvedBoardTheme] = useState('brown.png');
   const pieceTheme = normalizePieceSet(pieceSet || globalVisuals?.pieceSet || 'cburnett');
   const boardThemeKey = normalizeBoardTheme(boardTheme || globalVisuals?.boardTheme || 'brown');
-  const boardImage = boardThemeAsset(boardThemeKey);
+  const boardImage = boardThemeAsset(resolvedBoardTheme || boardThemeKey);
 
   const chessEvents = useMemo(() => ({ select: onChessSelect }), [onChessSelect]);
 
@@ -368,28 +370,73 @@ export default function ChessBoard({
     let cancelled = false;
     if (typeof window === 'undefined') return undefined;
     const candidates = ['svg', 'png', 'webp'];
-    const probe = (ext) =>
+    const probe = (theme, ext) =>
       new Promise((resolve) => {
         const img = new Image();
         img.onload = () => resolve(true);
         img.onerror = () => resolve(false);
-        img.src = `/lichess-assets/piece/${pieceTheme}/wP.${ext}`;
+        img.src = `/lichess-assets/piece/${theme}/wP.${ext}`;
       });
     (async () => {
       for (const ext of candidates) {
         // eslint-disable-next-line no-await-in-loop
-        const ok = await probe(ext);
+        const ok = await probe(pieceTheme, ext);
         if (ok) {
-          if (!cancelled) setPieceAssetExt(ext);
+          if (!cancelled) {
+            setResolvedPieceTheme(pieceTheme);
+            setPieceAssetExt(ext);
+          }
           return;
         }
       }
-      if (!cancelled) setPieceAssetExt('svg');
+      for (const ext of candidates) {
+        // eslint-disable-next-line no-await-in-loop
+        const ok = await probe('cburnett', ext);
+        if (ok) {
+          if (!cancelled) {
+            setResolvedPieceTheme('cburnett');
+            setPieceAssetExt(ext);
+          }
+          return;
+        }
+      }
+      if (!cancelled) {
+        setResolvedPieceTheme('cburnett');
+        setPieceAssetExt('svg');
+      }
     })();
     return () => {
       cancelled = true;
     };
   }, [pieceTheme]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (typeof window === 'undefined') return undefined;
+    const probeBoard = (theme) =>
+      new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => resolve(true);
+        img.onerror = () => resolve(false);
+        img.src = boardThemeAsset(theme);
+      });
+    (async () => {
+      // eslint-disable-next-line no-await-in-loop
+      const preferredOk = await probeBoard(boardThemeKey);
+      if (preferredOk) {
+        if (!cancelled) setResolvedBoardTheme(boardThemeKey);
+        return;
+      }
+      // eslint-disable-next-line no-await-in-loop
+      const fallbackOk = await probeBoard('brown.png');
+      if (!cancelled) {
+        setResolvedBoardTheme(fallbackOk ? 'brown.png' : boardThemeKey);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [boardThemeKey]);
 
   if (!fen) {
     return (
@@ -418,18 +465,18 @@ export default function ChessBoard({
 
   const themeStyle = {
     '--board-theme-image': `url("${boardImage}")`,
-    '--piece-wp': `url("/lichess-assets/piece/${pieceTheme}/wP.${pieceAssetExt}")`,
-    '--piece-wn': `url("/lichess-assets/piece/${pieceTheme}/wN.${pieceAssetExt}")`,
-    '--piece-wb': `url("/lichess-assets/piece/${pieceTheme}/wB.${pieceAssetExt}")`,
-    '--piece-wr': `url("/lichess-assets/piece/${pieceTheme}/wR.${pieceAssetExt}")`,
-    '--piece-wq': `url("/lichess-assets/piece/${pieceTheme}/wQ.${pieceAssetExt}")`,
-    '--piece-wk': `url("/lichess-assets/piece/${pieceTheme}/wK.${pieceAssetExt}")`,
-    '--piece-bp': `url("/lichess-assets/piece/${pieceTheme}/bP.${pieceAssetExt}")`,
-    '--piece-bn': `url("/lichess-assets/piece/${pieceTheme}/bN.${pieceAssetExt}")`,
-    '--piece-bb': `url("/lichess-assets/piece/${pieceTheme}/bB.${pieceAssetExt}")`,
-    '--piece-br': `url("/lichess-assets/piece/${pieceTheme}/bR.${pieceAssetExt}")`,
-    '--piece-bq': `url("/lichess-assets/piece/${pieceTheme}/bQ.${pieceAssetExt}")`,
-    '--piece-bk': `url("/lichess-assets/piece/${pieceTheme}/bK.${pieceAssetExt}")`,
+    '--piece-wp': `url("/lichess-assets/piece/${resolvedPieceTheme}/wP.${pieceAssetExt}")`,
+    '--piece-wn': `url("/lichess-assets/piece/${resolvedPieceTheme}/wN.${pieceAssetExt}")`,
+    '--piece-wb': `url("/lichess-assets/piece/${resolvedPieceTheme}/wB.${pieceAssetExt}")`,
+    '--piece-wr': `url("/lichess-assets/piece/${resolvedPieceTheme}/wR.${pieceAssetExt}")`,
+    '--piece-wq': `url("/lichess-assets/piece/${resolvedPieceTheme}/wQ.${pieceAssetExt}")`,
+    '--piece-wk': `url("/lichess-assets/piece/${resolvedPieceTheme}/wK.${pieceAssetExt}")`,
+    '--piece-bp': `url("/lichess-assets/piece/${resolvedPieceTheme}/bP.${pieceAssetExt}")`,
+    '--piece-bn': `url("/lichess-assets/piece/${resolvedPieceTheme}/bN.${pieceAssetExt}")`,
+    '--piece-bb': `url("/lichess-assets/piece/${resolvedPieceTheme}/bB.${pieceAssetExt}")`,
+    '--piece-br': `url("/lichess-assets/piece/${resolvedPieceTheme}/bR.${pieceAssetExt}")`,
+    '--piece-bq': `url("/lichess-assets/piece/${resolvedPieceTheme}/bQ.${pieceAssetExt}")`,
+    '--piece-bk': `url("/lichess-assets/piece/${resolvedPieceTheme}/bK.${pieceAssetExt}")`,
   };
 
   return (
