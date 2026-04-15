@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase';
 import ProfileBody from '../components/ProfileBody';
 import { hashEmail } from '../lib/hashEmail';
 import { fetchFriendsForUser } from '../lib/friends';
+import { streakFromUserRow } from '../lib/streakFromUserRow';
 
 export default function ProfilePage() {
     const session = useSupabaseSession();
@@ -37,7 +38,7 @@ export default function ProfilePage() {
     async function fetchUserData() {
         const { data, error } = await supabase
             .from('User')
-            .select('id, email, name, bio')
+            .select('id, email, name, bio, Streak(userId, currentStreak, longestStreak, playedToday, lastActivityDate)')
             .eq('id', userId)
             .single();
         if (!error) setUserData(data);
@@ -61,6 +62,7 @@ export default function ProfilePage() {
                         onNameUpdated={fetchUserData}
                         friends={friends}
                         tabsUserId={userId}
+                        streakRow={streakFromUserRow(userData)}
                     />
                 )}
             </main>

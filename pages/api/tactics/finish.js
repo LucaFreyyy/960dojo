@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { refreshUserStreakInDb } from '../../../lib/streakServer';
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -139,6 +140,15 @@ export default async function handler(req, res) {
 
     const reportedFinishedCount =
       (userFinishedCount || 0) + (isFailedQueueRetry ? 0 : 1);
+
+    try {
+      const streakResult = await refreshUserStreakInDb(supabaseAdmin, userId);
+      if (!streakResult?.ok) {
+        console.error('[api/tactics/finish] streak refresh failed:', streakResult?.error);
+      }
+    } catch (streakErr) {
+      console.warn('[api/tactics/finish] streak refresh exception:', streakErr);
+    }
 
     return res.status(200).json({
       userRating: newUserRating,

@@ -203,3 +203,25 @@ CREATE POLICY "FriendRequest_delete_receiver"
 -- No policies for anon/authenticated → inserts only via service role (/api/feedback).
 -- ---------------------------------------------------------------------------
 ALTER TABLE public."Feedback" ENABLE ROW LEVEL SECURITY;
+
+-- ---------------------------------------------------------------------------
+-- Streak  (matches: userId, currentStreak, longestStreak, lastActivityDate, playedToday, updatedAt)
+-- Public read for leaderboards / profiles; writes via service role (API) only.
+-- ---------------------------------------------------------------------------
+DO $streak_rls$
+BEGIN
+  IF to_regclass('public."Streak"') IS NULL THEN
+    RAISE NOTICE 'Skipping Streak RLS: public."Streak" not found.';
+  ELSE
+    EXECUTE 'ALTER TABLE public."Streak" ENABLE ROW LEVEL SECURITY';
+
+    EXECUTE 'DROP POLICY IF EXISTS "Streak_select_all" ON public."Streak"';
+    EXECUTE $p$
+      CREATE POLICY "Streak_select_all"
+        ON public."Streak" FOR SELECT
+        TO anon, authenticated
+        USING (true)
+    $p$;
+  END IF;
+END
+$streak_rls$;

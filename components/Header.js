@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import Dropdown from './Dropdown';
+import UserStreakHeaderBadge from './UserStreakHeaderBadge';
 import { FaCoffee } from 'react-icons/fa';
 import { useSupabaseSession } from '../lib/SessionContext';
 
@@ -26,8 +27,11 @@ export default function Header() {
                 />
                 <h1 className="logo-text">960 DOJO</h1>
             </Link>
-            <div className="header-dropdown-wrap">
-                <Dropdown />
+            <div className="header-right-cluster">
+                <UserStreakHeaderBadge />
+                <div className="header-dropdown-wrap">
+                    <Dropdown />
+                </div>
             </div>
         </header>
     );

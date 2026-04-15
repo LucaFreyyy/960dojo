@@ -42,11 +42,33 @@ import {
   updateUserOpening,
 } from '../lib/openingsDb';
 import { hashEmail } from '../lib/hashEmail';
+import { supabase } from '../lib/supabase';
 import { lastMoveSquaresAtMainlineSansIndex } from '../lib/trainingBrowseHighlight';
 import { useMoveListWheelNavigation } from '../lib/useMoveListWheelNavigation';
 import { stashPgnAndOpenAnalysis } from '../lib/analysisSessionImport';
 
 const USER_TARGET_MOVES = 11;
+
+async function requestStreakRefreshAfterPlay(userId) {
+  if (!userId || typeof window === 'undefined') return;
+  try {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session?.access_token) return;
+    await fetch('/api/streak/refresh', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ userId }),
+    });
+  } catch {
+    /* ignore */
+  }
+  window.dispatchEvent(new CustomEvent('dojo-streak-changed'));
+}
 
 export default function OpeningsPage() {
   const session = useSupabaseSession();
@@ -416,6 +438,8 @@ export default function OpeningsPage() {
           });
           if (!wroteDone) {
             console.warn('[openings/finalizeGame] failed to mark finished opening row', { rowId: targetRowId });
+          } else if (userIdRef.current) {
+            void requestStreakRefreshAfterPlay(userIdRef.current);
           }
 
           // Step 2: store evalHistory. If decimal arrays are rejected by schema, fall back to integers.

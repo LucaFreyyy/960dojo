@@ -405,6 +405,9 @@ export default function TacticsPage() {
           });
           const data = await res.json();
           if (!res.ok) return;
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('dojo-streak-changed'));
+          }
           setUserDelta(data?.delta ?? null);
           setPuzzleDelta(
             Number.isFinite(ratingSnap.puzzleRating) && Number.isFinite(data?.tacticRating)

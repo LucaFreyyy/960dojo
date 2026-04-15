@@ -704,6 +704,12 @@
   flex-wrap: wrap;
 }
 
+.leaderboard-cats-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
 .leaderboard-cat-btn {
   padding: 0.65rem 1.25rem;
   font-size: 0.95rem;
@@ -913,6 +919,47 @@
 
 .leaderboard-player-link:hover {
   color: var(--text-color-link);
+}
+
+.leaderboard-board-toggle {
+  display: flex;
+  justify-content: center;
+  gap: 0.65rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.leaderboard-board-btn {
+  padding: 0.55rem 1.1rem;
+  font-size: 0.92rem;
+  font-weight: 600;
+  font-family: var(--font-ui);
+  border: none;
+  border-radius: var(--btn-radius-lg);
+  background: var(--surface);
+  color: var(--ink-muted);
+  cursor: pointer;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: var(--btn-sketch-ring-lg), var(--sketch-shadow);
+}
+
+.leaderboard-board-btn:hover {
+  background: var(--bg-hover);
+}
+
+.leaderboard-board-btn--active {
+  background: var(--surface-active);
+  color: var(--ink);
+  box-shadow: var(--btn-sketch-ring-primary-lg), var(--box-shadow-heavy);
+}
+
+.leaderboard-table th.leaderboard-table__streak {
+  text-align: right;
+  width: 140px;
+}
+
+.leaderboard-table td.leaderboard-table__streak-cell {
+  text-align: right;
 }
 
 /* Player search */

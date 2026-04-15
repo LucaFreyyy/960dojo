@@ -8,6 +8,7 @@ import Button from '../../components/Button';
 import { hashEmail } from '../../lib/hashEmail';
 import { fetchFriendsForUser, fetchFriendshipRow, sendFriendRequest } from '../../lib/friends';
 import ProfileBody from '../../components/ProfileBody';
+import { streakFromUserRow } from '../../lib/streakFromUserRow';
 
 export default function ProfilePage() {
     const session = useSupabaseSession();
@@ -53,7 +54,7 @@ export default function ProfilePage() {
     async function fetchUserData() {
         const { data, error } = await supabase
             .from('User')
-            .select('id, email, name, bio')
+            .select('id, email, name, bio, Streak(userId, currentStreak, longestStreak, playedToday, lastActivityDate)')
             .eq('id', id)
             .single();
 
@@ -105,6 +106,7 @@ export default function ProfilePage() {
                         tabsUserId={id}
                         compareUserId={viewerId && viewerId !== id ? viewerId : null}
                         profileName={userData?.name}
+                        streakRow={streakFromUserRow(userData)}
                         actionSlot={
                             viewerId && viewerId !== id ? (
                                 friendship?.status === 'accepted' ? (

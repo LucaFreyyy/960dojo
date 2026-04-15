@@ -12,6 +12,7 @@ export default function ProfileBody({
   tabsUserId,
   compareUserId = null,
   profileName,
+  streakRow = null,
 }) {
   return (
     <>
@@ -20,6 +21,7 @@ export default function ProfileBody({
         editable={editable}
         checkUsernameAvailable={checkUsernameAvailable}
         onNameUpdated={onNameUpdated}
+        streakRow={streakRow}
       />
       {actionSlot ? <div className="profile-action-slot">{actionSlot}</div> : null}
       <hr className="separating-line" />

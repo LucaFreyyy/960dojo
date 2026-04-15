@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import ProfileStreakRow from './streak/ProfileStreakRow';
 
-export default function ProfileHeader({ user, editable = true }) {
+export default function ProfileHeader({ user, editable = true, streakRow = null }) {
     const [editingField, setEditingField] = useState(null);
     const [formData, setFormData] = useState({
         name: user.name,
@@ -99,6 +100,8 @@ export default function ProfileHeader({ user, editable = true }) {
                         <h2 className="name-text">{user.name}</h2>
                     )}
                 </div>
+
+                {streakRow ? <ProfileStreakRow streak={streakRow} /> : null}
 
                 <div className="profile-bio-row">
                     <label>Bio {editable && (
