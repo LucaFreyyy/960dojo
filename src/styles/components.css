@@ -1005,6 +1005,7 @@
   padding: 0.2rem 0.25rem;
   border-radius: 4px;
   cursor: pointer;
+  --engine-line-color: var(--accent-cool, #2ea4ff);
 }
 
 .move-list__engine-line:hover {
@@ -1016,12 +1017,12 @@
   min-width: 3.25rem;
   font-variant-numeric: tabular-nums;
   font-weight: 600;
-  color: var(--accent-cool, #2ea4ff);
+  color: var(--engine-line-color);
   margin-right: 0.45rem;
 }
 
 .move-list__engine-line-pv {
-  color: var(--ink);
+  color: var(--engine-line-color);
   word-break: break-word;
 }
 

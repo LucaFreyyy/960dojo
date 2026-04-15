@@ -393,6 +393,7 @@ const MoveList = forwardRef(function MoveList(
                                 className="move-list__engine-line"
                                 onMouseEnter={() => onEngineLineHover?.(row.rank)}
                                 onClick={() => onEngineLineClick?.(row.rank)}
+                                style={row.color ? { '--engine-line-color': row.color } : undefined}
                             >
                                 <span className="move-list__engine-line-eval">{row.evalText}</span>
                                 <span className="move-list__engine-line-pv">{row.pvText}</span>

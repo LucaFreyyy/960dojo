@@ -63,9 +63,18 @@ function lossToEngineBrush(lossCp) {
   const hue = 118 * (1 - t) + 12 * t;
   return {
     color: `hsl(${hue} 74% 40%)`,
-    opacity: 0.9,
+    lineColor: `hsl(${hue} 74% 40%)`,
+    opacity: 1,
     lineWidth: 10,
   };
+}
+
+function engineBrushKey(multipv, lineColor) {
+  const safeColor = String(lineColor || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return `engl-${multipv}-${safeColor || 'default'}`;
 }
 
 function buildStartFenFromBackrank(backrank) {
@@ -783,18 +792,24 @@ export default function AnalysisPage() {
   const topPanel = boardOrientation === 'white' ? analysisPlayers.black : analysisPlayers.white;
   const bottomPanel = boardOrientation === 'white' ? analysisPlayers.white : analysisPlayers.black;
 
+  const whiteToMove = whiteToMoveFromFen(currentFen);
+
   const engineBestLinesForMoveList = useMemo(() => {
     if (!showEngineBestMoves || !engineMultipvLines.length) return null;
     const fen = currentFen;
-    return engineMultipvLines.map((ln) => {
+    const slice = engineMultipvLines.slice(0, ENGINE_MULTIPV);
+    return slice.map((ln, lineIdx) => {
+      const loss = lossCpVsBestLine(slice, lineIdx, whiteToMove);
+      const brush = lossToEngineBrush(loss);
       const sanPv = uciPvToSanString(fen, ln.pvUci);
       return {
         rank: ln.multipv,
         evalText: formatEvalFromCpWhite(ln.cpWhite),
         pvText: sanPv || (Array.isArray(ln.pvUci) ? ln.pvUci.join(' ') : ''),
+        color: brush.lineColor,
       };
     });
-  }, [showEngineBestMoves, engineMultipvLines, currentFen]);
+  }, [showEngineBestMoves, engineMultipvLines, currentFen, whiteToMove]);
 
   const playEngineLineFirstMove = useCallback((rank) => {
     const line = engineMultipvLines.find((ln) => ln.multipv === rank);
@@ -809,8 +824,6 @@ export default function AnalysisPage() {
     if (!move?.san) return;
     onBoardMove({ from, to, san: move.san });
   }, [engineMultipvLines, currentFen, onBoardMove]);
-
-  const whiteToMove = whiteToMoveFromFen(currentFen);
 
   const { analysisAutoShapes, analysisDrawableBrushes } = useMemo(() => {
     if (!showEngineBestMoves || !engineMultipvLines.length) {
@@ -829,10 +842,15 @@ export default function AnalysisPage() {
       if (!sq(ln.firstFrom) || !sq(ln.firstTo)) continue;
       const lineIdx = slice.findIndex((x) => x.multipv === ln.multipv);
       const loss = lossCpVsBestLine(slice, lineIdx, whiteToMove);
-      const brushKey = `engl-${ln.multipv}`;
+      const b = lossToEngineBrush(loss);
+      const brushKey = engineBrushKey(ln.multipv, b.lineColor);
       if (!brushes[brushKey]) {
-        const b = lossToEngineBrush(loss);
-        brushes[brushKey] = { key: brushKey, ...b };
+        brushes[brushKey] = {
+          key: brushKey,
+          color: b.color,
+          opacity: b.opacity,
+          lineWidth: b.lineWidth,
+        };
       }
       shapes.push({ orig: ln.firstFrom, dest: ln.firstTo, brush: brushKey });
     }
