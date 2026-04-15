@@ -86,6 +86,19 @@
   color: var(--ink);
 }
 
+.profile-name-with-streak {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 0.85rem;
+  width: 100%;
+}
+
+.profile-name-with-streak .name-text {
+  width: auto;
+}
+
 .name-input {
   background: var(--bg-deep);
   border: var(--border-muted);

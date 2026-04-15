@@ -94,14 +94,18 @@ export default function ProfileHeader({ user, editable = true, streakRow = null 
                                 autoFocus
                             />
                         ) : (
-                            <h2 className="name-text">{user.name}</h2>
+                            <div className="profile-name-with-streak">
+                                <h2 className="name-text">{user.name}</h2>
+                                {streakRow ? <ProfileStreakRow streak={streakRow} /> : null}
+                            </div>
                         )
                     ) : (
-                        <h2 className="name-text">{user.name}</h2>
+                        <div className="profile-name-with-streak">
+                            <h2 className="name-text">{user.name}</h2>
+                            {streakRow ? <ProfileStreakRow streak={streakRow} /> : null}
+                        </div>
                     )}
                 </div>
-
-                {streakRow ? <ProfileStreakRow streak={streakRow} /> : null}
 
                 <div className="profile-bio-row">
                     <label>Bio {editable && (
