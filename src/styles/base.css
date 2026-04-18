@@ -1,0 +1,115 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  background-color: var(--bg-deep);
+  overscroll-behavior-y: auto;
+  overflow-x: hidden;
+  overflow-y: visible;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--font-ui);
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--ink);
+  background: var(--bg-page);
+  background-color: var(--bg-deep);
+  overscroll-behavior-y: auto;
+  overflow-x: hidden;
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: calc(var(--page-scroll-past) + env(safe-area-inset-bottom, 0px));
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+#__next {
+  overflow-x: hidden;
+  overflow-y: visible;
+}
+
+main {
+  min-height: calc(100vh - var(--header-height));
+  overflow: visible;
+}
+
+a {
+  color: var(--text-color-link);
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* Card / control links — no underline */
+a.practice-box:hover,
+a.time-box:hover,
+a.btn:hover,
+a.buy-coffee:hover,
+a.logo-container:hover,
+a.dropdown-item:hover,
+a.leaderboard-player-link:hover,
+a.notification-card__link:hover {
+  text-decoration: none;
+}
+
+button:hover,
+.btn:hover,
+.dropbtn:hover,
+.leaderboard-cat-btn:hover {
+  text-decoration: none;
+}
+
+code {
+  font-family: ui-monospace, monospace;
+  font-size: 0.9em;
+}
+
+button:focus-visible {
+  outline: none;
+}
+
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--logo-red);
+  outline-offset: 2px;
+}
+
+/* Editable fields need visible caret */
+input,
+textarea,
+[contenteditable] {
+  caret-color: var(--ink);
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+select {
+  -webkit-user-select: auto;
+  user-select: auto;
+}
+
+#fullScreenLoadingOverlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  z-index: 9999;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink);
+  font-size: 1.5rem;
+  text-align: center;
+}
+
+#fullScreenLoadingOverlay .loader {
+  margin-bottom: 1rem;
+}

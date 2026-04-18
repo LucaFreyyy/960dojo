@@ -1,0 +1,1088 @@
+import Head from 'next/head';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Chess } from '../lib/chessCompat';
+import { useSupabaseSession } from '../lib/SessionContext';
+import Chessboard from '../components/Chessboard';
+import MoveList from '../components/MoveList';
+import RatingDisplay from '../components/RatingDisplay';
+import { ESTABLISHED_RATING_MIN_ENTRIES } from '../lib/ratingConstants';
+import { OpenInAnalysisBtn } from '../components/PostTacticDisplay';
+import SectionTitle from '../components/SectionTitle';
+import PositionSelector from '../components/PositionSelector';
+import PositionDisplay from '../components/PositionDisplay';
+import ModeSelector from '../components/ModeSelector';
+import StartBtn from '../components/StartBtn';
+import PlayAgainBtn from '../components/PlayAgainBtn';
+import { positionNrToStartFen, randomInt } from '../lib/chess960';
+import { buildPgnFromSans, replaySansFromStoredPgn } from '../lib/openingsPgn';
+import { getOpponentSanAndFen } from '../lib/openingsOpponent';
+import { analyzeFenCpWhiteStream, evalFenDepthCpWhite } from '../lib/stockfishUtils';
+import {
+  OPENINGS_EVAL_DEPTH_FINAL,
+  OPENINGS_EVAL_DEPTH_MOVE,
+} from '../lib/openingsEval';
+import { createPosition } from '../lib/chessopsUtils';
+import {
+  applyBoardMoveToChessGame,
+  applyMoveMatchingTargetFen,
+  computeFenTrail,
+  countUserMovesFromSans,
+  sideToMoveFromFen,
+} from '../lib/openingsGame';
+import { playButtonClick, playChessMove, playLoseSound, playWinSound } from '../lib/soundEffects';
+import { computeOpeningsRatingDelta } from '../lib/openingsRating';
+import { createRatedOpeningRow } from '../lib/openingsUserOpening';
+import {
+  countOpeningsRatings,
+  fetchUserOpeningDeepAnal,
+  fetchLatestOpeningsRating,
+  fetchUnfinishedOpeningRow,
+  insertUserOpening,
+  upsertUserOpeningDeepAnal,
+  updateUserOpening,
+} from '../lib/openingsDb';
+import { hashEmail } from '../lib/hashEmail';
+import { supabase } from '../lib/supabase';
+import { lastMoveSquaresAtMainlineSansIndex } from '../lib/trainingBrowseHighlight';
+import { useMoveListWheelNavigation } from '../lib/useMoveListWheelNavigation';
+import { stashPgnAndOpenAnalysis } from '../lib/analysisSessionImport';
+
+const USER_TARGET_MOVES = 11;
+
+async function requestStreakRefreshAfterPlay(userId) {
+  if (!userId || typeof window === 'undefined') return;
+  try {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session?.access_token) return;
+    await fetch('/api/streak/refresh', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ userId }),
+    });
+  } catch {
+    /* ignore */
+  }
+  window.dispatchEvent(new CustomEvent('dojo-streak-changed'));
+}
+
+export default function OpeningsPage() {
+  const session = useSupabaseSession();
+  const [userId, setUserId] = useState(null);
+
+  const [gameMode, setGameMode] = useState('training');
+  const [colorChoice, setColorChoice] = useState('random');
+  const [openingNr, setOpeningNr] = useState(0);
+  const [infoMessage, setInfoMessage] = useState('');
+
+  const [phase, setPhase] = useState('setup');
+  const positionRef = useRef(null);
+
+  const [userColor, setUserColor] = useState('white');
+  const [startFen, setStartFen] = useState(null);
+  const [openingRowId, setOpeningRowId] = useState(null);
+  const [isRatedSession, setIsRatedSession] = useState(false);
+
+  const [playedSans, setPlayedSans] = useState([]);
+  const [currentFen, setCurrentFen] = useState(null);
+  const { moveListNavRef, onWheelNavigate } = useMoveListWheelNavigation();
+
+  const [browsePosition, setBrowsePosition] = useState({ index: -1, variationPath: [] });
+  const [opponentBusy, setOpponentBusy] = useState(false);
+
+  const [dbRating, setDbRating] = useState(1500);
+  const [trainingRating, setTrainingRating] = useState(1500);
+  const [ratingDelta, setRatingDelta] = useState(null);
+  const [openingsRatingCount, setOpeningsRatingCount] = useState(0);
+
+  const [moveListLoading, setMoveListLoading] = useState(false);
+  const [moveListEvalData, setMoveListEvalData] = useState(null);
+  const [openingDeepAnal, setOpeningDeepAnal] = useState(false);
+  const [boardEvalPulse, setBoardEvalPulse] = useState('');
+
+  const playedSansRef = useRef([]);
+  const currentFenRef = useRef(null);
+  const phaseRef = useRef('setup');
+  const userColorRef = useRef('white');
+  const userMovesDoneRef = useRef(0);
+  const isRatedRef = useRef(false);
+  const openingRowIdRef = useRef(null);
+  const startFenRef = useRef(null);
+  const userIdRef = useRef(null);
+  const sessionAccessTokenRef = useRef(null);
+  const gameModeRef = useRef('training');
+  const trainingRatingRef = useRef(1500);
+  const dbRatingRef = useRef(1500);
+  /** Parallel to positions along the mainline; pawns from White POV, or ±(100+mateIn). */
+  const evalHistoryTrailRef = useRef([]);
+  const evalTasksRef = useRef(new Map());
+  const opponentBusyRef = useRef(false);
+  const isBrowsingLiveRef = useRef(true);
+  const endingGameRef = useRef(false);
+  const lastBoardMoveKeyRef = useRef('');
+  const openingDeepAnalRef = useRef(false);
+  const openingDeepAnalHydratedRef = useRef(false);
+  const settingsAccessDeniedRef = useRef(false);
+  const boardEvalPulseTimerRef = useRef(null);
+
+  useEffect(() => {
+    const email = session?.user?.email || null;
+    if (!email) {
+      setUserId((prev) => (prev === null ? prev : null));
+      return;
+    }
+    hashEmail(email)
+      .then((id) => setUserId((prev) => (prev === id ? prev : id)))
+      .catch(() => setUserId((prev) => (prev === null ? prev : null)));
+  }, [session?.user?.email]);
+
+  useEffect(() => () => {
+    if (boardEvalPulseTimerRef.current) {
+      clearTimeout(boardEvalPulseTimerRef.current);
+      boardEvalPulseTimerRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    playedSansRef.current = playedSans;
+  }, [playedSans]);
+  useEffect(() => {
+    isRatedRef.current = isRatedSession;
+  }, [isRatedSession]);
+  useEffect(() => {
+    openingRowIdRef.current = openingRowId;
+  }, [openingRowId]);
+  useEffect(() => {
+    startFenRef.current = startFen;
+  }, [startFen]);
+  useEffect(() => {
+    userIdRef.current = userId;
+  }, [userId]);
+  useEffect(() => {
+    sessionAccessTokenRef.current = session?.access_token ?? null;
+  }, [session]);
+  useEffect(() => {
+    gameModeRef.current = gameMode;
+  }, [gameMode]);
+  useEffect(() => {
+    trainingRatingRef.current = trainingRating;
+  }, [trainingRating]);
+  useEffect(() => {
+    dbRatingRef.current = dbRating;
+  }, [dbRating]);
+  useEffect(() => {
+    openingDeepAnalRef.current = openingDeepAnal;
+  }, [openingDeepAnal]);
+
+  useEffect(() => {
+    if (!userId) {
+      setGameMode('training');
+      settingsAccessDeniedRef.current = false;
+      return;
+    }
+    (async () => {
+      const [r, c] = await Promise.all([
+        fetchLatestOpeningsRating(userId),
+        countOpeningsRatings(userId),
+      ]);
+      setDbRating(r);
+      setTrainingRating(r);
+      setOpeningsRatingCount(c);
+      setGameMode((prev) => (prev === 'ranked' ? prev : 'ranked'));
+    })();
+  }, [userId]);
+
+  useEffect(() => {
+    if (!userId) {
+      openingDeepAnalHydratedRef.current = false;
+      setOpeningDeepAnal((prev) => (prev === false ? prev : false));
+      return;
+    }
+    if (settingsAccessDeniedRef.current) return;
+    openingDeepAnalHydratedRef.current = false;
+    (async () => {
+      const enabled = await fetchUserOpeningDeepAnal(userId);
+      if (enabled === null) {
+        // RLS may block UserSettings in some environments (403).
+        // Stop retry loops; keep local default false for this session.
+        settingsAccessDeniedRef.current = true;
+        setOpeningDeepAnal((prev) => (prev === false ? prev : false));
+        openingDeepAnalHydratedRef.current = true;
+        return;
+      }
+      setOpeningDeepAnal((prev) => (prev === enabled ? prev : enabled));
+      openingDeepAnalHydratedRef.current = true;
+    })();
+  }, [userId]);
+
+  useEffect(() => {
+    if (!userId || !openingDeepAnalHydratedRef.current || settingsAccessDeniedRef.current) return;
+    upsertUserOpeningDeepAnal(userId, openingDeepAnal).then((ok) => {
+      if (!ok) settingsAccessDeniedRef.current = true;
+    });
+  }, [userId, openingDeepAnal]);
+
+  const rankedMode = gameMode === 'ranked';
+  const showSetup = phase === 'setup';
+  const showMoveList = phase !== 'setup';
+
+  const moveListPgn = useMemo(() => {
+    if (!startFen) return '';
+    return buildPgnFromSans(startFen, playedSans);
+  }, [startFen, playedSans]);
+
+  const openingAnalysisPgn = useMemo(() => {
+    if (!startFen || !moveListPgn) return '';
+    return [
+      '[Event "960 Dojo Openings"]',
+      '[Variant "Chess960"]',
+      `[FEN "${startFen}"]`,
+      '[SetUp "1"]',
+      `[Opening "Chess960 #${openingNr}"]`,
+      '',
+      moveListPgn,
+    ].join('\n');
+  }, [startFen, moveListPgn, openingNr]);
+
+  const fenTrail = useMemo(
+    () => (startFen ? computeFenTrail(startFen, playedSans) : []),
+    [startFen, playedSans]
+  );
+
+  const fenByIndex = useMemo(() => fenTrail, [fenTrail]);
+
+  const liveBrowseIndex = Math.max(-1, playedSans.length - 1);
+  const isBrowsingLive =
+    browsePosition.index === liveBrowseIndex && (browsePosition.variationPath?.length || 0) === 0;
+
+  const displayedFen = useMemo(() => {
+    if (phase === 'setup') {
+      try {
+        return positionNrToStartFen(openingNr);
+      } catch {
+        return null;
+      }
+    }
+    const idx = Math.max(0, browsePosition.index + 1);
+    return fenByIndex[idx] || currentFen || startFen;
+  }, [phase, openingNr, browsePosition, fenByIndex, currentFen, startFen]);
+
+  const boardLastMove = useMemo(() => {
+    if (phase === 'setup' || !startFen) return undefined;
+    if (browsePosition.variationPath?.length) return undefined;
+    return lastMoveSquaresAtMainlineSansIndex(startFen, playedSans, browsePosition.index);
+  }, [phase, startFen, playedSans, browsePosition]);
+
+  const opponentToMove = useMemo(() => {
+    if (phase !== 'playing' || !isBrowsingLive || !displayedFen) return false;
+    return sideToMoveFromFen(displayedFen) !== userColor;
+  }, [phase, isBrowsingLive, displayedFen, userColor]);
+
+  /** Refs read inside `onBoardMove` must match this render (that handler runs before useEffect). */
+  if (typeof window !== 'undefined') {
+    phaseRef.current = phase;
+    currentFenRef.current = currentFen;
+    userColorRef.current = userColor;
+    opponentBusyRef.current = opponentBusy;
+    isBrowsingLiveRef.current = isBrowsingLive;
+  }
+
+  const handleBrowsePositionChanged = useCallback((index, variationPath) => {
+    setBrowsePosition((prev) => {
+      const nextPath = Array.isArray(variationPath) ? variationPath : [];
+      const sameIndex = prev.index === index;
+      const samePath =
+        prev.variationPath.length === nextPath.length &&
+        prev.variationPath.every((x, i) => x === nextPath[i]);
+      if (sameIndex && samePath) return prev;
+      return { index, variationPath: nextPath };
+    });
+  }, []);
+
+  const syncEvalHistoryToDb = useCallback(async (trailWhiteCp) => {
+    const id = openingRowIdRef.current;
+    if (!id || !isRatedRef.current) return;
+    const payload = trailWhiteCp.map((x) => (Number.isFinite(x) ? Math.round(x) : 0));
+    await updateUserOpening(id, { evalHistory: payload });
+  }, []);
+
+  const cancelAllEvalTasks = useCallback(() => {
+    const tasks = Array.from(evalTasksRef.current.values());
+    for (const task of tasks) task.cancel();
+    evalTasksRef.current.clear();
+  }, []);
+
+  const queuePositionEval = useCallback(
+    (fen, index) => {
+      if (!Number.isFinite(index) || index < 0) return null;
+      const trail = evalHistoryTrailRef.current;
+      if (Number.isFinite(trail[index])) return null;
+      const existing = evalTasksRef.current.get(index);
+      if (existing) return existing.promise;
+
+      let settled = false;
+      let resolveTask = () => {};
+      const promise = new Promise((resolve) => {
+        resolveTask = resolve;
+      });
+      const task = {
+        cancel: () => {},
+        promise,
+      };
+      const settle = () => {
+        if (settled) return;
+        settled = true;
+        evalTasksRef.current.delete(index);
+        resolveTask();
+      };
+      task.cancel = () => {
+        cancelStream?.();
+        settle();
+      };
+
+      const cancelStream = analyzeFenCpWhiteStream(fen, OPENINGS_EVAL_DEPTH_MOVE, {
+        onDone: async ({ cpWhite }) => {
+          if (settled) return;
+          if (Number.isFinite(cpWhite)) {
+            const nextTrail = evalHistoryTrailRef.current;
+            while (nextTrail.length <= index) nextTrail.push(null);
+            nextTrail[index] = cpWhite;
+            evalHistoryTrailRef.current = nextTrail;
+            await syncEvalHistoryToDb(nextTrail);
+          }
+          settle();
+        },
+      });
+      evalTasksRef.current.set(index, task);
+      return promise;
+    },
+    [syncEvalHistoryToDb]
+  );
+
+  useEffect(() => {
+    if (phase !== 'playing' || !startFen) return;
+    if (!openingDeepAnal) {
+      cancelAllEvalTasks();
+      return;
+    }
+    const fens = computeFenTrail(startFen, playedSans);
+    const trail = evalHistoryTrailRef.current;
+    for (let i = 0; i < fens.length; i += 1) {
+      if (!Number.isFinite(trail[i])) queuePositionEval(fens[i], i);
+    }
+  }, [phase, startFen, playedSans, openingDeepAnal, queuePositionEval, cancelAllEvalTasks]);
+
+  const finalizeGame = useCallback(async () => {
+    if (endingGameRef.current) return;
+    endingGameRef.current = true;
+    try {
+      setPhase('finishing');
+      setMoveListLoading(true);
+      setOpponentBusy(false);
+      opponentBusyRef.current = false;
+
+      await Promise.allSettled(Array.from(evalTasksRef.current.values(), (task) => task.promise));
+      evalTasksRef.current.clear();
+
+      const start = startFenRef.current;
+      const sans = playedSansRef.current;
+      if (!start) {
+        setPhase('done');
+        setMoveListLoading(false);
+        return;
+      }
+
+      const trailFens = computeFenTrail(start, sans);
+      const lastFen = trailFens[trailFens.length - 1] || start;
+      let finalCp = await evalFenDepthCpWhite(lastFen, OPENINGS_EVAL_DEPTH_FINAL);
+      if (!Number.isFinite(finalCp)) {
+        // Fallback so the last move always has a displayable eval entry.
+        finalCp = await evalFenDepthCpWhite(lastFen, OPENINGS_EVAL_DEPTH_MOVE);
+      }
+
+      const trail = [...evalHistoryTrailRef.current];
+      while (trail.length < trailFens.length) trail.push(null);
+      const lastIdx = trailFens.length - 1;
+      trail[lastIdx] = Number.isFinite(finalCp) ? finalCp : 0;
+      evalHistoryTrailRef.current = trail;
+
+      // Keep PGN/selection/eval lengths in sync on the done screen.
+      setBrowsePosition({ index: Math.max(-1, sans.length - 1), variationPath: [] });
+      const evalData = Array.from({ length: Math.max(1, sans.length + 1) }, (_, i) =>
+        Number.isFinite(trail[i]) ? trail[i] / 100 : null
+      );
+      setMoveListEvalData(evalData);
+
+      const finishedAt = new Date().toISOString();
+      const pgnText = buildPgnFromSans(start, sans);
+      const rowId = openingRowIdRef.current;
+
+      if (isRatedRef.current) {
+        let targetRowId = rowId;
+        if (!targetRowId && userIdRef.current) {
+          const fallback = await fetchUnfinishedOpeningRow(userIdRef.current);
+          targetRowId = fallback?.id || null;
+        }
+
+        const evalHistoryCp = trail.map((x) => (Number.isFinite(x) ? Math.round(x) : 0));
+
+        if (targetRowId) {
+          // Step 1: always stamp completion metadata even if eval payload fails.
+          const wroteDone = await updateUserOpening(targetRowId, {
+            pgn: pgnText,
+            finished: finishedAt,
+          });
+          if (!wroteDone) {
+            console.warn('[openings/finalizeGame] failed to mark finished opening row', { rowId: targetRowId });
+          } else if (userIdRef.current) {
+            void requestStreakRefreshAfterPlay(userIdRef.current);
+          }
+
+          // Step 2: store evalHistory. If decimal arrays are rejected by schema, fall back to integers.
+          let wroteEval = await updateUserOpening(targetRowId, { evalHistory: evalHistoryCp });
+          if (!wroteEval) {
+            // If the DB rejects the array type for any reason, don't block the completion stamp.
+            wroteEval = false;
+          }
+          if (!wroteEval) {
+            console.warn('[openings/finalizeGame] failed to persist evalHistory', { rowId: targetRowId });
+          }
+        } else {
+          console.warn('[openings/finalizeGame] missing row id for rated game');
+        }
+
+        if (userIdRef.current) {
+          const nOpen = await countOpeningsRatings(userIdRef.current);
+          const change = computeOpeningsRatingDelta(finalCp, userColorRef.current, nOpen);
+          const newRating = Math.round(dbRatingRef.current + change);
+
+          try {
+            const token = sessionAccessTokenRef.current;
+            if (!token) {
+              console.warn('[openings/finalizeGame] missing session token for rating insert');
+            } else {
+              const res = await fetch('/api/createOpeningRating', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({ id: userIdRef.current, newRating }),
+              });
+              const data = await res.json();
+              if (data?.success) {
+                setRatingDelta(change);
+                setDbRating(newRating);
+                setTrainingRating(newRating);
+                const nextCount = await countOpeningsRatings(userIdRef.current);
+                setOpeningsRatingCount(nextCount);
+              }
+            }
+          } catch {}
+        }
+      }
+
+      setMoveListLoading(false);
+      const uc = userColorRef.current;
+      const userAhead =
+        Number.isFinite(finalCp) &&
+        ((uc === 'white' && finalCp > 0) || (uc === 'black' && finalCp < 0));
+      if (boardEvalPulseTimerRef.current) {
+        clearTimeout(boardEvalPulseTimerRef.current);
+      }
+      setBoardEvalPulse(userAhead ? 'win' : 'lose');
+      boardEvalPulseTimerRef.current = setTimeout(() => {
+        setBoardEvalPulse('');
+        boardEvalPulseTimerRef.current = null;
+      }, 1050);
+      if (userAhead) playWinSound();
+      else playLoseSound();
+      setPhase('done');
+    } finally {
+      endingGameRef.current = false;
+    }
+  }, []);
+
+  const playOpponentOnce = useCallback(async () => {
+    const fen = currentFenRef.current;
+    const ph = phaseRef.current;
+    if (!fen || ph !== 'playing') return false;
+
+    const rating =
+      gameModeRef.current === 'ranked' ? dbRatingRef.current : trainingRatingRef.current;
+
+    setOpponentBusy(true);
+    opponentBusyRef.current = true;
+    try {
+      const g = new Chess(fen, { chess960: true });
+      if (g.isGameOver()) return false;
+
+      const res = await getOpponentSanAndFen(fen, rating);
+      if (!res?.san || !res.newFen) return false;
+
+      const newSans = [...playedSansRef.current, res.san];
+      const newFen = res.newFen;
+      const idx = newSans.length;
+      if (openingDeepAnalRef.current) {
+        queuePositionEval(newFen, idx);
+      }
+
+      setPlayedSans(newSans);
+      playedSansRef.current = newSans;
+      setCurrentFen(newFen);
+      currentFenRef.current = newFen;
+      setBrowsePosition({ index: newSans.length - 1, variationPath: [] });
+
+      const posAfter = createPosition(newFen);
+      playChessMove({ inCheck: Boolean(posAfter?.isCheck()) });
+
+      if (isRatedRef.current && openingRowIdRef.current) {
+        const pgnText = buildPgnFromSans(startFenRef.current, newSans);
+        await updateUserOpening(openingRowIdRef.current, { pgn: pgnText });
+      }
+
+      const g2 = new Chess(newFen, { chess960: true });
+      return !g2.isGameOver();
+    } finally {
+      setOpponentBusy(false);
+      opponentBusyRef.current = false;
+    }
+  }, [queuePositionEval]);
+
+  const runAfterUserMove = useCallback(
+    async (userMoveCount) => {
+      const ph = phaseRef.current;
+      if (ph !== 'playing') return;
+
+      const fen = currentFenRef.current;
+      const g = new Chess(fen, { chess960: true });
+      if (g.isGameOver()) {
+        await finalizeGame();
+        return;
+      }
+
+      if (userMoveCount >= USER_TARGET_MOVES) {
+        await playOpponentOnce();
+        await finalizeGame();
+        return;
+      }
+
+      const cont = await playOpponentOnce();
+      if (!cont) {
+        await finalizeGame();
+        return;
+      }
+
+      const fen2 = currentFenRef.current;
+      const g2 = new Chess(fen2, { chess960: true });
+      if (g2.isGameOver()) {
+        await finalizeGame();
+      }
+    },
+    [finalizeGame, playOpponentOnce]
+  );
+
+  const onBoardMove = useCallback(
+    async ({ from, to, san, newFen: boardNewFen, promotion, premove }) => {
+      const dbg = process.env.NODE_ENV === 'development';
+      const busyBlocks =
+        opponentBusyRef.current && !premove;
+      if (phaseRef.current !== 'playing' || busyBlocks || !isBrowsingLiveRef.current) {
+        if (dbg) {
+          console.warn('[openings/onBoardMove] blocked (phase/opponent/browse)', {
+            phase: phaseRef.current,
+            opponentBusy: opponentBusyRef.current,
+            isBrowsingLive: isBrowsingLiveRef.current,
+            premove: !!premove,
+          });
+        }
+        return;
+      }
+      // `opponentBusy` can stay true until `playOpponentOnce` finishes `await updateUserOpening`
+      // even though FEN / playedSans already updated — Chessground then runs premoves on the new
+      // position. Allow premoves whenever it is clearly the user's turn.
+      const ut =
+        currentFenRef.current &&
+        sideToMoveFromFen(currentFenRef.current) === userColorRef.current &&
+        phaseRef.current === 'playing' &&
+        (premove || !opponentBusyRef.current);
+      if (!ut) {
+        if (dbg) {
+          console.warn('[openings/onBoardMove] blocked (not user turn / no fen)', {
+            fen: currentFenRef.current?.slice(0, 80),
+            userColor: userColorRef.current,
+            side: currentFenRef.current && sideToMoveFromFen(currentFenRef.current),
+            opponentBusy: opponentBusyRef.current,
+            premove: !!premove,
+          });
+        }
+        return;
+      }
+
+      const g = new Chess(currentFenRef.current, { chess960: true });
+      let m = applyBoardMoveToChessGame(g, from, to, san, promotion);
+      if (!m) m = applyMoveMatchingTargetFen(g, boardNewFen);
+      if (!m) {
+        if (dbg) {
+          console.warn('[openings/onBoardMove] apply move failed', { from, to, san, boardNewFen, promotion });
+        }
+        return;
+      }
+
+      const newFen = g.fen();
+      const moveKey = `${from}-${to}-${m.san}-${newFen}`;
+      if (lastBoardMoveKeyRef.current === moveKey) return;
+      lastBoardMoveKeyRef.current = moveKey;
+
+      const newSans = [...playedSansRef.current, m.san];
+      const idx = newSans.length;
+      if (openingDeepAnalRef.current) {
+        queuePositionEval(newFen, idx);
+      }
+
+      setPlayedSans(newSans);
+      playedSansRef.current = newSans;
+      setCurrentFen(newFen);
+      currentFenRef.current = newFen;
+      setBrowsePosition({ index: newSans.length - 1, variationPath: [] });
+
+      userMovesDoneRef.current += 1;
+      const um = userMovesDoneRef.current;
+
+      if (isRatedRef.current && openingRowIdRef.current) {
+        const pgnText = buildPgnFromSans(startFenRef.current, newSans);
+        await updateUserOpening(openingRowIdRef.current, { pgn: pgnText });
+      }
+
+      await runAfterUserMove(um);
+    },
+    [queuePositionEval, runAfterUserMove]
+  );
+
+  const startGame = useCallback(async () => {
+    lastBoardMoveKeyRef.current = '';
+    setInfoMessage('');
+    setRatingDelta(null);
+    setMoveListEvalData(null);
+    setBoardEvalPulse('');
+    cancelAllEvalTasks();
+    evalHistoryTrailRef.current = [];
+
+    if (gameMode === 'ranked' && !userId) {
+      setInfoMessage('Log in to play ranked openings.');
+      return;
+    }
+
+    const gen = positionRef.current?.generatePosition?.();
+    const nr = gen?.openingNr ?? openingNr;
+    const startPosFen = positionNrToStartFen(nr);
+    setOpeningNr(nr);
+
+    let uc = 'white';
+    if (gameMode === 'ranked') {
+      uc = Math.random() < 0.5 ? 'white' : 'black';
+    } else if (colorChoice === 'random') {
+      uc = Math.random() < 0.5 ? 'white' : 'black';
+    } else {
+      uc = colorChoice;
+    }
+
+    setUserColor(uc);
+    userColorRef.current = uc;
+    userMovesDoneRef.current = 0;
+
+    let rowId = null;
+    let rated = gameMode === 'ranked';
+
+    if (rated && userId) {
+      const row = await fetchUnfinishedOpeningRow(userId);
+      if (row?.id) {
+        rowId = row.id;
+        const storedNr = Number(row.openingNr);
+        const storedColor = row.color === 'black' ? 'black' : 'white';
+        const sf = positionNrToStartFen(storedNr);
+        const sans = replaySansFromStoredPgn(row.pgn || '', sf);
+        setOpeningNr(storedNr);
+        setStartFen(sf);
+        startFenRef.current = sf;
+        setUserColor(storedColor);
+        userColorRef.current = storedColor;
+        userMovesDoneRef.current = countUserMovesFromSans(sf, sans, storedColor);
+        setPlayedSans(sans);
+        playedSansRef.current = sans;
+        const trail = computeFenTrail(sf, sans);
+        setCurrentFen(trail[trail.length - 1] || sf);
+        currentFenRef.current = trail[trail.length - 1] || sf;
+        setBrowsePosition({ index: Math.max(-1, sans.length - 1), variationPath: [] });
+        setOpeningRowId(rowId);
+        openingRowIdRef.current = rowId;
+        setIsRatedSession(true);
+        isRatedRef.current = true;
+
+        const eh = Array.isArray(row.evalHistory) ? row.evalHistory : [];
+        evalHistoryTrailRef.current = eh.map((x) => (Number.isFinite(x) ? x : null));
+
+        setPhase('playing');
+        phaseRef.current = 'playing';
+        if (sideToMoveFromFen(currentFenRef.current) !== storedColor) {
+          setOpponentBusy(true);
+          opponentBusyRef.current = true;
+          setTimeout(async () => {
+            try {
+              await playOpponentOnce();
+            } finally {
+              setOpponentBusy(false);
+              opponentBusyRef.current = false;
+            }
+          }, 0);
+        }
+        return;
+      }
+
+      rowId = crypto.randomUUID();
+      await insertUserOpening(
+        createRatedOpeningRow({
+          id: rowId,
+          userId,
+          openingNr: nr,
+          color: uc,
+        })
+      );
+      setOpeningRowId(rowId);
+      openingRowIdRef.current = rowId;
+    } else {
+      setOpeningRowId(null);
+      openingRowIdRef.current = null;
+      setIsRatedSession(false);
+      isRatedRef.current = false;
+    }
+
+    setIsRatedSession(rated);
+    isRatedRef.current = rated;
+    setStartFen(startPosFen);
+    startFenRef.current = startPosFen;
+    setPlayedSans([]);
+    playedSansRef.current = [];
+    setCurrentFen(startPosFen);
+    currentFenRef.current = startPosFen;
+    setBrowsePosition({ index: -1, variationPath: [] });
+
+    evalHistoryTrailRef.current = [];
+
+    setPhase('playing');
+    phaseRef.current = 'playing';
+
+    if (sideToMoveFromFen(startPosFen) !== uc) {
+      setOpponentBusy(true);
+      opponentBusyRef.current = true;
+      setTimeout(async () => {
+        try {
+          await playOpponentOnce();
+        } finally {
+          setOpponentBusy(false);
+          opponentBusyRef.current = false;
+        }
+      }, 0);
+    }
+  }, [
+    gameMode,
+    userId,
+    openingNr,
+    colorChoice,
+    queuePositionEval,
+    cancelAllEvalTasks,
+    playOpponentOnce,
+  ]);
+
+  const playAgain = useCallback(async () => {
+    lastBoardMoveKeyRef.current = '';
+    setMoveListEvalData(null);
+    setRatingDelta(null);
+    setBoardEvalPulse('');
+    cancelAllEvalTasks();
+    evalHistoryTrailRef.current = [];
+    setPlayedSans([]);
+    playedSansRef.current = [];
+    setBrowsePosition({ index: -1, variationPath: [] });
+    userMovesDoneRef.current = 0;
+
+    const gen = positionRef.current?.generatePosition?.();
+    // If PositionSelector were unmounted, gen would be missing and we'd repeat openingNr — see always-mounted selector below.
+    const nr =
+      gen?.openingNr ?? (rankedMode ? randomInt(960) : openingNr);
+    setOpeningNr(nr);
+
+    let uc = 'white';
+    if (gameMode === 'ranked') {
+      uc = Math.random() < 0.5 ? 'white' : 'black';
+    } else if (colorChoice === 'random') {
+      uc = Math.random() < 0.5 ? 'white' : 'black';
+    } else {
+      uc = colorChoice;
+    }
+    setUserColor(uc);
+    userColorRef.current = uc;
+
+    const sf = positionNrToStartFen(nr);
+    setStartFen(sf);
+    startFenRef.current = sf;
+    setCurrentFen(sf);
+    currentFenRef.current = sf;
+
+    if (gameMode === 'ranked' && userId) {
+      const rowId = crypto.randomUUID();
+      await insertUserOpening(
+        createRatedOpeningRow({
+          id: rowId,
+          userId,
+          openingNr: nr,
+          color: uc,
+        })
+      );
+      setOpeningRowId(rowId);
+      openingRowIdRef.current = rowId;
+      setIsRatedSession(true);
+      isRatedRef.current = true;
+    } else {
+      setOpeningRowId(null);
+      openingRowIdRef.current = null;
+      setIsRatedSession(false);
+      isRatedRef.current = false;
+    }
+
+    setPhase('playing');
+    phaseRef.current = 'playing';
+
+    if (sideToMoveFromFen(sf) !== uc) {
+      setOpponentBusy(true);
+      opponentBusyRef.current = true;
+      setTimeout(async () => {
+        try {
+          await playOpponentOnce();
+        } finally {
+          setOpponentBusy(false);
+          opponentBusyRef.current = false;
+        }
+      }, 0);
+    }
+  }, [userId, gameMode, colorChoice, openingNr, rankedMode, cancelAllEvalTasks, playOpponentOnce]);
+
+  const onTrainingNotice = useCallback(() => {
+    setInfoMessage('Switch to training mode to customize.');
+    setTimeout(() => setInfoMessage(''), 2400);
+  }, []);
+
+  return (
+    <>
+      <Head>
+        <title>Openings - 960 Dojo</title>
+      </Head>
+      <main className="page-shell openings-page">
+        <SectionTitle title="Openings" />
+
+        <div className="openings-layout">
+          <div className="openings-col-board">
+            <div className="openings-board-head">
+              <PositionDisplay value={openingNr} editable={false} />
+              {opponentToMove ? (
+                <div
+                  className={[
+                    'openings-opponent-thinking',
+                    opponentBusy ? 'openings-opponent-thinking--busy' : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                  role="status"
+                  aria-live="polite"
+                  aria-label={opponentBusy ? 'Opponent is thinking' : 'Opponent to move'}
+                  title={opponentBusy ? 'Opponent is thinking' : 'Opponent to move'}
+                >
+                  <span className="openings-opponent-thinking__mark" aria-hidden>
+                    <svg
+                      className="openings-opponent-thinking__cloud"
+                      viewBox="0 0 44 34"
+                      width="34"
+                      height="26"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        className="openings-opponent-thinking__cloud-main"
+                        d="M22 5.5c4.2-.8 8.6 1.1 10.8 4.8 2.4 4 1.8 9-1.4 12.2-2.2 2.2-5.4 3.2-8.6 2.8-3.8-.4-7-2.8-8.4-6.4-1-2.6-.6-5.6 1.2-7.8 1.8-2.2 4.6-3.4 7.4-3.6z"
+                        fill="rgba(46, 164, 255, 0.14)"
+                        strokeWidth="2.15"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <ellipse
+                        className="openings-opponent-thinking__cloud-puff"
+                        cx="13"
+                        cy="21"
+                        rx="5.2"
+                        ry="4.6"
+                        fill="rgba(255, 228, 196, 0.1)"
+                        strokeWidth="1.75"
+                        strokeLinecap="round"
+                      />
+                      <circle
+                        className="openings-opponent-thinking__cloud-dot"
+                        cx="7"
+                        cy="26.5"
+                        r="2.4"
+                        fill="none"
+                        strokeWidth="1.65"
+                        strokeLinecap="round"
+                      />
+                      <path
+                        className="openings-opponent-thinking__cloud-tail"
+                        d="M4.5 30.5l-2.2 2.8"
+                        fill="none"
+                        strokeWidth="1.55"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                    <span className="openings-opponent-thinking__dots">
+                      <span />
+                      <span />
+                      <span />
+                    </span>
+                  </span>
+                </div>
+              ) : null}
+            </div>
+            <div
+              className={[
+                'training-chessboard',
+                phase === 'finishing' ? 'training-chessboard--openings-eval-loading' : '',
+                boardEvalPulse === 'win' ? 'training-chessboard--openings-eval-win' : '',
+                boardEvalPulse === 'lose' ? 'training-chessboard--openings-eval-lose' : '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
+            >
+              <Chessboard
+                fen={displayedFen}
+                orientation={phase === 'setup' && colorChoice === 'black' ? 'black' : (userColor === 'black' ? 'black' : 'white')}
+                onMove={onBoardMove}
+                disabled={phase !== 'playing' || !isBrowsingLive}
+                lastMove={boardLastMove}
+                onWheelNavigate={showMoveList ? onWheelNavigate : undefined}
+                movableColor={userColor}
+                premoveEnabled
+              />
+            </div>
+            <RatingDisplay
+              className="rating-display--panel"
+              label="Your openings rating"
+              rating={rankedMode ? dbRating : trainingRating}
+              delta={ratingDelta}
+              provisional={
+                rankedMode && (openingsRatingCount || 0) < ESTABLISHED_RATING_MIN_ENTRIES
+              }
+            />
+          </div>
+
+          <div
+            className={[
+              'openings-col-side',
+              showSetup ? '' : 'openings-col-side--playing',
+              !showSetup && phase === 'done' ? 'openings-col-side--done' : '',
+            ]
+              .filter(Boolean)
+              .join(' ')}
+          >
+            {showSetup ? (
+              <>
+                <ModeSelector
+                  mode={gameMode}
+                  onModeChange={setGameMode}
+                  colorChoice={colorChoice}
+                  onColorChange={setColorChoice}
+                  rankedLocked={!userId}
+                />
+              </>
+            ) : (
+              <>
+                {phase === 'done' && openingAnalysisPgn ? (
+                  <div className="narrow-action">
+                    <OpenInAnalysisBtn
+                      onClick={() =>
+                        stashPgnAndOpenAnalysis(openingAnalysisPgn, {
+                          evalMainlinePawns: Array.isArray(moveListEvalData) ? moveListEvalData : null,
+                          orientation: userColor,
+                        })
+                      }
+                    />
+                  </div>
+                ) : null}
+                {(phase === 'playing' || phase === 'finishing') ? (
+                  <label className="opening-deep-anal-toggle">
+                    <input
+                      type="checkbox"
+                      checked={openingDeepAnal}
+                      onChange={(e) => {
+                        playButtonClick();
+                        setOpeningDeepAnal(e.target.checked);
+                      }}
+                    />
+                    <span className="slider-toggle__track" aria-hidden>
+                      <span className="slider-toggle__thumb" />
+                    </span>
+                    <span>analyze each move [not recommended on phone]</span>
+                  </label>
+                ) : null}
+                <MoveList
+                  ref={moveListNavRef}
+                  pgn={moveListPgn}
+                  evalData={moveListEvalData}
+                  allowSparseEvalData
+                  userColor={userColor}
+                  startTurn={startFen ? sideToMoveFromFen(startFen) : 'white'}
+                  loading={moveListLoading}
+                  onBrowsePositionChanged={handleBrowsePositionChanged}
+                  selectedPosition={browsePosition}
+                  resetSelectionOnPgnChange={false}
+                />
+                {phase === 'done' ? (
+                  <div className="narrow-action">
+                    <PlayAgainBtn onClick={playAgain} disabled={gameMode === 'ranked' && !userId} />
+                  </div>
+                ) : null}
+              </>
+            )}
+            {/* Stay mounted while playing so positionRef.generatePosition works on Play again */}
+            <PositionSelector
+              ref={positionRef}
+              minimal={!showSetup}
+              rankedMode={rankedMode}
+              openingNr={openingNr}
+              onOpeningNrChange={setOpeningNr}
+              onTrainingOnlyNotice={onTrainingNotice}
+            />
+            {showSetup ? (
+              <>
+                <StartBtn onClick={startGame} disabled={gameMode === 'ranked' && !userId} />
+                {!rankedMode ? (
+                  <label className="training-rating-field">
+                    Training rating
+                    <input
+                      type="number"
+                      value={trainingRating}
+                      onChange={(e) => setTrainingRating(Number(e.target.value) || 1500)}
+                    />
+                  </label>
+                ) : null}
+                {infoMessage ? (
+                  <div className="text-warn">{infoMessage}</div>
+                ) : null}
+              </>
+            ) : null}
+          </div>
+        </div>
+      </main>
+    </>
+  );
+}
