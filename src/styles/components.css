@@ -1360,41 +1360,47 @@
   position: absolute;
   width: 12.5%;
   height: 12.5%;
-  border: 1px solid rgba(0, 0, 0, 0.45);
-  border-radius: 0;
-  background: rgba(24, 23, 22, 0.94);
+  border: 1px solid color-mix(in srgb, var(--logo-blue) 55%, transparent);
+  border-radius: 6px 4px 7px 5px;
+  background: color-mix(in srgb, var(--logo-blue) 22%, transparent);
   color: var(--ink);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: inset 0 0 0 1px rgba(255, 228, 196, 0.08);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 1px 3px rgba(0, 0, 0, 0.25);
+  padding: 0;
 }
 
 .chessboard-promotion-square:hover {
-  background: rgba(38, 37, 36, 0.96);
+  background: color-mix(in srgb, var(--logo-blue) 34%, transparent);
+  border-color: color-mix(in srgb, var(--logo-blue) 70%, transparent);
 }
 
 .chessboard-promotion-square:focus-visible {
   outline: 2px solid var(--logo-blue);
-  outline-offset: -2px;
-}
-
-.chessboard-promotion-piece {
-  position: absolute;
-  inset: 0;
-  display: block;
-  width: 100% !important;
-  height: 100% !important;
-  background-size: contain !important;
-  background-repeat: no-repeat !important;
-  background-position: center !important;
+  outline-offset: 2px;
 }
 
 .chessboard-promotion-piece-wrap {
   position: relative;
   width: 100%;
   height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chessboard-promotion-piece {
+  position: relative;
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  background-size: contain !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
 }
 
 .chessboard-placeholder {
@@ -1724,13 +1730,14 @@
 }
 
 .play-player-timer {
-  width: 52px;
-  min-width: 52px;
+  width: 4.25rem;
+  min-width: 4.25rem;
   padding: 0.1rem 0;
   text-align: center;
-  font-size: 0.9rem;
+  font-size: 1.2rem;
   font-weight: 800;
-  line-height: 1.1;
+  line-height: 1.15;
+  letter-spacing: 0.02em;
 }
 
 .play-draw-offer-slot {

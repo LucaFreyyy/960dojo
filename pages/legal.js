@@ -95,6 +95,17 @@ export default function LegalPage() {
                         on GitHub.
                     </p>
                     <p>
+                        <strong>Tactics puzzles.</strong> Positions used in the tactics training were generated offline
+                        using a self-modified version based on{' '}
+                        <ExternalLink href="https://github.com/vitogit/pgn-tactics-generator">
+                            vitogit/pgn-tactics-generator
+                        </ExternalLink>{' '}
+                        (MIT License). Source games include Chess960 games played on{' '}
+                        <ExternalLink href="https://lichess.org/">Lichess</ExternalLink>, and Chess960 opening sessions
+                        played on 960 Dojo by this site&apos;s users. That tooling is not shipped with the website; it
+                        was only used to produce puzzle data.
+                    </p>
+                    <p>
                         <strong>Fonts.</strong> Montserrat and Pacifico are loaded from{' '}
                         <ExternalLink href="https://fonts.google.com/">Google Fonts</ExternalLink>; they are
                         typically licensed under the OFL. Chess piece and board artwork under <code>public/lichess-assets/</code>{' '}

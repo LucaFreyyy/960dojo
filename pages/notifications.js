@@ -136,13 +136,13 @@ export default function NotificationsPage() {
       .update({ status: 'accepted' })
       .eq('id', id)
       .eq('receiverId', userId);
-    loadRequests();
+    await loadRequests();
   }
 
   async function declineRequest(id) {
     if (!userId) return;
     await supabase.from('FriendRequest').delete().eq('id', id).eq('receiverId', userId);
-    loadRequests();
+    await loadRequests();
   }
 
   async function markFeedbackRead(id, read) {
@@ -156,7 +156,9 @@ export default function NotificationsPage() {
       },
       body: JSON.stringify({ read }),
     });
-    if (res.ok) await loadFeedback();
+    if (res.ok) {
+      await loadFeedback();
+    }
   }
 
   async function deleteFeedback(id) {
@@ -166,7 +168,9 @@ export default function NotificationsPage() {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` },
     });
-    if (res.ok) await loadFeedback();
+    if (res.ok) {
+      await loadFeedback();
+    }
   }
 
   async function respondToRematch(notificationId, accept) {

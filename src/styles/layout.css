@@ -82,6 +82,46 @@ header {
   box-shadow: var(--focus-ring), var(--btn-sketch-ring-muted);
 }
 
+/* Unread notifications: same blue accent as home play time buttons; high specificity so :hover / :focus-visible don't hide it */
+button.dropbtn.dropbtn--notify-pending {
+  background: rgba(46, 164, 255, 0.2);
+  border-color: rgba(46, 164, 255, 0.45);
+  box-shadow:
+    var(--btn-sketch-ring-blue),
+    var(--sketch-shadow),
+    0 0 0 1px rgba(46, 164, 255, 0.35);
+}
+
+button.dropbtn.dropbtn--notify-pending:hover {
+  background: rgba(46, 164, 255, 0.2);
+  border-color: rgba(46, 164, 255, 0.45);
+  box-shadow:
+    var(--btn-sketch-ring-blue),
+    var(--sketch-shadow),
+    0 0 0 1px rgba(46, 164, 255, 0.35);
+}
+
+button.dropbtn.dropbtn--notify-pending:focus-visible {
+  background: rgba(46, 164, 255, 0.22);
+  border-color: rgba(46, 164, 255, 0.5);
+  box-shadow:
+    var(--focus-ring),
+    var(--btn-sketch-ring-blue),
+    var(--sketch-shadow),
+    0 0 0 1px rgba(46, 164, 255, 0.4);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button.dropbtn.dropbtn--notify-pending {
+    background: rgba(46, 164, 255, 0.22);
+    border-color: rgba(46, 164, 255, 0.5);
+    box-shadow:
+      var(--btn-sketch-ring-blue),
+      var(--sketch-shadow),
+      0 0 0 1px rgba(46, 164, 255, 0.4);
+  }
+}
+
 .dropbtn-label {
   max-width: 9.5rem;
   overflow: hidden;

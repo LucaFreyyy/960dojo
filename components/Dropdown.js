@@ -2,7 +2,6 @@ import { supabase } from '../lib/supabase';
 import { useSupabaseSession } from '../lib/SessionContext';
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { hashEmail } from '../lib/hashEmail';
 import { usePlayUi } from '../lib/PlayUiContext';
 
 function MenuSection({ title, children }) {
@@ -33,8 +32,12 @@ export default function Dropdown() {
     const session = useSupabaseSession();
     const { status: playStatus } = usePlayUi();
     const isAuthenticated = !!session;
+    const playUnread = Number(playStatus?.unreadNotifications) || 0;
+    const pendingFriends = Number(playStatus?.pendingFriendRequests) || 0;
+    const unreadFeedback = Number(playStatus?.unreadFeedback) || 0;
+    const hasPendingNotifications =
+        playUnread > 0 || pendingFriends > 0 || unreadFeedback > 0;
     const [userName, setUserName] = useState('');
-    const [hasPendingNotifications, setHasPendingNotifications] = useState(false);
     const [open, setOpen] = useState(false);
 
     useEffect(() => {
@@ -59,47 +62,6 @@ export default function Dropdown() {
         fetchName();
     }, [session]);
 
-    useEffect(() => {
-        if (!session?.user?.email) {
-            setHasPendingNotifications(false);
-            return;
-        }
-        let cancelled = false;
-        (async () => {
-            try {
-                const uid = await hashEmail(session.user.email);
-                if (cancelled) return;
-                const { count, error } = await supabase
-                    .from('FriendRequest')
-                    .select('id', { count: 'exact', head: true })
-                    .eq('receiverId', uid)
-                    .eq('status', 'pending');
-
-                let unreadFeedback = 0;
-                const { data: sess } = await supabase.auth.getSession();
-                const token = sess?.session?.access_token;
-                if (token) {
-                    const fr = await fetch('/api/feedback/inbox?countOnly=1', {
-                        headers: { Authorization: `Bearer ${token}` },
-                    });
-                    if (fr.ok) {
-                        const j = await fr.json();
-                        unreadFeedback = typeof j.unreadFeedback === 'number' ? j.unreadFeedback : 0;
-                    }
-                }
-
-                if (!cancelled && !error) {
-                    setHasPendingNotifications((count ?? 0) > 0 || unreadFeedback > 0 || (playStatus?.unreadNotifications ?? 0) > 0);
-                }
-            } catch {
-                if (!cancelled) setHasPendingNotifications(false);
-            }
-        })();
-        return () => {
-            cancelled = true;
-        };
-    }, [session, open, playStatus?.unreadNotifications]);
-
     const dropdownRef = useRef(null);
 
     useEffect(() => {
@@ -119,12 +81,13 @@ export default function Dropdown() {
 
     const close = () => setOpen(false);
     const showNotifyDot = isAuthenticated && hasPendingNotifications;
+    const notifyAlert = isAuthenticated && hasPendingNotifications;
 
     return (
         <div className="dropdown" ref={dropdownRef}>
             <button
                 type="button"
-                className="dropbtn"
+                className={`dropbtn${notifyAlert ? ' dropbtn--notify-pending' : ''}`}
                 aria-expanded={open}
                 aria-haspopup="true"
                 aria-label="Menu"
