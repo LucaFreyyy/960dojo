@@ -13,6 +13,7 @@ import RatingDisplay from '../components/RatingDisplay';
 import { ESTABLISHED_RATING_MIN_ENTRIES } from '../lib/ratingConstants';
 import SectionTitle from '../components/SectionTitle';
 import { stashPgnAndOpenAnalysis } from '../lib/analysisSessionImport';
+import { trimTrailingOpponentMoveFromPuzzleLine } from '../lib/tacticPgnUtils';
 import { createPosition } from '../lib/chessopsUtils';
 import { tacticsBoardLastMove } from '../lib/trainingBrowseHighlight';
 import { useMoveListWheelNavigation } from '../lib/useMoveListWheelNavigation';
@@ -324,9 +325,11 @@ export default function TacticsPage() {
       if (!res.ok) throw new Error(data?.error || 'Failed to load puzzle');
 
       const nextTactic = data?.tactic || null;
-      const parsedLine = Array.isArray(nextTactic?.puzzleLine)
-        ? nextTactic.puzzleLine
-        : parsePgnMoves(nextTactic?.pgn || '');
+      const parsedLine = trimTrailingOpponentMoveFromPuzzleLine(
+        Array.isArray(nextTactic?.puzzleLine)
+          ? nextTactic.puzzleLine
+          : parsePgnMoves(nextTactic?.pgn || '')
+      );
       const nextFen = nextTactic?.startFen || null;
       if (!nextFen || !parsedLine.length) throw new Error('Puzzle data incomplete (missing start position or moves).');
 

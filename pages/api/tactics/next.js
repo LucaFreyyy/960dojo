@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { getBearerAuthUser } from '../../../lib/apiAuth';
-import { extractPgnTag } from '../../../lib/tacticPgnUtils';
+import { extractPgnTag, trimTrailingOpponentMoveFromPuzzleLine } from '../../../lib/tacticPgnUtils';
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -158,7 +158,7 @@ export default async function handler(req, res) {
       if (!next?.tactic) return res.status(404).json({ error: 'No available tactics' });
       const chosen = next.tactic;
       const startFen = extractPgnTag(chosen.pgn, 'FEN');
-      const puzzleLine = parseSanMovesFromPgn(chosen.pgn);
+      const puzzleLine = trimTrailingOpponentMoveFromPuzzleLine(parseSanMovesFromPgn(chosen.pgn));
       const puzzleStartPly = extractPuzzleStartPlyFromPgn(chosen.pgn);
       if (!startFen || !puzzleLine.length) {
         return res.status(500).json({ error: 'Invalid tactic PGN: missing FEN tag or moves' });
@@ -247,7 +247,7 @@ export default async function handler(req, res) {
         if (retryTactic) {
           const chosen = retryTactic;
           const startFen = extractPgnTag(chosen.pgn, 'FEN');
-          const puzzleLine = parseSanMovesFromPgn(chosen.pgn);
+          const puzzleLine = trimTrailingOpponentMoveFromPuzzleLine(parseSanMovesFromPgn(chosen.pgn));
           const puzzleStartPly = extractPuzzleStartPlyFromPgn(chosen.pgn);
           if (!startFen || !puzzleLine.length) {
             return res.status(500).json({ error: 'Invalid tactic PGN: missing FEN tag or moves' });
@@ -349,7 +349,7 @@ export default async function handler(req, res) {
     }
 
     const startFen = extractPgnTag(chosen.pgn, 'FEN');
-    const puzzleLine = parseSanMovesFromPgn(chosen.pgn);
+    const puzzleLine = trimTrailingOpponentMoveFromPuzzleLine(parseSanMovesFromPgn(chosen.pgn));
     const puzzleStartPly = extractPuzzleStartPlyFromPgn(chosen.pgn);
     if (!startFen || !puzzleLine.length) {
       return res.status(500).json({ error: 'Invalid tactic PGN: missing FEN tag or moves' });
