@@ -422,10 +422,96 @@
   box-sizing: border-box;
 }
 
+/* Label | optional center (e.g. castling strip) | rating — uses middle space */
+.rating-display--with-center {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 0.65rem;
+}
+
+.rating-display__center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-width: 0;
+}
+
 /* Tactics / openings: same width as training board column */
 .rating-display--panel {
   width: 100%;
   max-width: var(--training-board-size);
+}
+
+/* FEN castling rights: 0-0 / 0-0-0 from FEN field */
+.fen-castle-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem 0.65rem;
+  padding: 0.45rem 0.75rem;
+  border: var(--border-soft);
+  border-radius: var(--sketch-radius);
+  background: var(--surface);
+  box-shadow: var(--sketch-shadow);
+  font-size: 0.78rem;
+  font-family: var(--font-ui);
+  font-weight: 600;
+  color: var(--ink-muted);
+  line-height: 1.35;
+  box-sizing: border-box;
+}
+
+/* Inside puzzle RatingDisplay: no second card — chips only */
+.fen-castle-strip--embedded {
+  padding: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  font-size: 0.72rem;
+  gap: 0.28rem 0.45rem;
+}
+
+.fen-castle-strip--embedded .fen-castle-chip {
+  padding: 0.08rem 0.28rem;
+}
+
+.fen-castle-strip__side {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.fen-castle-strip__color {
+  margin-right: 0.1rem;
+  font-size: 0.95rem;
+  line-height: 1;
+  opacity: 0.9;
+}
+
+.fen-castle-strip__sep {
+  opacity: 0.45;
+  user-select: none;
+}
+
+.fen-castle-chip {
+  padding: 0.12rem 0.35rem;
+  border-radius: 6px;
+  letter-spacing: 0.02em;
+  transition: color 0.12s ease, background 0.12s ease, opacity 0.12s ease;
+}
+
+.fen-castle-chip--on {
+  color: var(--text-color, var(--ink));
+  background: rgba(46, 164, 255, 0.14);
+  box-shadow: 0 0 0 1px rgba(46, 164, 255, 0.28);
+}
+
+.fen-castle-chip--off {
+  opacity: 0.38;
+  font-weight: 500;
 }
 
 .rating-display__label {
@@ -2120,7 +2206,19 @@
     font-size: 1.15rem;
   }
 
-  .rating-display {
+  .rating-display:not(.rating-display--with-center) {
     flex-wrap: wrap;
+  }
+
+  .rating-display--with-center {
+    column-gap: 0.4rem;
+  }
+
+  .fen-castle-strip--embedded {
+    font-size: 0.62rem;
+  }
+
+  .fen-castle-strip--embedded .fen-castle-strip__color {
+    font-size: 0.82rem;
   }
 }

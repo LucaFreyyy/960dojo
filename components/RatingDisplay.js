@@ -9,6 +9,8 @@ export default function RatingDisplay({
   provisional = false,
   className = '',
   profileUserId = null,
+  /** Optional node rendered in the horizontal center (e.g. tactics FEN castling strip). */
+  centerContent = null,
 }) {
   const hasDelta = typeof delta === 'number' && Number.isFinite(delta);
   const hasSecondary = Number.isFinite(secondaryRating);
@@ -19,8 +21,10 @@ export default function RatingDisplay({
     else if (delta < 0) deltaMod = 'rating-display__delta--down';
   }
 
+  const hasCenter = centerContent != null && centerContent !== false;
+
   return (
-    <div className={`rating-display ${className}`.trim()}>
+    <div className={`rating-display ${hasCenter ? 'rating-display--with-center' : ''} ${className}`.trim()}>
       {profileUserId ? (
         <Link href={`/profile/${profileUserId}`} className="rating-display__label rating-display__label-link">
           {label}
@@ -28,6 +32,7 @@ export default function RatingDisplay({
       ) : (
         <span className="rating-display__label">{label}</span>
       )}
+      {hasCenter ? <div className="rating-display__center">{centerContent}</div> : null}
       <span className="rating-display__value">
         <span className="rating-display__value-inner">
           {Number.isFinite(rating) ? String(rating) : '—'}

@@ -10,6 +10,7 @@ import DifficultySelector from '../components/DifficultySelector';
 import PostTacticDisplay from '../components/PostTacticDisplay';
 import TacticsPuzzleOverlay from '../components/TacticsPuzzleOverlay';
 import RatingDisplay from '../components/RatingDisplay';
+import FenCastlingRightsStrip from '../components/FenCastlingRightsStrip';
 import { ESTABLISHED_RATING_MIN_ENTRIES } from '../lib/ratingConstants';
 import SectionTitle from '../components/SectionTitle';
 import { stashPgnAndOpenAnalysis } from '../lib/analysisSessionImport';
@@ -627,6 +628,12 @@ export default function TacticsPage() {
               rating={puzzleRating}
               delta={puzzleDelta}
               provisional={(tacticTimesPlayed || 0) < ESTABLISHED_RATING_MIN_ENTRIES}
+              centerContent={
+                <FenCastlingRightsStrip
+                  fen={displayedFen || currentFen || startFen}
+                  className="fen-castle-strip--embedded"
+                />
+              }
             />
             <div className="board-stack">
               <div className="training-chessboard tactics-board-wrap">
