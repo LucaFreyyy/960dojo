@@ -2,7 +2,13 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { makeFen } from 'chessops/fen';
 import { parseSquare } from 'chessops/util';
 import { Chessground } from 'chessground';
-import { createPosition, toDests, makeMove, turnColorFromFen } from '../lib/chessopsUtils';
+import {
+  createPosition,
+  toDests,
+  makeMove,
+  turnColorFromFen,
+  isLegalMoveFromSquares,
+} from '../lib/chessopsUtils';
 import { playChessMove, playPieceTouch } from '../lib/soundEffects';
 import { boardThemeAsset, normalizeBoardTheme, normalizePieceSet } from '../lib/boardVisuals';
 import { useBoardVisuals } from '../lib/BoardVisualsContext';
@@ -39,6 +45,51 @@ function getPromotionContext(position, from, dest) {
   const rawColor = piece.color;
   const color = rawColor === 'black' || rawColor === 'b' ? 'black' : 'white';
   return { needed: destRank === 1 || destRank === 8, color };
+}
+
+/** Snap ground + refs back to parent FEN (illegal / rejected premove or move). */
+function resyncGroundToFen(cg, fenStr, ctx) {
+  const {
+    positionRef,
+    queuedPremoveRef,
+    orientationRef,
+    disabledRef,
+    premoveEnabledRef,
+    premovableCastleRef,
+    movableColorRef,
+    chessEvents,
+    previousLastMove,
+  } = ctx;
+  const pos = createPosition(fenStr);
+  if (!pos) return;
+  positionRef.current = pos;
+  queuedPremoveRef.current = null;
+  try {
+    cg.cancelPremove();
+  } catch {}
+  cg.set({
+    fen: fenStr,
+    turnColor: turnColorFromFen(fenStr),
+    orientation: orientationRef.current,
+    events: chessEvents,
+    selectable: { enabled: !disabledRef.current },
+    premovable: {
+      enabled: premoveEnabledRef.current && !disabledRef.current,
+      showDests: true,
+      castle: premovableCastleRef.current,
+      events: {
+        set: (o, d, meta) => {
+          queuedPremoveRef.current = { orig: o, dest: d, metadata: meta };
+        },
+        unset: () => {},
+      },
+    },
+    movable: {
+      color: disabledRef.current ? 'none' : movableColorRef.current,
+      dests: disabledRef.current ? new Map() : toDests(positionRef.current),
+    },
+    lastMove: previousLastMove,
+  });
 }
 
 function squareToBoardCoords(square, orientation) {
@@ -278,10 +329,38 @@ export default function ChessBoard({
                 }
                 if (!PROMOTION_CHOICES.includes(promotion)) promotion = 'queen';
               }
+
+              const resyncCtx = {
+                positionRef,
+                queuedPremoveRef,
+                orientationRef,
+                disabledRef,
+                premoveEnabledRef,
+                premovableCastleRef,
+                movableColorRef,
+                chessEvents,
+                previousLastMove,
+              };
+              if (!isLegalMoveFromSquares(positionRef.current, orig, dest, promotion || null)) {
+                resyncGroundToFen(cg, fenRef.current, resyncCtx);
+                return;
+              }
+
               fenBeforeMove = makeFen(positionRef.current.toSetup());
               ({ san, newFen } = makeMove(positionRef.current, orig, dest, promotion));
             } catch (e) {
               console.error('[Chessboard] makeMove failed', { orig, dest, fen, err: String(e) });
+              resyncGroundToFen(cg, fenRef.current, {
+                positionRef,
+                queuedPremoveRef,
+                orientationRef,
+                disabledRef,
+                premoveEnabledRef,
+                premovableCastleRef,
+                movableColorRef,
+                chessEvents,
+                previousLastMove,
+              });
               return;
             }
 
@@ -304,33 +383,17 @@ export default function ChessBoard({
 
             if (!accepted) {
               if (typeof fenBeforeMove === 'string' && fenBeforeMove.trim()) {
-                const pos = createPosition(fenBeforeMove);
-                if (pos) {
-                  positionRef.current = pos;
-                  cg.set({
-                    fen: fenBeforeMove,
-                    turnColor: turnColorFromFen(fenBeforeMove),
-                    orientation: orientationRef.current,
-                    events: chessEvents,
-                    selectable: { enabled: !disabledRef.current },
-                    premovable: {
-                      enabled: premoveEnabledRef.current && !disabledRef.current,
-                      showDests: true,
-                      castle: premovableCastleRef.current,
-                      events: {
-                        set: (o, d, meta) => {
-                          queuedPremoveRef.current = { orig: o, dest: d, metadata: meta };
-                        },
-                        unset: () => {},
-                      },
-                    },
-                    movable: {
-                      color: disabledRef.current ? 'none' : movableColorRef.current,
-                      dests: disabledRef.current ? new Map() : toDests(positionRef.current),
-                    },
-                    lastMove: previousLastMove,
-                  });
-                }
+                resyncGroundToFen(cg, fenBeforeMove, {
+                  positionRef,
+                  queuedPremoveRef,
+                  orientationRef,
+                  disabledRef,
+                  premoveEnabledRef,
+                  premovableCastleRef,
+                  movableColorRef,
+                  chessEvents,
+                  previousLastMove,
+                });
               }
               return;
             }
@@ -460,6 +523,21 @@ export default function ChessBoard({
           const { orig, dest } = queuedPremoveRef.current;
           const promoCtx = getPromotionContext(positionRef.current, orig, dest);
           const promotion = promoCtx.needed ? 'queen' : null;
+          const premoveResyncCtx = {
+            positionRef,
+            queuedPremoveRef,
+            orientationRef,
+            disabledRef,
+            premoveEnabledRef,
+            premovableCastleRef,
+            movableColorRef,
+            chessEvents,
+            previousLastMove: Array.isArray(lastMove) ? lastMove : undefined,
+          };
+          if (!isLegalMoveFromSquares(positionRef.current, orig, dest, promotion)) {
+            resyncGroundToFen(ground, fen, premoveResyncCtx);
+            return;
+          }
           const fenBeforeMove = makeFen(positionRef.current.toSetup());
           const { san, newFen } = makeMove(positionRef.current, orig, dest, promotion);
           queuedPremoveRef.current = null;
@@ -476,33 +554,7 @@ export default function ChessBoard({
             accepted = ret !== false;
           }
           if (!accepted) {
-            const pos = createPosition(fenBeforeMove);
-            if (pos) {
-              positionRef.current = pos;
-              ground.set({
-                fen: fenBeforeMove,
-                turnColor: turnColorFromFen(fenBeforeMove),
-                orientation: orientationRef.current,
-                lastMove: Array.isArray(lastMove) ? lastMove : undefined,
-                events: chessEvents,
-                selectable: { enabled: !disabled },
-                premovable: {
-                  enabled: premoveEnabled && !disabled,
-                  showDests: true,
-                  castle: premovableCastle,
-                  events: {
-                    set: (o, d, meta) => {
-                      queuedPremoveRef.current = { orig: o, dest: d, metadata: meta };
-                    },
-                    unset: () => {},
-                  },
-                },
-                movable: {
-                  color: disabled ? 'none' : movableColor,
-                  dests: disabled ? new Map() : toDests(positionRef.current),
-                },
-              });
-            }
+            resyncGroundToFen(ground, fenBeforeMove, premoveResyncCtx);
             return;
           }
           onPositionChangeRef.current?.(newFen);
@@ -520,6 +572,17 @@ export default function ChessBoard({
           });
         } catch (error) {
           queuedPremoveRef.current = null;
+          resyncGroundToFen(ground, fen, {
+            positionRef,
+            queuedPremoveRef,
+            orientationRef,
+            disabledRef,
+            premoveEnabledRef,
+            premovableCastleRef,
+            movableColorRef,
+            chessEvents,
+            previousLastMove: Array.isArray(lastMove) ? lastMove : undefined,
+          });
         }
       }
     } else {

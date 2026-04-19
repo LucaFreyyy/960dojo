@@ -373,7 +373,6 @@ export default function PlayPage() {
         playResult = applyPlayMoveOrThrow(game, {
           from: move.from,
           to: move.to,
-          san: move.san,
           promotion: move.promotion ?? null,
         });
       } catch {
