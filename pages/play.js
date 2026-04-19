@@ -123,7 +123,6 @@ export default function PlayPage() {
   const [viewerId, setViewerId] = useState(null);
   const [game, setGame] = useState(null);
   const [loadingGame, setLoadingGame] = useState(false);
-  const [error, setError] = useState('');
   const [info, setInfo] = useState('');
   const [rematchPending, setRematchPending] = useState(false);
   const [clockNow, setClockNow] = useState(Date.now());
@@ -176,9 +175,9 @@ export default function PlayPage() {
           setServerClockOffsetMs(json.game.serverNowMs - Date.now());
         }
         setGame(hydrateGame(json.game));
-        setError('');
+        setInfo('');
       } catch (err) {
-        setError(err.message || 'Could not load game.');
+        setInfo(err.message || 'Could not load game.');
       } finally {
         setLoadingGame(false);
       }
@@ -219,14 +218,14 @@ export default function PlayPage() {
     setOptimisticQueueTime(requestedTime);
     joinQueue(requestedTime)
       .then((result) => {
-        setError('');
+        setInfo('');
         if (result?.game?.id) {
           setOptimisticQueueTime(null);
         }
       })
       .catch((err) => {
         setOptimisticQueueTime(null);
-        setError(err.message || 'Could not join queue.');
+        setInfo(err.message || 'Could not join queue.');
       });
   }, [session, requestedTime, requestedGameId, status, joinQueue]);
 
@@ -367,8 +366,8 @@ export default function PlayPage() {
   );
 
   const handleMove = useCallback(
-    async (move) => {
-      if (!game || game.status !== 'active' || !viewerColor) return;
+    (move) => {
+      if (!game || game.status !== 'active' || !viewerColor) return false;
       let playResult;
       try {
         playResult = applyPlayMoveOrThrow(game, {
@@ -377,29 +376,32 @@ export default function PlayPage() {
           san: move.san,
           promotion: move.promotion ?? null,
         });
-      } catch (e) {
-        console.error(e);
-        setError(e?.message || String(e));
-        return;
+      } catch {
+        return false;
       }
+
+      const gid = game.id;
       setGame((current) => applyOptimisticMoveWithResult(current, playResult, viewerColor));
-      try {
-        await authedJsonFetch('/api/play/move', {
-          method: 'POST',
-          body: JSON.stringify({
-            gameId: game.id,
-            from: move.from,
-            to: move.to,
-            san: move.san,
-            promotion: move.promotion ?? null,
-            clientFen: move.newFen,
-          }),
-        });
-        setError('');
-      } catch (err) {
-        setError(err.message || 'Move rejected.');
-        fetchGame(game.id);
-      }
+
+      void (async () => {
+        try {
+          await authedJsonFetch('/api/play/move', {
+            method: 'POST',
+            body: JSON.stringify({
+              gameId: gid,
+              from: move.from,
+              to: move.to,
+              san: move.san,
+              promotion: move.promotion ?? null,
+              clientFen: move.newFen,
+            }),
+          });
+        } catch {
+          await fetchGame(gid);
+        }
+      })();
+
+      return true;
     },
     [game, viewerColor, fetchGame]
   );
@@ -484,7 +486,7 @@ export default function PlayPage() {
           <div className="text-muted">Please sign in to play live games.</div>
         ) : requestedGameId ? (
           !game || loadingGame ? (
-            <div className="text-muted">Loading game…</div>
+            <div className="text-muted">{loadingGame ? 'Loading game…' : info || 'Loading game…'}</div>
           ) : (
             <div className="play-layout">
               <div className="play-board-column">
@@ -506,7 +508,6 @@ export default function PlayPage() {
                     {game.resultText}
                   </div>
                 ) : null}
-                {error ? <div className="text-warn">{error}</div> : null}
                 {info ? <div className="text-muted">{info}</div> : null}
               </div>
               <aside className="play-side-column">
@@ -600,11 +601,14 @@ export default function PlayPage() {
             </div>
           )
         ) : (
-          <div className="play-inline-notice">
-            {effectiveQueueTime
-              ? `Searching for game: ${getQueueLabel(effectiveQueueTime)}`
-              : 'Custom time controls are not yet available. Join another queue from the home screen.'}
-          </div>
+          <>
+            <div className="play-inline-notice">
+              {effectiveQueueTime
+                ? `Searching for game: ${getQueueLabel(effectiveQueueTime)}`
+                : 'Custom time controls are not yet available. Join another queue from the home screen.'}
+            </div>
+            {info ? <div className="text-muted">{info}</div> : null}
+          </>
         )}
         {centerNotice ? <div className="play-center-notice">{centerNotice}</div> : null}
       </main>

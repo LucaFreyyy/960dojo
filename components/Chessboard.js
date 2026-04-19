@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { makeFen } from 'chessops/fen';
 import { parseSquare } from 'chessops/util';
 import { Chessground } from 'chessground';
 import { createPosition, toDests, makeMove, turnColorFromFen } from '../lib/chessopsUtils';
@@ -53,6 +54,7 @@ function squareToBoardCoords(square, orientation) {
 export default function ChessBoard({
   fen,
   orientation = 'white',
+  /** Return `false` to reject the move and snap the board back (e.g. failed server-side validation). */
   onMove,
   onPositionChange,
   disabled = false,
@@ -240,6 +242,7 @@ export default function ChessBoard({
             if (movingPiece && movingColor !== turnColor) {
               return;
             }
+            let fenBeforeMove;
             try {
               const promoCtx = getPromotionContext(positionRef.current, orig, dest);
               if (promoCtx.needed) {
@@ -275,24 +278,66 @@ export default function ChessBoard({
                 }
                 if (!PROMOTION_CHOICES.includes(promotion)) promotion = 'queen';
               }
+              fenBeforeMove = makeFen(positionRef.current.toSetup());
               ({ san, newFen } = makeMove(positionRef.current, orig, dest, promotion));
             } catch (e) {
               console.error('[Chessboard] makeMove failed', { orig, dest, fen, err: String(e) });
               return;
             }
+
+            let accepted = true;
+            if (onMoveRef.current) {
+              try {
+                const ret = onMoveRef.current({
+                  from: orig,
+                  to: dest,
+                  san,
+                  newFen,
+                  promotion: promotion || null,
+                  premove: !!metadata?.premove,
+                });
+                accepted = ret !== false;
+              } catch {
+                accepted = false;
+              }
+            }
+
+            if (!accepted) {
+              if (typeof fenBeforeMove === 'string' && fenBeforeMove.trim()) {
+                const pos = createPosition(fenBeforeMove);
+                if (pos) {
+                  positionRef.current = pos;
+                  cg.set({
+                    fen: fenBeforeMove,
+                    turnColor: turnColorFromFen(fenBeforeMove),
+                    orientation: orientationRef.current,
+                    events: chessEvents,
+                    selectable: { enabled: !disabledRef.current },
+                    premovable: {
+                      enabled: premoveEnabledRef.current && !disabledRef.current,
+                      showDests: true,
+                      castle: premovableCastleRef.current,
+                      events: {
+                        set: (o, d, meta) => {
+                          queuedPremoveRef.current = { orig: o, dest: d, metadata: meta };
+                        },
+                        unset: () => {},
+                      },
+                    },
+                    movable: {
+                      color: disabledRef.current ? 'none' : movableColorRef.current,
+                      dests: disabledRef.current ? new Map() : toDests(positionRef.current),
+                    },
+                    lastMove: previousLastMove,
+                  });
+                }
+              }
+              return;
+            }
+
             const inCheck = positionRef.current.isCheck();
             playChessMove({ inCheck });
 
-            if (onMoveRef.current) {
-              onMoveRef.current({
-                from: orig,
-                to: dest,
-                san,
-                newFen,
-                promotion: promotion || null,
-                premove: !!metadata?.premove,
-              });
-            }
             if (onPositionChangeRef.current) {
               onPositionChangeRef.current(newFen);
             }
@@ -415,16 +460,51 @@ export default function ChessBoard({
           const { orig, dest } = queuedPremoveRef.current;
           const promoCtx = getPromotionContext(positionRef.current, orig, dest);
           const promotion = promoCtx.needed ? 'queen' : null;
+          const fenBeforeMove = makeFen(positionRef.current.toSetup());
           const { san, newFen } = makeMove(positionRef.current, orig, dest, promotion);
           queuedPremoveRef.current = null;
-          onMoveRef.current?.({
-            from: orig,
-            to: dest,
-            san,
-            newFen,
-            promotion: promotion || null,
-            premove: true,
-          });
+          let accepted = true;
+          if (onMoveRef.current) {
+            const ret = onMoveRef.current({
+              from: orig,
+              to: dest,
+              san,
+              newFen,
+              promotion: promotion || null,
+              premove: true,
+            });
+            accepted = ret !== false;
+          }
+          if (!accepted) {
+            const pos = createPosition(fenBeforeMove);
+            if (pos) {
+              positionRef.current = pos;
+              ground.set({
+                fen: fenBeforeMove,
+                turnColor: turnColorFromFen(fenBeforeMove),
+                orientation: orientationRef.current,
+                lastMove: Array.isArray(lastMove) ? lastMove : undefined,
+                events: chessEvents,
+                selectable: { enabled: !disabled },
+                premovable: {
+                  enabled: premoveEnabled && !disabled,
+                  showDests: true,
+                  castle: premovableCastle,
+                  events: {
+                    set: (o, d, meta) => {
+                      queuedPremoveRef.current = { orig: o, dest: d, metadata: meta };
+                    },
+                    unset: () => {},
+                  },
+                },
+                movable: {
+                  color: disabled ? 'none' : movableColor,
+                  dests: disabled ? new Map() : toDests(positionRef.current),
+                },
+              });
+            }
+            return;
+          }
           onPositionChangeRef.current?.(newFen);
           ground.set({
             fen: newFen,
