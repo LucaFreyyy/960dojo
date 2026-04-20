@@ -10,6 +10,11 @@ async function hashEmail(email) {
     return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
+function logNonCriticalInitError(scope, error) {
+    const message = error?.message || String(error || '');
+    console.warn(`[signup] non-critical ${scope} init failed: ${message}`);
+}
+
 export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).end();
     const supabaseAdmin = createSupabaseAdmin();
@@ -41,7 +46,7 @@ export default async function handler(req, res) {
             userId: id,
             opening_deep_anal: false,
         });
-        if (settingsError) return res.status(400).json({ error: settingsError.message || 'Could not create user settings' });
+        if (settingsError) logNonCriticalInitError('UserSettings', settingsError);
 
         const ratings = ['bullet', 'blitz', 'rapid', 'classical', 'tactics', 'openings'].map(type => ({
             id: crypto.randomUUID(),
@@ -50,20 +55,21 @@ export default async function handler(req, res) {
             value: 1500,
         }));
         const { error: ratingError } = await supabaseAdmin.from('Rating').insert(ratings);
-        if (ratingError) return res.status(400).json({ error: ratingError.message || 'Could not create ratings' });
+        if (ratingError) logNonCriticalInitError('Rating', ratingError);
 
         let tacticId = null;
         try { tacticId = await fetchNewTactic(supabaseAdmin, id); } catch {}
         if (tacticId) {
-            await supabaseAdmin.from('UserTactic').insert({
+            const { error: userTacticError } = await supabaseAdmin.from('UserTactic').insert({
                 id: crypto.randomUUID(),
                 userId: id,
                 tacticId,
             });
+            if (userTacticError) logNonCriticalInitError('UserTactic', userTacticError);
         }
 
         const { openingNr, color } = getRandomOpening();
-        await supabaseAdmin.from('UserOpening').insert(
+        const { error: openingError } = await supabaseAdmin.from('UserOpening').insert(
             createRatedOpeningRow({
                 id: crypto.randomUUID(),
                 userId: id,
@@ -71,12 +77,14 @@ export default async function handler(req, res) {
                 color,
             })
         );
+        if (openingError) logNonCriticalInitError('UserOpening', openingError);
     } else {
         // Ensure legacy users also have a settings row.
-        await supabaseAdmin.from('UserSettings').upsert(
+        const { error: legacySettingsError } = await supabaseAdmin.from('UserSettings').upsert(
             { userId: id, opening_deep_anal: false },
             { onConflict: 'userId' }
         );
+        if (legacySettingsError) logNonCriticalInitError('legacy UserSettings', legacySettingsError);
     }
 
     const needsEmailConfirmation = !data?.session;

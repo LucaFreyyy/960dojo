@@ -81,20 +81,13 @@ export default function LoginPage() {
                 setBusy(false);
                 return setError(data.error);
             }
-            if (data.needsEmailConfirmation) {
-                setBusy(false);
-                setError('');
-                setInfo(
-                    `We sent a verification link to ${email.trim()}. Please check your inbox and your spam/junk folder too. Open it to activate your account.`
-                );
-                setPassword('');
-                return;
-            }
-            const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-            if (signInError) {
-                setBusy(false);
-                return setError(mapSignInErrorMessage(signInError));
-            }
+            setBusy(false);
+            setError('');
+            setInfo(
+                `We sent a verification link to ${email.trim()}. Please check your inbox and your spam/junk folder too. Open it to activate your account.`
+            );
+            setPassword('');
+            return;
         }
         setBusy(false);
         window.location.href = '/';

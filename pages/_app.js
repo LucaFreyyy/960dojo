@@ -43,10 +43,19 @@ export default function App({ Component, pageProps }) {
   const [boardVisuals, setBoardVisuals] = useState(readBoardVisualsFromStorage);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setLoading(false);
-    });
+    supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        setSession(data.session);
+      })
+      .catch(() => {
+        // Invalid/missing refresh tokens can happen after account creation/login churn.
+        // Treat as signed out and let the normal sign-in flow proceed.
+        setSession(null);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
     });
