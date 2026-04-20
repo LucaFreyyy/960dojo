@@ -623,6 +623,10 @@ export default function OpeningsPage() {
         return;
       }
 
+      if (userMovesDoneRef.current >= USER_TARGET_MOVES) {
+        return;
+      }
+
       const g = new Chess(currentFenRef.current, { chess960: true });
       let m = applyBoardMoveToChessGame(g, from, to, san, promotion);
       if (!m) m = applyMoveMatchingTargetFen(g, boardNewFen);
@@ -728,6 +732,16 @@ export default function OpeningsPage() {
 
         setPhase('playing');
         phaseRef.current = 'playing';
+        if (userMovesDoneRef.current >= USER_TARGET_MOVES) {
+          setTimeout(async () => {
+            if (sideToMoveFromFen(currentFenRef.current) !== storedColor) {
+              await playOpponentOnce();
+            }
+            await finalizeGame();
+          }, 0);
+          return;
+        }
+
         if (sideToMoveFromFen(currentFenRef.current) !== storedColor) {
           setOpponentBusy(true);
           opponentBusyRef.current = true;
