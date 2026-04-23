@@ -376,7 +376,10 @@ export default function LeaderboardPage() {
                     <th className="leaderboard-table__rank">Rank</th>
                     <th>Player</th>
                     {isStreakCategory ? (
-                      <th className="leaderboard-table__streak">Best streak</th>
+                      <>
+                        <th className="leaderboard-table__streak">Best streak</th>
+                        <th className="leaderboard-table__streak">Current</th>
+                      </>
                     ) : (
                       <th className="leaderboard-table__rating">Rating</th>
                     )}
@@ -395,15 +398,28 @@ export default function LeaderboardPage() {
                         </Link>
                       </td>
                       {isStreakCategory ? (
-                        <td className="leaderboard-table__streak-cell">
-                          <div className="leaderboard-streak-cell">
-                            <StreakFlameBadge
-                              variant={streakScoreVariant(player)}
-                              value={player.longestStreak}
-                              tooltip="Longest streak"
-                            />
-                          </div>
-                        </td>
+                        <>
+                          <td className="leaderboard-table__streak-cell">
+                            <div className="leaderboard-streak-cell">
+                              <StreakFlameBadge
+                                variant={streakScoreVariant(player)}
+                                value={player.longestStreak}
+                                tooltip="Longest streak"
+                              />
+                            </div>
+                          </td>
+                          <td className="leaderboard-table__streak-cell">
+                            <div className="leaderboard-streak-cell">
+                              {player.currentStreak !== player.longestStreak && player.currentStreak > 0 && (
+                                <StreakFlameBadge
+                                  variant={player.playedToday ? 'full' : 'half'}
+                                  value={player.currentStreak}
+                                  tooltip="Current streak"
+                                />
+                              )}
+                            </div>
+                          </td>
+                        </>
                       ) : (
                         <td className="leaderboard-table__rating-cell">{player.rating}</td>
                       )}
