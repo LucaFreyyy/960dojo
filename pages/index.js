@@ -48,8 +48,7 @@ export default function HomePage() {
                 <Explanation label="About Openings">
                   <p>Select ranked or practice a type of starting position of your choice.</p>
                   <p>
-                    Play against the lichess database, switching to Stockfish at your level when the database runs out
-                    of moves.
+                    Play against a Maia 2 model finetuned on the lichess database for chess960.
                   </p>
                 </Explanation>
               </div>
