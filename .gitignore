@@ -20,6 +20,10 @@
 # production
 /build
 
+# maia model
+/maia_model
+/maia2_models
+
 # misc
 .DS_Store
 *.pem

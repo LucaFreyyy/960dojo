@@ -82,8 +82,7 @@ export default function LegalPage() {
                             <ExternalLink href="https://github.com/nmrugg/stockfish.js">Stockfish.js</ExternalLink> —
                             in-browser engine (derived from{' '}
                             <ExternalLink href="https://github.com/official-stockfish/Stockfish">Stockfish</ExternalLink>;
-                            see notices in the upstream projects). The site loads Stockfish as WebAssembly for analysis
-                            and opening play.
+                            see notices in the upstream projects). The site loads Stockfish as WebAssembly for analysis.
                         </li>
                     </ul>
                     <p>
@@ -116,12 +115,8 @@ export default function LegalPage() {
                     <h2 className="legal-page__subtitle">Third-party services</h2>
                     <ul className="legal-page__list">
                         <li>
-                            <strong>Lichess opening explorer</strong> — aggregated statistics are requested from Lichess
-                            infrastructure (
-                            <ExternalLink href="https://explorer.lichess.ovh/">explorer.lichess.ovh</ExternalLink>) in line
-                            with the <ExternalLink href="https://lichess.org/api">Lichess API</ExternalLink> documentation
-                            (including rate limits). 960 Dojo
-                            is not affiliated with or endorsed by Lichess.
+                            <strong>Lichess game database and Maia 2 model</strong> — are used to generate opening play.
+                            I finetuned the <ExternalLink href="https://github.com/CSSLab/maia2">Maia 2 model</ExternalLink> on <ExternalLink href="https://database.lichess.org/#variant_games">lichess' game database</ExternalLink> for chess960 on my own and built a .onnx model to run it in the browser.
                         </li>
                         <li>
                             <strong>Supabase</strong> — database and authentication (
@@ -148,7 +143,7 @@ export default function LegalPage() {
                         for the complete tree and dependency notices.
                     </p>
 
-                    <p className="legal-page__meta">Last updated: April 18, 2026</p>
+                    <p className="legal-page__meta">Last updated: April 25, 2026</p>
                 </section>
             </main>
         </>
