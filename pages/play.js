@@ -119,7 +119,7 @@ function PlayerPanel({ name, rating, delta, clockText, active, top = false, prof
 export default function PlayPage() {
   const router = useRouter();
   const session = useSupabaseSession();
-  const { status, joinQueue, refreshStatus } = usePlayUi();
+  const { status, joinQueue } = usePlayUi();
   const [viewerId, setViewerId] = useState(null);
   const [game, setGame] = useState(null);
   const [loadingGame, setLoadingGame] = useState(false);
@@ -358,10 +358,9 @@ export default function PlayPage() {
       }
       if (action === 'request_rematch') setRematchPending(true);
       if (action === 'cancel_rematch' || action === 'play_again') setRematchPending(false);
-      await refreshStatus();
       return result;
     },
-    [game?.id, refreshStatus]
+    [game?.id]
   );
 
   const handleMove = useCallback(
