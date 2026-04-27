@@ -1,6 +1,11 @@
 import { getAuthUserFromToken, getBearerAuthUser } from '../../../lib/apiAuth';
 import { createRedisSubscriber } from '../../../lib/playRedis';
-import { getPlayStatus, startPlayServerWatchdog } from '../../../lib/playServer';
+import {
+  getPlayStatus,
+  markStatusStreamConnected,
+  markStatusStreamDisconnected,
+  startPlayServerWatchdog,
+} from '../../../lib/playServer';
 
 const USER_STATUS_CHANNEL = (userId) => `play:user:${userId}:status`;
 
@@ -32,6 +37,7 @@ export default async function handler(req, res) {
   }
 
   const { userId } = authUser;
+  await markStatusStreamConnected(userId);
   const snapshot = await getPlayStatus(userId);
 
   const sub = await createRedisSubscriber();
@@ -49,8 +55,12 @@ export default async function handler(req, res) {
     res.write(`: ping ${Date.now()}\n\n`);
   }, 25_000);
 
+  let cleanedUp = false;
   const cleanup = async () => {
+    if (cleanedUp) return;
+    cleanedUp = true;
     clearInterval(heartbeat);
+    try { await markStatusStreamDisconnected(userId); } catch {}
     try { await sub.unsubscribe(channel); } catch {}
     try { if (sub.isOpen) await sub.quit(); } catch {}
     try { res.end(); } catch {}
