@@ -257,7 +257,6 @@ export default function PlayPage() {
               setServerClockOffsetMs(payload.game.serverNowMs - Date.now());
             }
             setGame(hydrateGame(payload.game));
-            refreshStatus();
           }
         } catch {}
       };
@@ -283,7 +282,7 @@ export default function PlayPage() {
         es?.close();
       } catch {}
     };
-  }, [session, requestedGameId, refreshStatus, sendReadySignal]);
+  }, [session, requestedGameId, sendReadySignal]);
 
   useEffect(() => {
     if (status?.activeGame?.id && requestedGameId && status.activeGame.id !== requestedGameId) {
