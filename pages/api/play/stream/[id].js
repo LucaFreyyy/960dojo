@@ -1,7 +1,6 @@
 import { getAuthUserFromToken, getBearerAuthUser } from '../../../../lib/apiAuth';
 import { createRedisSubscriber } from '../../../../lib/playRedis';
 import {
-  getGameSnapshot,
   markPlayerConnected,
   markPlayerDisconnected,
   startPlayServerWatchdog,
@@ -41,8 +40,7 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
-  await markPlayerConnected(id, authUser.userId);
-  const game = await getGameSnapshot(id, authUser.userId);
+  const game = await markPlayerConnected(id, authUser.userId);
   if (!game) {
     return res.status(404).json({ error: 'Game not found' });
   }

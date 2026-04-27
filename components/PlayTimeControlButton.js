@@ -4,15 +4,11 @@ import { usePlayUi } from '../lib/PlayUiContext';
 export default function PlayTimeControlButton({ time, label, className = 'time-box' }) {
   const router = useRouter();
   const { status, cancelQueue, joinQueue } = usePlayUi();
-  const queueCount = Number(status?.queuePresence?.[time]) || 0;
-  const selfInThisQueue = status?.queue?.time === time;
-  const othersWaiting = queueCount > (selfInThisQueue ? 1 : 0);
-  const btnClassName = `${className} ${othersWaiting ? 'time-box--queued' : ''}`.trim();
 
   return (
     <button
       type="button"
-      className={btnClassName}
+      className={className}
       onClick={async () => {
         if (status?.queue) {
           await cancelQueue();
