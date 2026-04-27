@@ -19,7 +19,7 @@ export default function PlayTimeControlButton({ time, label, className = 'time-b
           return;
         }
         const result = await joinQueue(time);
-        if (result?.game?.id) {
+        if (result?.game?.id && (result.game.status === 'active' || result.game.status === 'awaiting_handshake')) {
           router.push(`/play?game=${encodeURIComponent(result.game.id)}`);
         }
       }}

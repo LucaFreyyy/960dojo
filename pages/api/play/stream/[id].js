@@ -1,6 +1,11 @@
 import { getAuthUserFromToken, getBearerAuthUser } from '../../../../lib/apiAuth';
 import { createRedisSubscriber } from '../../../../lib/playRedis';
-import { getGameSnapshot } from '../../../../lib/playServer';
+import {
+  getGameSnapshot,
+  markPlayerConnected,
+  markPlayerDisconnected,
+  startPlayServerWatchdog,
+} from '../../../../lib/playServer';
 
 function normalizeId(raw) {
   const id = Array.isArray(raw) ? raw[0] : raw;
@@ -23,6 +28,8 @@ export default async function handler(req, res) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
+  startPlayServerWatchdog();
+
   const id = normalizeId(req.query.id);
   if (!id) {
     return res.status(400).json({ error: 'Invalid game id' });
@@ -34,6 +41,7 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
+  await markPlayerConnected(id, authUser.userId);
   const game = await getGameSnapshot(id, authUser.userId);
   if (!game) {
     return res.status(404).json({ error: 'Game not found' });
@@ -56,6 +64,9 @@ export default async function handler(req, res) {
 
   const cleanup = async () => {
     clearInterval(heartbeat);
+    try {
+      await markPlayerDisconnected(id, authUser.userId);
+    } catch {}
     try {
       await sub.unsubscribe(channel);
     } catch {}

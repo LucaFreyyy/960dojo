@@ -219,7 +219,7 @@ export default function PlayPage() {
     joinQueue(requestedTime)
       .then((result) => {
         setInfo('');
-        if (result?.game?.id) {
+        if (result?.game?.id && (result.game.status === 'active' || result.game.status === 'awaiting_handshake')) {
           setOptimisticQueueTime(null);
         }
       })
@@ -584,7 +584,10 @@ export default function PlayPage() {
                         onClick={async () => {
                           await sendGameAction('cancel_rematch');
                           const result = await joinQueue(game.time);
-                          if (result?.game?.id) {
+                          if (
+                            result?.game?.id &&
+                            (result.game.status === 'active' || result.game.status === 'awaiting_handshake')
+                          ) {
                             router.replace(`/play?game=${encodeURIComponent(result.game.id)}`);
                           } else {
                             setInfo(`Joined ${getQueueLabel(game.time)} queue.`);
