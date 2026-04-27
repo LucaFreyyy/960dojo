@@ -13,6 +13,13 @@ function writeEvent(res, payload) {
   res.write(`data: ${JSON.stringify(payload)}\n\n`);
 }
 
+function parseIncludeQueuePresence(queryValue) {
+  const raw = Array.isArray(queryValue) ? queryValue[0] : queryValue;
+  if (raw === undefined || raw === null || raw === '') return true;
+  const normalized = String(raw).toLowerCase();
+  return normalized === '1' || normalized === 'true' || normalized === 'yes';
+}
+
 export const config = {
   api: {
     bodyParser: false,
@@ -38,7 +45,8 @@ export default async function handler(req, res) {
 
   const { userId } = authUser;
   await markStatusStreamConnected(userId);
-  const snapshot = await getPlayStatus(userId);
+  const includeQueuePresence = parseIncludeQueuePresence(req.query.includeQueuePresence);
+  const snapshot = await getPlayStatus(userId, { includeQueuePresence });
 
   const sub = await createRedisSubscriber();
   const channel = USER_STATUS_CHANNEL(userId);

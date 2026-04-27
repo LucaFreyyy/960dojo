@@ -101,6 +101,11 @@ function buildFenTrailFromGame(game) {
   return trail;
 }
 
+function isGameMissingError(error) {
+  const msg = String(error?.message || '').toLowerCase();
+  return msg.includes('game not found') || msg.includes('request failed: 404');
+}
+
 function PlayerPanel({ name, rating, delta, clockText, active, top = false, profileUserId = null }) {
   return (
     <div className={`play-player-card ${active ? 'play-player-card--active' : ''} ${top ? 'play-player-card--top' : ''}`.trim()}>
@@ -190,25 +195,6 @@ export default function PlayPage() {
     fetchGame(requestedGameId);
   }, [requestedGameId, session, fetchGame]);
 
-  const sendReadySignal = useCallback(
-    async (gameId) => {
-      if (!gameId) return;
-      try {
-        const result = await authedJsonFetch('/api/play/ready', {
-          method: 'POST',
-          body: JSON.stringify({ gameId }),
-        });
-        if (result?.game) {
-          if (Number.isFinite(result.game.serverNowMs)) {
-            setServerClockOffsetMs(result.game.serverNowMs - Date.now());
-          }
-          setGame(hydrateGame(result.game));
-        }
-      } catch {}
-    },
-    []
-  );
-
   useEffect(() => {
     if (!session || requestedGameId || !requestedTime) return;
     if (status?.queue?.time === requestedTime) return;
@@ -244,6 +230,7 @@ export default function PlayPage() {
     let es = null;
     let reconnectTimer = null;
     let closed = false;
+    let consecutiveStreamErrors = 0;
 
     const openStream = async () => {
       const token = await getAccessToken();
@@ -253,6 +240,7 @@ export default function PlayPage() {
         try {
           const payload = JSON.parse(event.data);
           if (payload?.game) {
+            consecutiveStreamErrors = 0;
             if (Number.isFinite(payload.game.serverNowMs)) {
               setServerClockOffsetMs(payload.game.serverNowMs - Date.now());
             }
@@ -260,17 +248,45 @@ export default function PlayPage() {
           }
         } catch {}
       };
-      sendReadySignal(requestedGameId);
       es.onerror = () => {
-        try {
-          es?.close();
-        } catch {}
-        if (!closed) {
-          reconnectTimer = window.setTimeout(() => {
-            streamKeyRef.current += 1;
-            openStream();
-          }, 3000);
-        }
+        void (async () => {
+          try {
+            es?.close();
+          } catch {}
+          if (closed) return;
+          consecutiveStreamErrors += 1;
+          if (consecutiveStreamErrors < 3) {
+            reconnectTimer = window.setTimeout(() => {
+              streamKeyRef.current += 1;
+              openStream();
+            }, 3000);
+            return;
+          }
+          try {
+            await authedJsonFetch(`/api/play/game/${encodeURIComponent(requestedGameId)}`);
+            reconnectTimer = window.setTimeout(() => {
+              streamKeyRef.current += 1;
+              openStream();
+            }, 3000);
+            return;
+          } catch (error) {
+            if (!isGameMissingError(error)) {
+              reconnectTimer = window.setTimeout(() => {
+                streamKeyRef.current += 1;
+                openStream();
+              }, 3000);
+              return;
+            }
+            setGame(null);
+            setInfo('This game is no longer available.');
+            const fallbackGameId = status?.activeGame?.id;
+            if (fallbackGameId) {
+              router.replace(`/play?game=${encodeURIComponent(fallbackGameId)}`);
+            } else {
+              router.replace('/play');
+            }
+          }
+        })();
       };
     };
 
@@ -282,7 +298,7 @@ export default function PlayPage() {
         es?.close();
       } catch {}
     };
-  }, [session, requestedGameId, sendReadySignal]);
+  }, [session, requestedGameId, router, status?.activeGame?.id]);
 
   useEffect(() => {
     if (status?.activeGame?.id && requestedGameId && status.activeGame.id !== requestedGameId) {
