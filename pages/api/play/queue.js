@@ -19,8 +19,9 @@ export default async function handler(req, res) {
 
     if (req.method === 'POST') {
       const body = parseBody(req);
-      if (!body?.time) return res.status(400).json({ error: 'Missing time control' });
-      const result = await joinPlayQueue(authUser.userId, body.time);
+      const timeRaw = typeof body?.time === 'string' ? body.time.trim() : '';
+      if (!timeRaw) return res.status(400).json({ error: 'Missing time control' });
+      const result = await joinPlayQueue(authUser.userId, timeRaw);
       return res.status(200).json(result);
     }
 

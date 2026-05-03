@@ -2025,6 +2025,59 @@
   }
 }
 
+.play-custom-time-lobby {
+  max-width: min(100%, 420px);
+  padding: 0.5rem 0;
+}
+
+.play-custom-time-lobby__intro {
+  font-size: 0.9rem;
+  line-height: 1.45;
+  margin: 0 0 0.85rem;
+}
+
+.play-custom-time-lobby__fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.play-custom-time-lobby__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--ink-muted);
+}
+
+.play-custom-time-lobby__field input {
+  width: 6.5rem;
+  padding: 0.4rem 0.5rem;
+  border-radius: var(--sketch-radius);
+  border: var(--border-soft);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: 0.95rem;
+}
+
+.play-custom-time-lobby__submit {
+  align-self: flex-end;
+}
+
+.play-custom-time-lobby__home {
+  font-size: 0.86rem;
+  margin: 0;
+}
+
+.play-custom-time-lobby__home a {
+  color: var(--logo-blue);
+  text-decoration: underline;
+}
+
 .play-inline-notice {
   padding: 0.85rem 0.95rem;
 }

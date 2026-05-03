@@ -1,4 +1,5 @@
 import Head from 'next/head';
+import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Button from '../components/Button';
@@ -10,7 +11,12 @@ import { usePlayUi } from '../lib/PlayUiContext';
 import { useSupabaseSession } from '../lib/SessionContext';
 import { stashPgnAndOpenAnalysis } from '../lib/analysisSessionImport';
 import { authedJsonFetch, getAccessToken } from '../lib/playClient';
-import { formatClockMs, getQueueLabel } from '../lib/playConstants';
+import {
+  buildCustomTimeQueueKey,
+  formatClockMs,
+  getQueueLabel,
+  validateCustomTimeInput,
+} from '../lib/playConstants';
 import { Chess } from '../lib/chessCompat';
 import { applyPlayMoveOrThrow } from '../lib/playMoveResolution';
 import { buildArchivePgn } from '../lib/playPgn';
@@ -135,6 +141,8 @@ export default function PlayPage() {
   const [centerNotice, setCenterNotice] = useState('');
   const [serverClockOffsetMs, setServerClockOffsetMs] = useState(0);
   const [optimisticQueueTime, setOptimisticQueueTime] = useState(null);
+  const [customMinutes, setCustomMinutes] = useState(10);
+  const [customIncrementSec, setCustomIncrementSec] = useState(0);
   const attemptedJoinRef = useRef('');
   const streamKeyRef = useRef(0);
   const tokenRef = useRef('');
@@ -616,12 +624,64 @@ export default function PlayPage() {
               </aside>
             </div>
           )
-        ) : (
+        ) : requestedTime ? (
           <>
             <div className="play-inline-notice">
               {effectiveQueueTime
                 ? `Searching for game: ${getQueueLabel(effectiveQueueTime)}`
-                : 'Custom time controls are not yet available. Join another queue from the home screen.'}
+                : `Joining ${getQueueLabel(requestedTime)}…`}
+            </div>
+            {info ? <div className="text-muted">{info}</div> : null}
+          </>
+        ) : (
+          <>
+            <div className="play-custom-time-lobby">
+              <p className="text-muted play-custom-time-lobby__intro">
+                Custom games use a separate queue: you are paired only with someone who chose the same minutes and
+                increment here (not the preset buttons on the home page).
+              </p>
+              <div className="play-custom-time-lobby__fields">
+                <label className="play-custom-time-lobby__field">
+                  <span>Starting time (minutes)</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={180}
+                    value={customMinutes}
+                    onChange={(e) => setCustomMinutes(e.target.value)}
+                  />
+                </label>
+                <label className="play-custom-time-lobby__field">
+                  <span>Increment (seconds)</span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={180}
+                    value={customIncrementSec}
+                    onChange={(e) => setCustomIncrementSec(e.target.value)}
+                  />
+                </label>
+                <Button
+                  variant="primary"
+                  className="play-custom-time-lobby__submit"
+                  onClick={() => {
+                    setInfo('');
+                    const err = validateCustomTimeInput(customMinutes, customIncrementSec);
+                    if (err) {
+                      setInfo(err);
+                      return;
+                    }
+                    const key = buildCustomTimeQueueKey(customMinutes, customIncrementSec);
+                    router.replace(`/play?time=${encodeURIComponent(key)}`);
+                  }}
+                >
+                  Find opponent
+                </Button>
+              </div>
+              <p className="text-muted play-custom-time-lobby__home">
+                Or pick a preset time control from the{' '}
+                <Link href="/">home page</Link>.
+              </p>
             </div>
             {info ? <div className="text-muted">{info}</div> : null}
           </>

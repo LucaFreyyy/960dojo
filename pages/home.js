@@ -15,7 +15,7 @@ const timeControls = [
   { time: '10+5', label: 'Rapid' },
   { time: '15+10', label: 'Rapid' },
   { time: '30+0', label: 'Classical' },
-  { time: '30+20', label: 'Classical' },
+  { time: '30+30', label: 'Classical' },
 ];
 
 export default function HomePage() {
