@@ -252,6 +252,12 @@
   padding-top: 10px;
 }
 
+/* Shorter move list so difficulty, list, and post-puzzle actions fit in the viewport. */
+.tactics-page {
+  --move-list-body-height: calc(var(--training-board-size) * 0.85 * 0.5);
+  --move-list-panel-height: calc(var(--move-list-body-height) + 7.5rem);
+}
+
 .narrow-action {
   max-width: 280px;
 }
