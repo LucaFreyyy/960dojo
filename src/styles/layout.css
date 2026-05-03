@@ -472,22 +472,6 @@ button.dropbtn.dropbtn--notify-pending:focus-visible {
   background: var(--surface);
 }
 
-.time-grid .time-box--queued {
-  background: rgba(46, 164, 255, 0.2);
-  box-shadow:
-    var(--btn-sketch-ring-blue),
-    var(--sketch-shadow),
-    0 0 0 1px rgba(46, 164, 255, 0.35);
-}
-
-.time-grid .time-box--queued:hover {
-  background: rgba(46, 164, 255, 0.2);
-  box-shadow:
-    var(--btn-sketch-ring-blue),
-    var(--sketch-shadow),
-    0 0 0 1px rgba(46, 164, 255, 0.35);
-}
-
 .play-status-banner {
   width: 100%;
   border: none;

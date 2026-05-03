@@ -16,6 +16,16 @@ import { useBoardVisuals } from '../lib/BoardVisualsContext';
 const PROMOTION_CHOICES = ['queen', 'rook', 'bishop', 'knight'];
 const PROMOTION_ORDER = ['queen', 'knight', 'rook', 'bishop'];
 const FILES = 'abcdefgh';
+const MATERIAL_ROLES = ['queen', 'rook', 'bishop', 'knight', 'pawn'];
+const MATERIAL_VALUES = { queen: 9, rook: 5, bishop: 3, knight: 3, pawn: 1 };
+const STANDARD_MATERIAL = { queen: 1, rook: 2, bishop: 2, knight: 2, pawn: 8 };
+const FEN_PIECE_TO_ROLE = {
+  q: 'queen',
+  r: 'rook',
+  b: 'bishop',
+  n: 'knight',
+  p: 'pawn',
+};
 const EMPTY_AUTO_SHAPES = Object.freeze([]);
 const DEFAULT_USER_DRAWABLE_BRUSHES = {
   green: { key: 'green', color: '#2e8bff', opacity: 0.95, lineWidth: 10 },
@@ -102,6 +112,91 @@ function squareToBoardCoords(square, orientation) {
   return { x: file, y: 8 - rank };
 }
 
+function pieceAssetCode(color, role) {
+  const colorCode = color === 'white' ? 'w' : 'b';
+  const roleCode = role === 'knight' ? 'N' : role[0].toUpperCase();
+  return `${colorCode}${roleCode}`;
+}
+
+function countCurrentMaterial(fen) {
+  const counts = {
+    white: { queen: 0, rook: 0, bishop: 0, knight: 0, pawn: 0 },
+    black: { queen: 0, rook: 0, bishop: 0, knight: 0, pawn: 0 },
+  };
+  const board = String(fen || '').split(/\s+/)[0] || '';
+  for (const ch of board) {
+    const lower = ch.toLowerCase();
+    const role = FEN_PIECE_TO_ROLE[lower];
+    if (!role) continue;
+    const color = ch === lower ? 'black' : 'white';
+    counts[color][role] += 1;
+  }
+  return counts;
+}
+
+function calculateMaterialDifference(fen) {
+  const current = countCurrentMaterial(fen);
+  const capturedByWhite = {};
+  const capturedByBlack = {};
+  for (const role of MATERIAL_ROLES) {
+    capturedByWhite[role] = Math.max(0, STANDARD_MATERIAL[role] - current.black[role]);
+    capturedByBlack[role] = Math.max(0, STANDARD_MATERIAL[role] - current.white[role]);
+  }
+
+  const net = { white: {}, black: {} };
+  let whiteValue = 0;
+  let blackValue = 0;
+  for (const role of MATERIAL_ROLES) {
+    const common = Math.min(capturedByWhite[role], capturedByBlack[role]);
+    net.white[role] = capturedByWhite[role] - common;
+    net.black[role] = capturedByBlack[role] - common;
+    whiteValue += net.white[role] * MATERIAL_VALUES[role];
+    blackValue += net.black[role] * MATERIAL_VALUES[role];
+  }
+  return {
+    white: {
+      pieces: net.white,
+      plus: Math.max(0, whiteValue - blackValue),
+    },
+    black: {
+      pieces: net.black,
+      plus: Math.max(0, blackValue - whiteValue),
+    },
+  };
+}
+
+function MaterialDifference({ side, material, pieceTheme, pieceExt }) {
+  const sideMaterial = material?.[side];
+  if (!sideMaterial) return <div className="material-difference material-difference--empty" aria-hidden />;
+  const pieces = [];
+  for (const role of MATERIAL_ROLES) {
+    const count = Number(sideMaterial.pieces?.[role]) || 0;
+    for (let i = 0; i < count; i += 1) {
+      pieces.push({ role, idx: i });
+    }
+  }
+  const hasContent = pieces.length > 0 || sideMaterial.plus > 0;
+  return (
+    <div
+      className={`material-difference material-difference--${side} ${hasContent ? '' : 'material-difference--empty'}`.trim()}
+      aria-label={`${side} captured material`}
+    >
+      {pieces.map(({ role, idx }) => {
+        const code = pieceAssetCode(side === 'white' ? 'black' : 'white', role);
+        return (
+          <span
+            key={`${role}-${idx}`}
+            className="material-difference__piece"
+            style={{ backgroundImage: `url("/lichess-assets/piece/${pieceTheme}/${code}.${pieceExt}")` }}
+            aria-hidden
+          />
+        );
+      })}
+      {sideMaterial.plus > 0 ? <span className="material-difference__plus">+{sideMaterial.plus}</span> : null}
+    </div>
+  );
+}
+
 export default function ChessBoard({
   fen,
   orientation = 'white',
@@ -172,6 +267,7 @@ export default function ChessBoard({
   const pieceTheme = normalizePieceSet(pieceSet || globalVisuals?.pieceSet || 'cburnett');
   const boardThemeKey = normalizeBoardTheme(boardTheme || globalVisuals?.boardTheme || 'brown');
   const boardImage = boardThemeAsset(resolvedBoardTheme || boardThemeKey);
+  const material = useMemo(() => calculateMaterialDifference(fen), [fen]);
 
   const chessEvents = useMemo(() => ({ select: onChessSelect }), [onChessSelect]);
 
@@ -661,7 +757,6 @@ export default function ChessBoard({
       });
     (async () => {
       for (const ext of candidates) {
-        // eslint-disable-next-line no-await-in-loop
         const ok = await probe(pieceTheme, ext);
         if (ok) {
           if (!cancelled) {
@@ -672,7 +767,6 @@ export default function ChessBoard({
         }
       }
       for (const ext of candidates) {
-        // eslint-disable-next-line no-await-in-loop
         const ok = await probe('cburnett', ext);
         if (ok) {
           if (!cancelled) {
@@ -703,13 +797,11 @@ export default function ChessBoard({
         img.src = boardThemeAsset(theme);
       });
     (async () => {
-      // eslint-disable-next-line no-await-in-loop
       const preferredOk = await probeBoard(boardThemeKey);
       if (preferredOk) {
         if (!cancelled) setResolvedBoardTheme(boardThemeKey);
         return;
       }
-      // eslint-disable-next-line no-await-in-loop
       const fallbackOk = await probeBoard('brown.png');
       if (!cancelled) {
         setResolvedBoardTheme(fallbackOk ? 'brown.png' : boardThemeKey);
@@ -763,33 +855,47 @@ export default function ChessBoard({
 
   return (
     <div ref={shellRef} className={`chessboard-shell chessboard-theme--${boardThemeKey}`} style={themeStyle}>
-      <div ref={containerRef} className="chessboard-root" />
-      {promotionUI ? (
-        <div
-          className="chessboard-promotion-overlay"
-          role="dialog"
-          aria-label="Choose promotion piece"
-          onClick={() => resolvePromotion(null)}
-        >
-          {promotionButtons.map((btn) => (
-            <button
-              key={btn.key}
-              type="button"
-              className="chessboard-promotion-square"
-              style={btn.style}
-              aria-label={`Promote to ${btn.piece}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                resolvePromotion(btn.piece);
-              }}
-            >
-              <div className="cg-wrap chessboard-promotion-piece-wrap" aria-hidden>
-                <piece className={`chessboard-promotion-piece ${promotionUI.color} ${btn.piece}`} />
-              </div>
-            </button>
-          ))}
-        </div>
-      ) : null}
+      <MaterialDifference
+        side={orientation === 'black' ? 'white' : 'black'}
+        material={material}
+        pieceTheme={resolvedPieceTheme}
+        pieceExt={pieceAssetExt}
+      />
+      <div className="chessboard-board-wrap">
+        <div ref={containerRef} className="chessboard-root" />
+        {promotionUI ? (
+          <div
+            className="chessboard-promotion-overlay"
+            role="dialog"
+            aria-label="Choose promotion piece"
+            onClick={() => resolvePromotion(null)}
+          >
+            {promotionButtons.map((btn) => (
+              <button
+                key={btn.key}
+                type="button"
+                className="chessboard-promotion-square"
+                style={btn.style}
+                aria-label={`Promote to ${btn.piece}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  resolvePromotion(btn.piece);
+                }}
+              >
+                <div className="cg-wrap chessboard-promotion-piece-wrap" aria-hidden>
+                  <piece className={`chessboard-promotion-piece ${promotionUI.color} ${btn.piece}`} />
+                </div>
+              </button>
+            ))}
+          </div>
+        ) : null}
+      </div>
+      <MaterialDifference
+        side={orientation === 'black' ? 'black' : 'white'}
+        material={material}
+        pieceTheme={resolvedPieceTheme}
+        pieceExt={pieceAssetExt}
+      />
     </div>
   );
 }
