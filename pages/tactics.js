@@ -663,7 +663,6 @@ export default function TacticsPage() {
             <DifficultySelector value={difficulty} onChange={setDifficulty} disabled={loading} />
             <MoveList
               ref={moveListNavRef}
-              className="move-list--tactics"
               pgn={moveListPgn}
               evalData={[]}
               userColor={orientation}

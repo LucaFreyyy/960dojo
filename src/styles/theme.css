@@ -12,8 +12,12 @@
 
   /* Tactics / openings: cap at 560px, shrink on narrow viewports so list height matches board */
   --training-board-size: min(560px, calc(100vw - 2.5rem));
-  /* Openings move list body; tactics uses .move-list--tactics override */
+  /* Move list scroll body; same on tactics, openings, analysis */
   --move-list-body-height: calc(var(--training-board-size) * 0.85);
+  /* Outer .move-list height: nav + padding + eval/loading + flex body (engine lines reduce body, not panel) */
+  --move-list-panel-height: calc(var(--move-list-body-height) + 7.5rem);
+  /* Horizontal inset for training grids + aligned page chrome (alerts, titles) */
+  --training-layout-inline-shift: calc(var(--training-board-size) * 0.25);
 
   --logo-blue: #2ea4ff;
   --logo-red: #a22020;
@@ -359,4 +363,10 @@
     radial-gradient(circle at 18% 88%, rgba(70, 150, 95, 0.3) 0 12px, transparent 13px),
     radial-gradient(circle at 82% 90%, rgba(90, 170, 110, 0.32) 0 11px, transparent 12px),
     radial-gradient(circle at 92% 86%, rgba(70, 150, 95, 0.3) 0 13px, transparent 14px);
+}
+
+@media (max-width: 768px) {
+  :root {
+    --training-layout-inline-shift: 0px;
+  }
 }

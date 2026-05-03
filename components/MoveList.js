@@ -459,7 +459,6 @@ const MoveList = forwardRef(function MoveList(
                     className="move-list__engine-lines"
                     onMouseLeave={() => onEngineLineHover?.(null)}
                 >
-                    <div className="move-list__engine-lines-title">Engine lines</div>
                     <ol className="move-list__engine-lines-list">
                         {engineBestLines.map((row) => (
                             <li

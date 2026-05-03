@@ -6,9 +6,11 @@
 
 .tactics-layout {
   display: grid;
-  grid-template-columns: minmax(0, min(600px, 100%)) minmax(0, 1fr);
-  gap: 18px;
+  grid-template-columns: minmax(0, min(var(--training-board-size), 100%)) minmax(0, 1fr);
+  gap: 20px;
   align-items: start;
+  padding-left: var(--training-layout-inline-shift);
+  box-sizing: border-box;
 }
 
 .tactics-layout > section {
@@ -17,10 +19,12 @@
 
 .openings-layout {
   display: grid;
-  grid-template-columns: minmax(0, min(560px, 100%)) minmax(0, 1fr);
+  grid-template-columns: minmax(0, min(var(--training-board-size), 100%)) minmax(0, 1fr);
   gap: 20px;
   align-items: start;
   transform: none;
+  padding-left: var(--training-layout-inline-shift);
+  box-sizing: border-box;
 }
 
 .openings-layout > * {
@@ -149,6 +153,24 @@
   min-width: 0;
 }
 
+/* Align page chrome with the inset training grid (tactics “puzzle in progress”, analysis info, etc.) */
+.tactics-page > .section-title,
+.openings-page > .section-title,
+.position-generator-page > .section-title {
+  margin-left: var(--training-layout-inline-shift);
+  width: calc(100% - var(--training-layout-inline-shift));
+  box-sizing: border-box;
+}
+
+.tactics-page > .alert,
+.tactics-page > .tactics-login-hint,
+.openings-page > .alert,
+.position-generator-page > .alert {
+  margin-left: var(--training-layout-inline-shift);
+  width: calc(100% - var(--training-layout-inline-shift));
+  box-sizing: border-box;
+}
+
 .analysis-setup-row,
 .analysis-engine-row,
 .analysis-actions {
@@ -196,6 +218,8 @@
   display: flex;
   flex-direction: column;
   gap: 0.45rem;
+  padding-left: var(--training-layout-inline-shift);
+  box-sizing: border-box;
 }
 
 .analysis-subtitle {

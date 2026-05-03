@@ -1041,7 +1041,7 @@
 .move-list {
   width: 100%;
   max-width: calc(var(--training-board-size) * 0.5);
-  margin-inline: auto;
+  align-self: flex-start;
   background: var(--surface);
   border: var(--border-soft);
   border-radius: var(--sketch-radius);
@@ -1050,6 +1050,9 @@
   display: flex;
   flex-direction: column;
   position: relative;
+  height: var(--move-list-panel-height);
+  min-height: 0;
+  box-sizing: border-box;
 }
 
 .move-list__nav {
@@ -1057,6 +1060,7 @@
   gap: 0.5rem;
   margin-bottom: 0.65rem;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .move-list__nav-right {
@@ -1066,71 +1070,74 @@
 }
 
 .move-list__engine-lines {
-  margin-bottom: 0.65rem;
-  padding: 0.55rem 0.65rem;
+  margin-bottom: 0.45rem;
+  padding: 0.35rem 0.45rem;
   border-radius: var(--sketch-radius);
   border: var(--border-muted);
   background: rgba(46, 164, 255, 0.07);
   font-size: 0.8rem;
-  line-height: 1.45;
-}
-
-.move-list__engine-lines-title {
-  font-weight: 700;
-  font-size: 0.72rem;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--ink-muted);
-  margin-bottom: 0.4rem;
+  line-height: 1.35;
+  overflow: visible;
+  flex-shrink: 0;
 }
 
 .move-list__engine-lines-list {
   margin: 0;
-  padding-left: 1.15rem;
+  padding-left: 1.05rem;
   list-style: decimal;
 }
 
 .move-list__engine-line {
-  margin: 0.35rem 0;
-  padding: 0.2rem 0.25rem;
+  margin: 0.06rem 0;
+  padding: 0.12rem 0.2rem;
   border-radius: 4px;
   cursor: pointer;
   --engine-line-color: var(--accent-cool, #2ea4ff);
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  min-width: 0;
+  position: relative;
 }
 
 .move-list__engine-line:hover {
-  background: rgba(46, 164, 255, 0.12);
+  background: rgba(46, 164, 255, 0.16);
+  z-index: 2;
 }
 
 .move-list__engine-line-eval {
-  display: inline-block;
+  flex-shrink: 0;
   min-width: 3.25rem;
   font-variant-numeric: tabular-nums;
   font-weight: 600;
   color: var(--engine-line-color);
-  margin-right: 0.45rem;
 }
 
 .move-list__engine-line-pv {
+  flex: 1;
+  min-width: 0;
   color: var(--engine-line-color);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.move-list__engine-line:hover .move-list__engine-line-pv {
+  white-space: normal;
+  overflow: visible;
   word-break: break-word;
 }
 
 .move-list__body {
-  height: var(--move-list-body-height);
-  min-height: var(--move-list-body-height);
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto;
   border-radius: var(--sketch-radius);
   border: var(--border-muted);
   background: var(--bg-deep);
   padding: 0.62rem;
   line-height: 1.72;
   overflow-y: auto;
-}
-
-/* Tactics page only: shorter list than openings (see pages/tactics.js) */
-.move-list--tactics .move-list__body {
-  height: calc(var(--move-list-body-height) * 0.63);
-  min-height: calc(var(--move-list-body-height) * 0.63);
 }
 
 .move-list__row {
@@ -1180,6 +1187,7 @@
   min-height: 0;
   margin-top: 0.55rem;
   padding: 0 0.2rem;
+  flex-shrink: 0;
 }
 
 .move-list__empty {
@@ -1207,6 +1215,7 @@
   margin-top: 0.75rem;
   color: var(--ink);
   font-size: 0.9rem;
+  flex-shrink: 0;
 }
 
 .move-list__eval-strong {
@@ -1779,6 +1788,8 @@
   gap: 1rem;
   align-items: start;
   justify-content: start;
+  padding-left: calc(var(--training-board-size) * 0.25);
+  box-sizing: border-box;
 }
 
 .play-title-main {
@@ -1947,6 +1958,7 @@
 
 .play-move-list {
   height: 100%;
+  max-height: none;
   min-height: 0;
   display: flex;
   flex-direction: column;
@@ -1954,9 +1966,9 @@
 }
 
 .play-move-list .move-list__body {
-  height: auto;
+  flex: 1 1 auto;
   min-height: 0;
-  flex: 1;
+  height: auto;
 }
 
 .play-actions {
@@ -2059,9 +2071,19 @@
   padding: 0.95rem 1.1rem;
 }
 
+@media (min-width: 981px) {
+  .play-page > .section-title,
+  .play-page > .text-muted {
+    margin-left: var(--training-layout-inline-shift);
+    width: calc(100% - var(--training-layout-inline-shift));
+    box-sizing: border-box;
+  }
+}
+
 @media (max-width: 980px) {
   .play-layout {
     grid-template-columns: 1fr;
+    padding-left: 0;
   }
 
   .play-side-stack {
