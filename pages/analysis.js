@@ -1,6 +1,7 @@
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
 import Chessboard from '../components/Chessboard';
 import MoveList from '../components/MoveList';
 import PositionDisplay from '../components/PositionDisplay';
@@ -17,6 +18,7 @@ import { parsePgnTree } from '../lib/moveListEval';
 import { takeAnalysisImportForNonce } from '../lib/analysisSessionImport';
 import { useMoveListWheelNavigation } from '../lib/useMoveListWheelNavigation';
 import { extractPgnTag } from '../lib/tacticPgnUtils';
+import { useSupabaseSession } from '../lib/SessionContext';
 
 const EXAMPLE_BACKRANK = 'bbnnrkqr';
 const MAX_DEPTH_CAP = 50;
@@ -338,6 +340,7 @@ function getPositionAtSelection(startFen, mainline, selection) {
 
 export default function AnalysisPage() {
   const router = useRouter();
+  const session = useSupabaseSession();
   /** Survives React Strict Mode remount after takePgnForImportNonce removed the payload from localStorage. */
   const tacticImportPgnStashRef = useRef({
     nonce: null,
@@ -375,10 +378,124 @@ export default function AnalysisPage() {
   const [analysisPlayers, setAnalysisPlayers] = useState({ white: null, black: null });
   const [preselectSan, setPreselectSan] = useState(null);
   const [collapseVariations, setCollapseVariations] = useState(true);
+  const [studyId, setStudyId] = useState(null);
+  const [studyTitle, setStudyTitle] = useState('');
+  const [studyIsPublic, setStudyIsPublic] = useState(false);
+  const [studyIsOwner, setStudyIsOwner] = useState(false);
+  const [studyLoading, setStudyLoading] = useState(false);
+  const [studySaving, setStudySaving] = useState(false);
+  const lastStudySavedJsonRef = useRef('');
   const engineCancelRef = useRef(null);
   const engineStateRef = useRef({ key: null, depth: 0, cpWhite: null });
   const restoredFromCacheRef = useRef(false);
   const { moveListNavRef, onWheelNavigate } = useMoveListWheelNavigation();
+
+  const authHeader = useMemo(() => {
+    const token = session?.access_token;
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  }, [session]);
+
+  const buildStudySnapshot = useCallback(() => {
+    return {
+      version: 1,
+      positionNr,
+      backrankInput,
+      startFen,
+      pgnInput,
+      mainline,
+      selection,
+      currentFen,
+      lastMove,
+      boardOrientation,
+      evalEntries: Array.from(evalByKey.entries()),
+      depthEntries: Array.from(depthByKey.entries()),
+      depthLimit,
+      depthReached,
+      engineEvalCp,
+      engineMultipvLines,
+      engineLinesByKeyEntries: Array.from(engineLinesByKey.entries()),
+      engineOn,
+      showEngineBestMoves,
+      userShapesByPositionKeyEntries: Array.from(userShapesByPositionKey.entries()),
+      analysisPlayers,
+      collapseVariations,
+    };
+  }, [
+    positionNr,
+    backrankInput,
+    startFen,
+    pgnInput,
+    mainline,
+    selection,
+    currentFen,
+    lastMove,
+    boardOrientation,
+    evalByKey,
+    depthByKey,
+    depthLimit,
+    depthReached,
+    engineEvalCp,
+    engineMultipvLines,
+    engineLinesByKey,
+    engineOn,
+    showEngineBestMoves,
+    userShapesByPositionKey,
+    analysisPlayers,
+    collapseVariations,
+  ]);
+
+  const resetAnalysisLine = useCallback(() => {
+    setMainline(createLine());
+    setSelection({ index: -1, variationPath: [] });
+    setEvalByKey(new Map());
+    setDepthByKey(new Map());
+    setDepthReached(0);
+    setEngineEvalCp(null);
+    setEngineMultipvLines([]);
+    setEngineLinesByKey(new Map());
+    engineStateRef.current = { key: null, depth: 0, cpWhite: null };
+    setUserShapesByPositionKey(new Map());
+    setMoveCommentDraft('');
+    setInfoMessage('Reset.');
+  }, []);
+
+  const resetToFreshAnalysisBoard = useCallback(() => {
+    // Reset the entire analysis workspace (like opening a fresh analysis board).
+    // Keep this independent of studies: leaving a study should not delete it.
+    const nextFen = positionNrToStartFen(0);
+    setPositionNr(0);
+    setBackrankInput(numberToBackrank.get(0) || EXAMPLE_BACKRANK);
+    setStartFen(nextFen);
+    setFenInput(nextFen);
+    setMainline(createLine());
+    setSelection({ index: -1, variationPath: [] });
+    setCurrentFen(nextFen);
+    setLastMove(undefined);
+    setEvalByKey(new Map());
+    setDepthByKey(new Map());
+    setDepthReached(0);
+    setEngineEvalCp(null);
+    setEngineMultipvLines([]);
+    setEngineLinesByKey(new Map());
+    engineStateRef.current = { key: null, depth: 0, cpWhite: null };
+    setInfoMessage('');
+    setUserShapesByPositionKey(new Map());
+    setMoveCommentDraft('');
+    setBoardOrientation('white');
+    setAnalysisPlayers({ white: null, black: null });
+    setCollapseVariations(true);
+  }, [numberToBackrank]);
+
+  const hasUnsavedScratchWork = useMemo(() => {
+    if (studyId) return false;
+    if ((pgnInput || '').trim()) return true;
+    if (Array.isArray(mainline) && mainline.length) return true;
+    if (evalByKey.size) return true;
+    if (depthByKey.size) return true;
+    if (engineLinesByKey.size) return true;
+    if (userShapesByPositionKey.size) return true;
+    return false;
+  }, [studyId, pgnInput, mainline, evalByKey, depthByKey, engineLinesByKey, userShapesByPositionKey]);
 
   const analysisPositionKey = useMemo(() => {
     const { fen } = getPositionAtSelection(startFen, mainline, selection);
@@ -394,7 +511,7 @@ export default function AnalysisPage() {
 
   useEffect(() => {
     if (!router.isReady || restoredFromCacheRef.current) return;
-    const isImporting = router.query.importPgn === '1' || Boolean(router.query.openingShare);
+    const isImporting = router.query.importPgn === '1' || Boolean(router.query.openingShare) || Boolean(router.query.study);
     if (isImporting) {
       restoredFromCacheRef.current = true;
       return;
@@ -458,6 +575,150 @@ export default function AnalysisPage() {
       restoredFromCacheRef.current = true;
     }
   }, [router.isReady, router.query.importPgn, router.query.openingShare]);
+
+  useEffect(() => {
+    if (!router.isReady) return;
+    const rawStudy = router.query.study;
+    const nextStudyId = Array.isArray(rawStudy) ? rawStudy[0] : rawStudy;
+    if (!nextStudyId) return;
+    if (!/^[0-9a-f-]{36}$/i.test(nextStudyId)) {
+      setInfoMessage('Invalid study id.');
+      router.replace('/analysis', undefined, { shallow: true }).catch(() => {});
+      return;
+    }
+
+    let cancelled = false;
+    setStudyLoading(true);
+    (async () => {
+      try {
+        const res = await fetch(`/api/studies/${encodeURIComponent(nextStudyId)}`, { headers: { ...authHeader } });
+        const payload = await res.json().catch(() => ({}));
+        if (cancelled) return;
+        if (!res.ok) {
+          setInfoMessage(payload?.error || 'Failed to load study.');
+          setStudyLoading(false);
+          return;
+        }
+
+        const snapshot = payload?.analysis && typeof payload.analysis === 'object' ? payload.analysis : null;
+        if (!snapshot) {
+          setInfoMessage('Study is missing analysis payload.');
+          setStudyLoading(false);
+          return;
+        }
+
+        setStudyId(payload.id || nextStudyId);
+        setStudyTitle(String(payload.title || ''));
+        setStudyIsPublic(Boolean(payload.isPublic));
+        setStudyIsOwner(Boolean(payload.isOwner));
+
+        // Hydrate state (tolerant of older snapshots).
+        const loadedStartFen = typeof snapshot.startFen === 'string' && snapshot.startFen.trim() ? snapshot.startFen : '';
+        if (typeof snapshot.backrankInput === 'string') setBackrankInput(snapshot.backrankInput);
+        if (loadedStartFen) setStartFen(loadedStartFen);
+        const backrankFromFen = loadedStartFen ? extract960StartingBackrankFromFen(loadedStartFen) : null;
+        const mappedNrFromFen = backrankFromFen ? backrankToNumber.get(backrankFromFen) : null;
+        const hasMappedNr = Number.isInteger(mappedNrFromFen);
+        if (typeof snapshot.backrankInput === 'string' && snapshot.backrankInput.trim()) {
+          setBackrankInput(snapshot.backrankInput);
+        } else if (backrankFromFen) {
+          setBackrankInput(backrankFromFen);
+        }
+        if (hasMappedNr) {
+          // Prefer deriving from startFen, since stored positionNr may be stale or missing.
+          setPositionNr(mappedNrFromFen);
+        } else if (Number.isInteger(snapshot.positionNr)) {
+          setPositionNr(Math.max(0, Math.min(959, snapshot.positionNr)));
+        }
+        if (typeof snapshot.pgnInput === 'string') setPgnInput(snapshot.pgnInput);
+        if (Array.isArray(snapshot.mainline)) setMainline(snapshot.mainline);
+        if (
+          snapshot.selection &&
+          Number.isInteger(snapshot.selection.index) &&
+          Array.isArray(snapshot.selection.variationPath)
+        ) {
+          setSelection({
+            index: snapshot.selection.index,
+            variationPath: snapshot.selection.variationPath.map((x) => String(x)),
+          });
+        } else {
+          setSelection({ index: -1, variationPath: [] });
+        }
+        if (typeof snapshot.currentFen === 'string' && snapshot.currentFen.trim()) setCurrentFen(snapshot.currentFen);
+        if (Array.isArray(snapshot.lastMove) && snapshot.lastMove.length === 2) setLastMove(snapshot.lastMove);
+        if (snapshot.boardOrientation === 'white' || snapshot.boardOrientation === 'black') {
+          setBoardOrientation(snapshot.boardOrientation);
+        }
+        if (Array.isArray(snapshot.evalEntries)) {
+          setEvalByKey(new Map(snapshot.evalEntries.filter((e) => Array.isArray(e) && e.length === 2)));
+        } else {
+          setEvalByKey(new Map());
+        }
+        if (Array.isArray(snapshot.depthEntries)) {
+          setDepthByKey(new Map(snapshot.depthEntries.filter((e) => Array.isArray(e) && e.length === 2)));
+        } else {
+          setDepthByKey(new Map());
+        }
+        if (Number.isFinite(snapshot.depthLimit)) {
+          setDepthLimit(Math.max(BASE_DEPTH_LIMIT, Math.min(MAX_DEPTH_CAP, Math.round(snapshot.depthLimit))));
+        }
+        if (Number.isFinite(snapshot.depthReached)) setDepthReached(Math.max(0, Math.round(snapshot.depthReached)));
+        if (Number.isFinite(snapshot.engineEvalCp)) setEngineEvalCp(snapshot.engineEvalCp);
+        if (Array.isArray(snapshot.engineMultipvLines)) setEngineMultipvLines(snapshot.engineMultipvLines);
+        if (Array.isArray(snapshot.engineLinesByKeyEntries)) {
+          setEngineLinesByKey(new Map(snapshot.engineLinesByKeyEntries.filter((e) => Array.isArray(e) && e.length === 2)));
+        } else {
+          setEngineLinesByKey(new Map());
+        }
+        if (typeof snapshot.engineOn === 'boolean') setEngineOn(snapshot.engineOn);
+        if (typeof snapshot.showEngineBestMoves === 'boolean') setShowEngineBestMoves(snapshot.showEngineBestMoves);
+        if (Array.isArray(snapshot.userShapesByPositionKeyEntries)) {
+          setUserShapesByPositionKey(new Map(snapshot.userShapesByPositionKeyEntries.filter((e) => Array.isArray(e) && e.length === 2)));
+        } else {
+          setUserShapesByPositionKey(new Map());
+        }
+        if (snapshot.analysisPlayers && typeof snapshot.analysisPlayers === 'object') {
+          setAnalysisPlayers(snapshot.analysisPlayers);
+        }
+        if (typeof snapshot.collapseVariations === 'boolean') setCollapseVariations(snapshot.collapseVariations);
+
+        try {
+          lastStudySavedJsonRef.current = JSON.stringify({
+            title: String(payload.title || '').trim(),
+            isPublic: Boolean(payload.isPublic),
+            analysis: snapshot,
+          });
+        } catch {
+          lastStudySavedJsonRef.current = '';
+        }
+
+        // Loaded successfully; no banner needed.
+      } catch (e) {
+        if (!cancelled) setInfoMessage('Failed to load study.');
+      } finally {
+        if (!cancelled) setStudyLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [router.isReady, router.query.study, authHeader, router]);
+
+  useEffect(() => {
+    // If we leave a study route, reset study UI state to defaults (private).
+    if (!router.isReady) return;
+    const rawStudy = router.query.study;
+    const activeStudyId = Array.isArray(rawStudy) ? rawStudy[0] : rawStudy;
+    if (activeStudyId) return;
+    setStudyId(null);
+    setStudyTitle('');
+    setStudyIsPublic(false);
+    setStudyIsOwner(false);
+    setStudyLoading(false);
+    setStudySaving(false);
+    lastStudySavedJsonRef.current = '';
+  }, [router.isReady, router.query.study]);
 
   useEffect(() => {
     setEngineMultipvLines(engineLinesByKey.get(analysisPositionKey) || []);
@@ -1283,6 +1544,135 @@ export default function AnalysisPage() {
     return { ...base, [PRESELECT_BRUSH_KEY]: PRESELECT_BRUSH };
   }, [analysisDrawableBrushes]);
 
+  const saveStudy = useCallback(async () => {
+    if (!session?.access_token) {
+      setInfoMessage('Please sign in to save studies.');
+      return;
+    }
+    if (studySaving) return;
+    setStudySaving(true);
+    setInfoMessage('');
+    try {
+      const snapshot = buildStudySnapshot();
+      const title = String(studyTitle || '').trim();
+      const isPublic = Boolean(studyIsPublic);
+      const body = { title, isPublic, analysis: snapshot };
+      const url = studyId ? `/api/studies/${encodeURIComponent(studyId)}` : '/api/studies';
+      const method = studyId ? 'PATCH' : 'POST';
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json', ...authHeader },
+        body: JSON.stringify(body),
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(payload?.error || 'Failed to save study');
+      if (!studyId && payload?.id) {
+        setStudyId(payload.id);
+        router.replace(`/analysis?study=${encodeURIComponent(payload.id)}`, undefined, { shallow: true }).catch(() => {});
+      }
+      setStudyIsOwner(true);
+      try {
+        lastStudySavedJsonRef.current = JSON.stringify(body);
+      } catch {
+        lastStudySavedJsonRef.current = '';
+      }
+      // Saved successfully; keep quiet (autosave/manual-save UX).
+    } catch (e) {
+      setInfoMessage(e?.message || 'Failed to save study.');
+    } finally {
+      setStudySaving(false);
+    }
+  }, [
+    session,
+    studySaving,
+    buildStudySnapshot,
+    studyTitle,
+    studyIsPublic,
+    studyId,
+    authHeader,
+    router,
+  ]);
+
+  const deleteStudy = useCallback(async () => {
+    if (!studyId || !studyIsOwner) return;
+    const ok = window.confirm('Delete this study? This cannot be undone.');
+    if (!ok) return;
+    if (!session?.access_token) {
+      setInfoMessage('Please sign in to delete studies.');
+      return;
+    }
+    try {
+      setStudySaving(true);
+      const res = await fetch(`/api/studies/${encodeURIComponent(studyId)}`, {
+        method: 'DELETE',
+        headers: { ...authHeader },
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(payload?.error || 'Failed to delete study');
+      setStudyId(null);
+      setStudyTitle('');
+      setStudyIsPublic(false);
+      setStudyIsOwner(false);
+      lastStudySavedJsonRef.current = '';
+      router.replace('/analysis', undefined, { shallow: true }).catch(() => {});
+      // Deleted successfully; no banner needed.
+    } catch (e) {
+      setInfoMessage(e?.message || 'Failed to delete study.');
+    } finally {
+      setStudySaving(false);
+    }
+  }, [studyId, studyIsOwner, session, authHeader, router]);
+
+  useEffect(() => {
+    if (!studyId || !studyIsOwner) return;
+    if (studyLoading || studySaving) return;
+    if (!session?.access_token) return;
+
+    let nextJson = '';
+    try {
+      const title = String(studyTitle || '').trim();
+      const isPublic = Boolean(studyIsPublic);
+      const analysis = buildStudySnapshot();
+      nextJson = JSON.stringify({ title, isPublic, analysis });
+    } catch {
+      return;
+    }
+
+    if (!nextJson || nextJson === lastStudySavedJsonRef.current) return;
+
+    const t = setTimeout(async () => {
+      if (studySaving) return;
+      try {
+        setStudySaving(true);
+        const payload = JSON.parse(nextJson);
+        const res = await fetch(`/api/studies/${encodeURIComponent(studyId)}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', ...authHeader },
+          body: JSON.stringify(payload),
+        });
+        const out = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(out?.error || 'Autosave failed');
+        lastStudySavedJsonRef.current = nextJson;
+      } catch {
+        // keep quiet; user can still hit Save manually
+      } finally {
+        setStudySaving(false);
+      }
+    }, 1500);
+
+    return () => clearTimeout(t);
+  }, [
+    studyId,
+    studyIsOwner,
+    studyLoading,
+    studySaving,
+    session,
+    studyTitle,
+    studyIsPublic,
+    buildStudySnapshot,
+    authHeader,
+  ]);
+
   return (
     <>
       <Head>
@@ -1331,14 +1721,75 @@ export default function AnalysisPage() {
               ) : null}
             </div>
             <div className="openings-board-head">
-              <PositionDisplay value={positionNr} editable onChange={syncFromPositionNr} />
+              <PositionDisplay value={positionNr} editable={mainline.length === 0} onChange={syncFromPositionNr} />
             </div>
-            <BackrankInput
-              value={backrankInput}
-              onChange={setBackrankInput}
-              onApply={applyBackrank}
-              example={EXAMPLE_BACKRANK}
-            />
+            {mainline.length === 0 ? (
+              <BackrankInput
+                value={backrankInput}
+                onChange={setBackrankInput}
+                onApply={applyBackrank}
+                example={EXAMPLE_BACKRANK}
+              />
+            ) : null}
+            <div className="analysis-board-actions">
+              <button
+                type="button"
+                className="btn btn--secondary analysis-board-actions__reset"
+                onClick={() => {
+                  if (studyId) {
+                    router.replace('/analysis', undefined, { shallow: true }).catch(() => {});
+                    resetToFreshAnalysisBoard();
+                    return;
+                  }
+                  if (hasUnsavedScratchWork) {
+                    const ok = window.confirm('Reset analysis without saving this as a study?');
+                    if (!ok) return;
+                  }
+                  resetToFreshAnalysisBoard();
+                }}
+              >
+                Reset analysis
+              </button>
+            </div>
+            <div className="analysis-study-row analysis-study-row--under-board">
+              <div className="analysis-study-row__left">
+                <label className="analysis-study-row__label" htmlFor="study-title">Study</label>
+                <input
+                  id="study-title"
+                  className="analysis-study-row__input"
+                  type="text"
+                  placeholder={studyId ? 'Untitled study' : 'Title (optional)'}
+                  value={studyTitle}
+                  disabled={Boolean(studyId) && !studyIsOwner}
+                  onChange={(e) => setStudyTitle(e.target.value)}
+                />
+              </div>
+              <div className="analysis-study-row__right">
+                <label className="analysis-study-row__toggle">
+                  <input
+                    type="checkbox"
+                    checked={studyIsPublic}
+                    disabled={Boolean(studyId) && !studyIsOwner}
+                    onChange={(e) => setStudyIsPublic(e.target.checked)}
+                  />
+                  <span>Public</span>
+                </label>
+                <button
+                  type="button"
+                  className="btn btn--sm btn--secondary"
+                  disabled={!session?.access_token || studySaving || (Boolean(studyId) && !studyIsOwner)}
+                  onClick={() => {
+                    if (studyId) deleteStudy();
+                    else saveStudy();
+                  }}
+                  title={!session?.access_token ? 'Sign in to manage studies' : undefined}
+                >
+                  {studySaving ? 'Working…' : studyId ? 'Delete study' : 'Create study'}
+                </button>
+                <Link className="btn btn--sm btn--secondary" href="/studies">Studies</Link>
+                {studyLoading ? <span className="analysis-study-row__status">Loading…</span> : null}
+              </div>
+            </div>
           </div>
 
           <div className="openings-col-side">
@@ -1399,15 +1850,17 @@ export default function AnalysisPage() {
               onVariationPreselectSan={setPreselectSan}
               collapseVariations={collapseVariations}
               navRight={
-                <button
-                  type="button"
-                  className="ml-btn"
-                  onClick={() => setBoardOrientation((o) => (o === 'white' ? 'black' : 'white'))}
-                  aria-label="Flip board"
-                  title="Flip board"
-                >
-                  ↻
-                </button>
+                <>
+                  <button
+                    type="button"
+                    className="ml-btn"
+                    onClick={() => setBoardOrientation((o) => (o === 'white' ? 'black' : 'white'))}
+                    aria-label="Flip board"
+                    title="Flip board"
+                  >
+                    ↻
+                  </button>
+                </>
               }
             />
             <div className="analysis-movelist-toggle-row">

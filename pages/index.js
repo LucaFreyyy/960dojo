@@ -70,6 +70,16 @@ export default function HomePage() {
               </div>
             </div>
             <div className="practice-card">
+              <Link className="practice-box" href="/studies">
+                <h3>Studies</h3>
+              </Link>
+              <div className="practice-card__explain">
+                <Explanation label="About Studies">
+                  <p>Browse and share saved analysis studies.</p>
+                </Explanation>
+              </div>
+            </div>
+            <div className="practice-card">
               <Link className="practice-box" href="/positionGenerator">
                 <h3>Position Generator</h3>
               </Link>
