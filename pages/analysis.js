@@ -667,7 +667,23 @@ export default function AnalysisPage() {
           setSelection({ index: 0, variationPath: [...path, `${index}:${anchor.variations.length - 1}`] });
         }
       } else if (index === -1) {
-        if (!line.length) {
+        if (path.length > 0) {
+          // At the start of a variation line: a new move should create/select a sibling variation
+          // at the parent anchor position (not a nested variation under this line's first move).
+          const parentPath = path.slice(0, -1);
+          const [anchorRaw] = String(path[path.length - 1]).split(':');
+          const anchorIndex = Number(anchorRaw);
+          const parentLine = getLineByPath(next, parentPath);
+          const anchor = parentLine[anchorIndex];
+          if (!anchor) return prev;
+          const existingVarIdx = (anchor.variations || []).findIndex((vline) => vline?.[0]?.san === moveSan);
+          if (existingVarIdx >= 0) {
+            setSelection({ index: 0, variationPath: [...parentPath, `${anchorIndex}:${existingVarIdx}`] });
+          } else {
+            anchor.variations.push([{ san: moveSan, comment: '', variations: [] }]);
+            setSelection({ index: 0, variationPath: [...parentPath, `${anchorIndex}:${anchor.variations.length - 1}`] });
+          }
+        } else if (!line.length) {
           line.push({ san: moveSan, comment: '', variations: [] });
           setSelection({ index: 0, variationPath: path });
         } else if (line[0]?.san === moveSan) {

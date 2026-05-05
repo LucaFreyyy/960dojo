@@ -386,10 +386,20 @@ const MoveList = forwardRef(function MoveList(
         return (
             <span>
                 {line.map((node, i) => {
-                    const showMoveNo = (i % 2) === 0;
-                    const moveLabel = showMoveNo ? `${moveNo}. ` : '';
-                    if (!showMoveNo) moveNo += 1;
                     const segmentPath = [...path];
+                    const key = `${segmentPath.join('|') || 'main'}:${i}`;
+                    const plyBefore = pathToPlyBefore.get(key);
+                    const ply = Number.isInteger(plyBefore) ? plyBefore : null;
+                    const isWhiteMove = ply != null ? (ply % 2) === 0 : (i % 2) === 0;
+                    const computedMoveNo = ply != null ? Math.floor(ply / 2) + 1 : moveNo;
+                    const showMoveNo = isWhiteMove;
+                    const showEllipses = !isWhiteMove && i === 0;
+                    const moveLabel = showMoveNo
+                        ? `${computedMoveNo}. `
+                        : showEllipses
+                            ? `${computedMoveNo}... `
+                            : '';
+                    if (!isWhiteMove && ply == null) moveNo += 1;
 
                     return (
                         <span key={`${segmentPath.join('|') || 'main'}:${i}`}>
