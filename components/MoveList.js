@@ -87,6 +87,8 @@ const MoveList = forwardRef(function MoveList(
         canDemoteVariation = null,
         onMakeVariationMainline = null,
         onDeleteFromMove = null,
+        /** Optional callback: `(san | null) => void` when a variation choice is preselected. */
+        onVariationPreselectSan = null,
     },
     ref
 ) {
@@ -108,6 +110,7 @@ const MoveList = forwardRef(function MoveList(
 
     const [selection, setSelection] = useState({ index: -1, variationPath: [] });
     const [contextMenu, setContextMenu] = useState(null);
+    const [variationPreselect, setVariationPreselect] = useState(null);
     const suppressNextBrowseCallbackRef = useRef(false);
     const bodyRef = useRef(null);
 
@@ -281,6 +284,77 @@ const MoveList = forwardRef(function MoveList(
         });
     }, []);
 
+    const forkChoices = useMemo(() => {
+        if (!selection || selection.index < 0) return null;
+        const line = getLineByPath(tree, selection.variationPath);
+        const anchor = line?.[selection.index];
+        if (!anchor) return null;
+        const choices = [];
+        if (line[selection.index + 1]) {
+            choices.push({
+                kind: 'main',
+                index: selection.index + 1,
+                variationPath: clonePath(selection.variationPath),
+                key: `${(selection.variationPath || []).join('|') || 'main'}:${selection.index + 1}`,
+                san: String(line[selection.index + 1]?.san || ''),
+            });
+        }
+        (anchor.variations || []).forEach((vline, vIdx) => {
+            if (!vline || !vline[0]) return;
+            const vp = [...clonePath(selection.variationPath), `${selection.index}:${vIdx}`];
+            choices.push({
+                kind: 'var',
+                index: 0,
+                variationPath: vp,
+                key: `${vp.join('|')}:${0}`,
+                san: String(vline?.[0]?.san || ''),
+            });
+        });
+        if (choices.length < 2) return null;
+        return {
+            anchorIndex: selection.index,
+            anchorPath: clonePath(selection.variationPath),
+            choices,
+        };
+    }, [selection, tree]);
+
+    const variationChoiceMap = useMemo(() => {
+        const map = new Map();
+        if (!forkChoices) return map;
+        for (let i = 0; i < forkChoices.choices.length; i += 1) {
+            const c = forkChoices.choices[i];
+            map.set(c.key, { choiceIndex: i, kind: c.kind });
+        }
+        return map;
+    }, [forkChoices]);
+
+    useEffect(() => {
+        // Changing selection should clear any pending preselect.
+        setVariationPreselect(null);
+    }, [selection.index, selection.variationPath.join('|')]);
+
+    useEffect(() => {
+        if (typeof onVariationPreselectSan !== 'function') return;
+        if (!variationPreselect || !forkChoices) {
+            onVariationPreselectSan(null);
+            return;
+        }
+        const idx = Number.isInteger(variationPreselect.cursor) ? variationPreselect.cursor : -1;
+        const choice = idx >= 0 && idx < forkChoices.choices.length ? forkChoices.choices[idx] : null;
+        const san = choice?.san ? String(choice.san) : null;
+        onVariationPreselectSan(san && san.trim() ? san : null);
+    }, [forkChoices, onVariationPreselectSan, variationPreselect]);
+
+    const commitVariationPreselect = useCallback((cursor) => {
+        if (!forkChoices) return false;
+        const idx = Number.isInteger(cursor) ? cursor : -1;
+        if (idx < 0 || idx >= forkChoices.choices.length) return false;
+        const target = forkChoices.choices[idx];
+        setSelection({ index: target.index, variationPath: clonePath(target.variationPath) });
+        setVariationPreselect(null);
+        return true;
+    }, [forkChoices]);
+
     useImperativeHandle(
         ref,
         () => ({
@@ -296,17 +370,53 @@ const MoveList = forwardRef(function MoveList(
 
     useEffect(() => {
         function onKeyDown(event) {
-            if (event.key === 'ArrowLeft') {
+            const t = event.target;
+            const tag = t && typeof t.tagName === 'string' ? t.tagName.toLowerCase() : '';
+            const isTypingTarget =
+                tag === 'input'
+                || tag === 'textarea'
+                || (t && typeof t.isContentEditable === 'boolean' && t.isContentEditable);
+            if (isTypingTarget) return;
+
+            if (event.key === 'Escape') {
+                if (variationPreselect) {
+                    event.preventDefault();
+                    setVariationPreselect(null);
+                }
+            } else if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
                 event.preventDefault();
-                goPrev();
+                if (!forkChoices) return;
+                setVariationPreselect((prev) => {
+                    const base = prev && prev.anchorIndex === forkChoices.anchorIndex
+                        && prev.anchorPath.length === forkChoices.anchorPath.length
+                        && prev.anchorPath.every((x, i) => x === forkChoices.anchorPath[i])
+                        ? prev
+                        : { anchorIndex: forkChoices.anchorIndex, anchorPath: forkChoices.anchorPath, cursor: 0 };
+                    const dir = event.key === 'ArrowUp' ? -1 : +1;
+                    const nextCursor = (base.cursor + dir + forkChoices.choices.length) % forkChoices.choices.length;
+                    return { ...base, cursor: nextCursor };
+                });
+            } else if (event.key === 'Enter') {
+                if (variationPreselect && forkChoices) {
+                    event.preventDefault();
+                    commitVariationPreselect(variationPreselect.cursor);
+                }
+            } else if (event.key === 'ArrowLeft') {
+                event.preventDefault();
+                if (variationPreselect) setVariationPreselect(null);
+                else goPrev();
             } else if (event.key === 'ArrowRight') {
                 event.preventDefault();
-                goNext();
+                if (variationPreselect && forkChoices) {
+                    commitVariationPreselect(variationPreselect.cursor);
+                } else {
+                    goNext();
+                }
             }
         }
         window.addEventListener('keydown', onKeyDown);
         return () => window.removeEventListener('keydown', onKeyDown);
-    }, [goNext, goPrev]);
+    }, [commitVariationPreselect, forkChoices, goNext, goPrev, variationPreselect]);
 
     function renderMoveButton(node, index, path, prefix = '', fullWidth = false) {
         if (!node) return null;
@@ -337,6 +447,19 @@ const MoveList = forwardRef(function MoveList(
         }
         const toneClass = hasValidEvalData ? lossToneClass(lossCp) : 'move-btn--tone-neutral';
         const selectedClass = selected ? 'move-btn--selected' : '';
+        const choiceMeta = variationChoiceMap.get(key);
+        const isForkChoice = Boolean(choiceMeta);
+        const preselectActive = Boolean(
+            isForkChoice
+            && variationPreselect
+            && forkChoices
+            && variationPreselect.anchorIndex === forkChoices.anchorIndex
+            && variationPreselect.anchorPath.length === forkChoices.anchorPath.length
+            && variationPreselect.anchorPath.every((x, i) => x === forkChoices.anchorPath[i])
+            && variationPreselect.cursor === choiceMeta.choiceIndex
+        );
+        const forkChoiceClass = isForkChoice ? 'move-btn--variation-choice' : '';
+        const forkActiveClass = preselectActive ? 'move-btn--variation-choice-active' : '';
 
         const canPromote = typeof onPromoteVariation === 'function'
             && (typeof canPromoteVariation === 'function' ? canPromoteVariation(path, index) : path.length > 0);
@@ -364,7 +487,8 @@ const MoveList = forwardRef(function MoveList(
                         canDelete,
                     });
                 }}
-                className={`move-btn ${fullWidth ? 'move-btn--full' : 'move-btn--inline'} ${toneClass} ${selectedClass}`.trim()}
+                className={`move-btn ${fullWidth ? 'move-btn--full' : 'move-btn--inline'} ${toneClass} ${selectedClass} ${forkChoiceClass} ${forkActiveClass}`.trim()}
+                data-variation-choice={isForkChoice ? choiceMeta.kind : undefined}
             >
                 <span>
                     {prefix}

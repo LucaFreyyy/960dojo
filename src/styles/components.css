@@ -1289,6 +1289,15 @@
   box-shadow: inset 0 0 0 1px var(--gold);
 }
 
+.move-btn--variation-choice {
+  box-shadow: inset 0 0 0 1px rgba(212, 175, 55, 0.28);
+}
+
+.move-btn--variation-choice-active {
+  background: rgba(212, 175, 55, 0.14);
+  box-shadow: inset 0 0 0 2px rgba(212, 175, 55, 0.75);
+}
+
 .move-btn--selected .move-btn__eval {
   opacity: 1;
 }

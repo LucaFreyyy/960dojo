@@ -36,6 +36,9 @@ const ANALYSIS_USER_BRUSHES = {
   [USER_SECONDARY_BRUSH_KEY]: { key: USER_SECONDARY_BRUSH_KEY, color: '#cb5cff', opacity: 0.95, lineWidth: 10 },
 };
 
+const PRESELECT_BRUSH_KEY = 'variation-preselect';
+const PRESELECT_BRUSH = { key: PRESELECT_BRUSH_KEY, color: '#d4af37', opacity: 1, lineWidth: 8 };
+
 function formatEvalFromCpWhite(cpWhite) {
   if (!Number.isFinite(cpWhite)) return '…';
   const v = cpWhite / 100;
@@ -370,6 +373,7 @@ export default function AnalysisPage() {
   const [userShapesByPositionKey, setUserShapesByPositionKey] = useState(new Map());
   const [boardOrientation, setBoardOrientation] = useState('white');
   const [analysisPlayers, setAnalysisPlayers] = useState({ white: null, black: null });
+  const [preselectSan, setPreselectSan] = useState(null);
   const engineCancelRef = useRef(null);
   const engineStateRef = useRef({ key: null, depth: 0, cpWhite: null });
   const restoredFromCacheRef = useRef(false);
@@ -1223,6 +1227,19 @@ export default function AnalysisPage() {
     onBoardMove({ from, to, san: move.san });
   }, [engineMultipvLines, currentFen, onBoardMove]);
 
+  const preselectArrow = useMemo(() => {
+    const san = typeof preselectSan === 'string' ? preselectSan.trim() : '';
+    if (!san || !currentFen) return null;
+    try {
+      const g = new Chess(currentFen, { chess960: true });
+      const mv = g.move(san, { sloppy: true });
+      if (!mv?.from || !mv?.to) return null;
+      return { orig: mv.from, dest: mv.to, brush: PRESELECT_BRUSH_KEY };
+    } catch {
+      return null;
+    }
+  }, [currentFen, preselectSan]);
+
   const { analysisAutoShapes, analysisDrawableBrushes } = useMemo(() => {
     if (!showEngineBestMoves || !engineMultipvLines.length) {
       return EMPTY_ANALYSIS_DRAWABLE;
@@ -1255,6 +1272,16 @@ export default function AnalysisPage() {
     return { analysisAutoShapes: shapes, analysisDrawableBrushes: brushes };
   }, [showEngineBestMoves, engineMultipvLines, hoveredEngineLineRank, whiteToMove]);
 
+  const combinedAutoShapes = useMemo(() => {
+    const base = Array.isArray(analysisAutoShapes) ? analysisAutoShapes : [];
+    return preselectArrow ? [...base, preselectArrow] : base;
+  }, [analysisAutoShapes, preselectArrow]);
+
+  const combinedDrawableBrushes = useMemo(() => {
+    const base = analysisDrawableBrushes || {};
+    return { ...base, [PRESELECT_BRUSH_KEY]: PRESELECT_BRUSH };
+  }, [analysisDrawableBrushes]);
+
   return (
     <>
       <Head>
@@ -1284,8 +1311,8 @@ export default function AnalysisPage() {
                 onMove={onBoardMove}
                 lastMove={lastMove}
                 onWheelNavigate={onWheelNavigate}
-                autoShapes={analysisAutoShapes}
-                extraDrawableBrushes={analysisDrawableBrushes}
+                autoShapes={combinedAutoShapes}
+                extraDrawableBrushes={combinedDrawableBrushes}
                 userShapes={userShapesByPositionKey.get(analysisPositionKey) || []}
                 onUserShapesChange={handleUserShapesChanged}
                 userDrawableBrushes={ANALYSIS_USER_BRUSHES}
@@ -1368,6 +1395,7 @@ export default function AnalysisPage() {
               canDemoteVariation={canDemoteMove}
               onMakeVariationMainline={makeVariationMainline}
               onDeleteFromMove={deleteMovesFromSelection}
+              onVariationPreselectSan={setPreselectSan}
               navRight={
                 <button
                   type="button"
