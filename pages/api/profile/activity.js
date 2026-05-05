@@ -190,6 +190,18 @@ export default async function handler(req, res) {
   }
 
   if (kind === 'tactics') {
+    let totalCount = null;
+    try {
+      const { count, error: countErr } = await supabase
+        .from('UserTactic')
+        .select('id', { count: 'exact', head: true })
+        .eq('userId', userId)
+        .not('finished', 'is', null);
+      if (!countErr) totalCount = typeof count === 'number' ? count : null;
+    } catch (e) {
+      // ignore; keep totalCount as null
+    }
+
     const { data: tacticRows, error: tErr } = await supabase
       .from('UserTactic')
       .select('id, finished, solved, tacticId')
@@ -225,11 +237,24 @@ export default async function handler(req, res) {
     const hasMore =
       page.length === take && (skip + take < merged.length || !exhausted);
 
-    return res.status(200).json({ items: page, hasMore });
+    return res.status(200).json({ items: page, hasMore, totalCount });
   }
 
   if (kind === 'games') {
     if (!format) return res.status(400).json({ error: 'format required for games' });
+
+    let totalCount = null;
+    try {
+      const { count, error: countErr } = await supabase
+        .from('Game')
+        .select('id', { count: 'exact', head: true })
+        .or(`whiteId.eq.${userId},blackId.eq.${userId}`)
+        .eq('type', format);
+      if (!countErr) totalCount = typeof count === 'number' ? count : null;
+    } catch (e) {
+      // ignore; keep totalCount as null
+    }
+
     const { data: gameRows, error: gErr } = await supabase
       .from('Game')
       .select('id, whiteId, blackId, whiteRating, blackRating, type, playedAt, pgn, result')
@@ -258,7 +283,19 @@ export default async function handler(req, res) {
     const page = merged.slice(skip, skip + take);
     const exhausted = !gameRows || gameRows.length < pool;
     const hasMore = page.length === take && (skip + take < merged.length || !exhausted);
-    return res.status(200).json({ items: page, hasMore });
+    return res.status(200).json({ items: page, hasMore, totalCount });
+  }
+
+  let totalCount = null;
+  try {
+    const { count, error: countErr } = await supabase
+      .from('UserOpening')
+      .select('id', { count: 'exact', head: true })
+      .eq('userId', userId)
+      .not('finished', 'is', null);
+    if (!countErr) totalCount = typeof count === 'number' ? count : null;
+  } catch (e) {
+    // ignore; keep totalCount as null
   }
 
   const { data: openingRows, error: oErr } = await supabase
@@ -279,5 +316,5 @@ export default async function handler(req, res) {
   const exhausted = !openingRows || openingRows.length < pool;
   const hasMore = page.length === take && (skip + take < merged.length || !exhausted);
 
-  return res.status(200).json({ items: page, hasMore });
+  return res.status(200).json({ items: page, hasMore, totalCount });
 }

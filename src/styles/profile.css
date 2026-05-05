@@ -323,6 +323,14 @@
   color: var(--gold);
 }
 
+.profile-activity-feed__total {
+  margin: -0.65rem 0 0.95rem;
+  font-size: 0.92rem;
+  color: var(--ink-muted);
+  font-family: var(--font-ui);
+  font-weight: 650;
+}
+
 .profile-activity-feed__list {
   list-style: none;
   margin: 0;

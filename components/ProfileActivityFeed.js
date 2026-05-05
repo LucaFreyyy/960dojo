@@ -96,6 +96,7 @@ function TacticOutcomeIcon({ solved }) {
 export default function ProfileActivityFeed({ userId, variant, format = null }) {
   const [items, setItems] = useState([]);
   const [hasMore, setHasMore] = useState(true);
+  const [totalCount, setTotalCount] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const loadingRef = useRef(false);
@@ -129,6 +130,7 @@ export default function ProfileActivityFeed({ userId, variant, format = null }) 
     let cancelled = false;
     setItems([]);
     setHasMore(true);
+    setTotalCount(null);
     hasMoreRef.current = true;
     loadingRef.current = false;
     itemsLenRef.current = 0;
@@ -141,6 +143,7 @@ export default function ProfileActivityFeed({ userId, variant, format = null }) 
         const data = await fetchPage(0, 5);
         if (cancelled) return;
         setItems(data.items || []);
+        setTotalCount(typeof data.totalCount === 'number' ? data.totalCount : null);
         setHasMore(Boolean(data.hasMore));
         hasMoreRef.current = Boolean(data.hasMore);
       } catch (e) {
@@ -216,10 +219,14 @@ export default function ProfileActivityFeed({ userId, variant, format = null }) 
 
   const title = variant === 'tactics' ? 'Recent puzzles' : variant === 'openings' ? 'Recent opening sessions' : 'Recent games';
   const empty = variant === 'tactics' ? 'No puzzles played yet.' : variant === 'openings' ? 'No opening sessions yet.' : 'No games yet.';
+  const totalLabel = variant === 'tactics' ? 'Total puzzles' : variant === 'openings' ? 'Total openings' : 'Total games';
 
   return (
     <div className="profile-activity-feed">
       <h4 className="profile-activity-feed__title">{title}</h4>
+      <div className="profile-activity-feed__total">
+        {totalLabel}: {totalCount != null ? totalCount : '—'}
+      </div>
       {error ? <div className="alert alert--error profile-activity-feed__err">{error}</div> : null}
       {items.length === 0 && !loading && !error ? (
         <p className="profile-activity-feed__empty">{empty}</p>
