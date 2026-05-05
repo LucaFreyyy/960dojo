@@ -374,6 +374,7 @@ export default function AnalysisPage() {
   const [boardOrientation, setBoardOrientation] = useState('white');
   const [analysisPlayers, setAnalysisPlayers] = useState({ white: null, black: null });
   const [preselectSan, setPreselectSan] = useState(null);
+  const [collapseVariations, setCollapseVariations] = useState(true);
   const engineCancelRef = useRef(null);
   const engineStateRef = useRef({ key: null, depth: 0, cpWhite: null });
   const restoredFromCacheRef = useRef(false);
@@ -1396,6 +1397,7 @@ export default function AnalysisPage() {
               onMakeVariationMainline={makeVariationMainline}
               onDeleteFromMove={deleteMovesFromSelection}
               onVariationPreselectSan={setPreselectSan}
+              collapseVariations={collapseVariations}
               navRight={
                 <button
                   type="button"
@@ -1408,6 +1410,15 @@ export default function AnalysisPage() {
                 </button>
               }
             />
+            <div className="analysis-movelist-toggle-row">
+              <button
+                type="button"
+                className="btn btn--sm btn--secondary"
+                onClick={() => setCollapseVariations((v) => !v)}
+              >
+                Collapse variations: {collapseVariations ? 'On' : 'Off'}
+              </button>
+            </div>
             <AnalysisCommentBox
               value={moveCommentDraft}
               disabled={false}

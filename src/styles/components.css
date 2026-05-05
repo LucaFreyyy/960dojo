@@ -1162,10 +1162,53 @@
   border-bottom: 1px dashed rgba(74, 63, 56, 0.45);
 }
 
-.move-list__variation-inner {
+.move-list__var-line {
   display: inline;
-  color: var(--ink-muted);
-  margin-left: 4px;
+}
+
+.move-list__var-move {
+  display: inline;
+}
+
+.move-list__var-branch {
+  display: block;
+  margin-top: 0.22rem;
+  margin-left: 1.25rem;
+  padding-left: 0.55rem;
+  border-left: 1px dashed rgba(212, 175, 55, 0.22);
+}
+
+.move-list__var-collapsed {
+  display: inline-block;
+  box-sizing: border-box;
+  border: 1px dashed rgba(212, 175, 55, 0.35);
+  background: rgba(212, 175, 55, 0.06);
+  color: rgba(255, 228, 196, 0.82);
+  border-radius: 999px;
+  padding: 0.05rem 0.45rem;
+  font: inherit;
+  cursor: pointer;
+  line-height: 1.45;
+  margin-right: 0.35rem;
+  vertical-align: baseline;
+  outline: none;
+  appearance: none;
+}
+
+.move-list__var-collapsed:hover {
+  background: rgba(212, 175, 55, 0.11);
+  border-color: rgba(212, 175, 55, 0.55);
+}
+
+.move-list__var-collapsed:focus-visible {
+  outline: 2px solid rgba(212, 175, 55, 0.7);
+  outline-offset: 2px;
+}
+
+.move-list__var-paren {
+  color: rgba(255, 228, 196, 0.6);
+  font-weight: 700;
+  margin-left: -0.35rem;
 }
 
 .move-list__spacer-sm {

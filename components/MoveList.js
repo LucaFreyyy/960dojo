@@ -30,6 +30,16 @@ function clonePath(path) {
     return Array.isArray(path) ? [...path] : [];
 }
 
+function pathStartsWith(path, prefix) {
+    const a = Array.isArray(path) ? path : [];
+    const b = Array.isArray(prefix) ? prefix : [];
+    if (b.length > a.length) return false;
+    for (let i = 0; i < b.length; i += 1) {
+        if (a[i] !== b[i]) return false;
+    }
+    return true;
+}
+
 function getLineByPath(mainline, variationPath) {
     let line = mainline;
     for (const segment of variationPath) {
@@ -87,6 +97,8 @@ const MoveList = forwardRef(function MoveList(
         canDemoteVariation = null,
         onMakeVariationMainline = null,
         onDeleteFromMove = null,
+        /** When true, non-active variations collapse to summary tokens. */
+        collapseVariations = false,
         /** Optional callback: `(san | null) => void` when a variation choice is preselected. */
         onVariationPreselectSan = null,
     },
@@ -328,6 +340,15 @@ const MoveList = forwardRef(function MoveList(
         return map;
     }, [forkChoices]);
 
+    const preselectedVariationPath = useMemo(() => {
+        if (!variationPreselect || !forkChoices) return null;
+        const idx = Number.isInteger(variationPreselect.cursor) ? variationPreselect.cursor : -1;
+        if (idx < 0 || idx >= forkChoices.choices.length) return null;
+        const choice = forkChoices.choices[idx];
+        if (choice?.kind !== 'var') return null;
+        return Array.isArray(choice.variationPath) ? choice.variationPath : null;
+    }, [forkChoices, variationPreselect]);
+
     useEffect(() => {
         // Changing selection should clear any pending preselect.
         setVariationPreselect(null);
@@ -507,8 +528,9 @@ const MoveList = forwardRef(function MoveList(
 
     function renderVariationLine(line, path, moveNoStart = 1) {
         let moveNo = moveNoStart;
+        const selectedPath = Array.isArray(selection?.variationPath) ? selection.variationPath : [];
         return (
-            <span>
+            <div className="move-list__var-line">
                 {line.map((node, i) => {
                     const segmentPath = [...path];
                     const key = `${segmentPath.join('|') || 'main'}:${i}`;
@@ -526,24 +548,70 @@ const MoveList = forwardRef(function MoveList(
                     if (!isWhiteMove && ply == null) moveNo += 1;
 
                     return (
-                        <span key={`${segmentPath.join('|') || 'main'}:${i}`}>
+                        <span key={`${segmentPath.join('|') || 'main'}:${i}`} className="move-list__var-move">
                             {renderMoveButton(node, i, segmentPath, moveLabel)}
                             <span className="move-list__spacer-sm" />
-                            {node.variations.map((variation, vIdx) => (
-                                <span key={`${segmentPath.join('|')}:${i}:var-${vIdx}`} className="move-list__variation-inner">
-                                    ( {renderVariationLine(variation, [...segmentPath, `${i}:${vIdx}`], moveNo)} )
-                                </span>
-                            ))}
+                            {node.variations.map((variation, vIdx) => {
+                                const varPath = [...segmentPath, `${i}:${vIdx}`];
+                                const isActive = pathStartsWith(selectedPath, varPath);
+                                const isPreselected =
+                                    preselectedVariationPath
+                                    && preselectedVariationPath.length === varPath.length
+                                    && preselectedVariationPath.every((x, j) => x === varPath[j]);
+                                if (!collapseVariations || isActive || isPreselected) {
+                                    return (
+                                        <div key={`${segmentPath.join('|')}:${i}:var-${vIdx}`} className="move-list__var-branch">
+                                            <span className="move-list__var-paren">(</span>
+                                            {renderVariationLine(variation, varPath, moveNo)}
+                                            <span className="move-list__var-paren">)</span>
+                                        </div>
+                                    );
+                                }
+
+                                const firstSan = String(variation?.[0]?.san || '').trim();
+                                if (!firstSan) return null;
+                                const firstKey = `${varPath.join('|')}:0`;
+                                const firstPlyBefore = pathToPlyBefore.get(firstKey);
+                                const firstPly = Number.isInteger(firstPlyBefore) ? firstPlyBefore : null;
+                                const firstMoveNo = firstPly != null ? Math.floor(firstPly / 2) + 1 : computedMoveNo;
+                                const firstIsWhite = firstPly != null ? (firstPly % 2) === 0 : true;
+                                const prefix = firstIsWhite ? `${firstMoveNo}. ` : `${firstMoveNo}... `;
+                                const remaining = Math.max(0, (variation?.length || 0) - 1);
+
+                                // Variations with only one move are already compact; don't collapse them.
+                                if (remaining === 0) {
+                                    return (
+                                        <div key={`${segmentPath.join('|')}:${i}:var-${vIdx}`} className="move-list__var-branch">
+                                            <span className="move-list__var-paren">(</span>
+                                            {renderVariationLine(variation, varPath, moveNo)}
+                                            <span className="move-list__var-paren">)</span>
+                                        </div>
+                                    );
+                                }
+
+                                return (
+                                    <button
+                                        key={`${segmentPath.join('|')}:${i}:var-${vIdx}`}
+                                        type="button"
+                                        className="move-list__var-collapsed"
+                                        onClick={() => setSelection({ index: 0, variationPath: clonePath(varPath) })}
+                                        title="Jump to variation"
+                                    >
+                                        ({prefix}{firstSan}{remaining ? ` [+${remaining}]` : ''})
+                                    </button>
+                                );
+                            })}
                             <span className="move-list__spacer-md" />
                         </span>
                     );
                 })}
-            </span>
+            </div>
         );
     }
 
     function renderMainlineRows() {
         const rows = [];
+        const selectedPath = Array.isArray(selection?.variationPath) ? selection.variationPath : [];
         for (let i = 0; i < tree.length; i += 2) {
             const whiteNode = tree[i];
             const blackNode = tree[i + 1];
@@ -566,9 +634,45 @@ const MoveList = forwardRef(function MoveList(
 
             for (let v = 0; v < combined.length; v += 1) {
                 const variation = combined[v];
+                const varPath = variation.path;
+                const isActive = pathStartsWith(selectedPath, varPath);
+                const isPreselected =
+                    preselectedVariationPath
+                    && preselectedVariationPath.length === varPath.length
+                    && preselectedVariationPath.every((x, j) => x === varPath[j]);
+                const firstSan = String(variation?.line?.[0]?.san || '').trim();
+                const remaining = Math.max(0, (variation?.line?.length || 0) - 1);
+                const canCollapse = collapseVariations && !isActive && !isPreselected && remaining > 0 && Boolean(firstSan);
+
+                const collapsedToken = (() => {
+                    if (!canCollapse) return null;
+                    const firstKey = `${varPath.join('|')}:0`;
+                    const firstPlyBefore = pathToPlyBefore.get(firstKey);
+                    const firstPly = Number.isInteger(firstPlyBefore) ? firstPlyBefore : null;
+                    const firstMoveNo = firstPly != null ? Math.floor(firstPly / 2) + 1 : variation.moveNo;
+                    const firstIsWhite = firstPly != null ? (firstPly % 2) === 0 : true;
+                    const prefix = firstIsWhite ? `${firstMoveNo}. ` : `${firstMoveNo}... `;
+                    return (
+                        <button
+                            type="button"
+                            className="move-list__var-collapsed"
+                            onClick={() => setSelection({ index: 0, variationPath: clonePath(varPath) })}
+                            title="Jump to variation"
+                        >
+                            ({prefix}{firstSan} [+{remaining}])
+                        </button>
+                    );
+                })();
+
                 rows.push(
                     <div key={`main-row-${i}-var-${v}`} className="move-list__variation">
-                        ( {renderVariationLine(variation.line, variation.path, variation.moveNo)} )
+                        {collapsedToken ? collapsedToken : (
+                            <>
+                                <span className="move-list__var-paren">(</span>{' '}
+                                {renderVariationLine(variation.line, variation.path, variation.moveNo)}{' '}
+                                <span className="move-list__var-paren">)</span>
+                            </>
+                        )}
                     </div>
                 );
             }
