@@ -242,6 +242,15 @@
   gap: 0.28rem;
 }
 
+.profile-tab-peak {
+  margin-left: 0.35rem;
+  font-size: 0.82em;
+  font-weight: 600;
+  font-family: var(--font-ui);
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+
 .edit-button {
   all: unset;
   display: inline;

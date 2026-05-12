@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import RatingGraph from './RatingGraph';
 import ProfileActivityFeed from './ProfileActivityFeed';
@@ -30,6 +30,8 @@ export default function ProfileTabs({ userId, compareUserId = null, profileName 
     const [viewerRating, setViewerRating] = useState(null);
     const [profileProvisional, setProfileProvisional] = useState(false);
     const [viewerProvisional, setViewerProvisional] = useState(false);
+    const [profilePeak, setProfilePeak] = useState(null);
+    const [viewerPeak, setViewerPeak] = useState(null);
 
     const compareMode = Boolean(compareUserId && compareUserId !== userId);
     const profileLabel = profileName?.trim() || 'Player';
@@ -65,6 +67,16 @@ export default function ProfileTabs({ userId, compareUserId = null, profileName 
         if (typeof window === 'undefined') return;
         window.sessionStorage.setItem(PROFILE_TAB_STORAGE_KEY, activeTab);
     }, [activeTab]);
+
+    useEffect(() => {
+        setProfilePeak(null);
+        setViewerPeak(null);
+    }, [activeTab, userId, compareUserId]);
+
+    const handleChartMeta = useCallback((meta) => {
+        setProfilePeak(meta?.profilePeak ?? null);
+        setViewerPeak(meta?.viewerPeak ?? null);
+    }, []);
 
     useEffect(() => {
         async function fetchRating() {
@@ -148,6 +160,9 @@ export default function ProfileTabs({ userId, compareUserId = null, profileName 
                                 <span className="profile-tab-rating-with-hint">
                                     {rating ?? '–'}
                                     {profileProvisional ? <RatingEstablishedHint /> : null}
+                                    {profilePeak != null ? (
+                                        <span className="profile-tab-peak"> Peak: {profilePeak}</span>
+                                    ) : null}
                                 </span>
                             </span>
                             <span className="profile-tab-rating-sep" aria-hidden="true"> · </span>
@@ -156,6 +171,9 @@ export default function ProfileTabs({ userId, compareUserId = null, profileName 
                                 <span className="profile-tab-rating-with-hint">
                                     {viewerRating ?? '–'}
                                     {viewerProvisional ? <RatingEstablishedHint /> : null}
+                                    {viewerPeak != null ? (
+                                        <span className="profile-tab-peak"> Peak: {viewerPeak}</span>
+                                    ) : null}
                                 </span>
                             </span>
                         </>
@@ -165,6 +183,9 @@ export default function ProfileTabs({ userId, compareUserId = null, profileName 
                             <span className="profile-tab-rating-with-hint">
                                 {rating ?? '–'}
                                 {profileProvisional ? <RatingEstablishedHint /> : null}
+                                {profilePeak != null ? (
+                                    <span className="profile-tab-peak"> Peak: {profilePeak}</span>
+                                ) : null}
                             </span>
                         </>
                     )}
@@ -174,6 +195,7 @@ export default function ProfileTabs({ userId, compareUserId = null, profileName 
                     format={formatMap[activeTab]}
                     compareUserId={compareUserId}
                     profileName={profileName}
+                    onChartMeta={handleChartMeta}
                 />
                 {activeTab === 'Tactics' ? (
                     <ProfileActivityFeed userId={userId} variant="tactics" />

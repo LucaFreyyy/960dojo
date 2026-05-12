@@ -1,4 +1,4 @@
-import { useEffect, useState, useId } from 'react';
+import { useEffect, useState, useId, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import {
     AreaChart,
@@ -11,24 +11,81 @@ import {
     Legend,
 } from 'recharts';
 
-const axisTickTime = (ts) => new Date(ts).toLocaleDateString();
-const tooltipTime = (ts) => new Date(ts).toLocaleString();
+/** Date only (no time) for axis, ticks, and tooltip. */
+function formatDateOnly(ts) {
+    if (ts == null || !Number.isFinite(ts)) return '';
+    return new Date(ts).toLocaleDateString(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+    });
+}
 
-/** ~evenly spaced tick indices for the X axis (event index, not calendar time). */
-function evenTickIndices(len, maxTicks = 7) {
-    if (len <= 0) return [];
-    if (len === 1) return [0];
-    const last = len - 1;
-    if (last < maxTicks) {
-        return Array.from({ length: len }, (_, i) => i);
+function localDayKey(ts) {
+    const d = new Date(ts);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+}
+
+/** One sample per calendar day (local): last rating row of that day. Preserves that row's `t` for the x-axis. */
+function downsampleDailyLast(rows) {
+    if (!rows?.length) return [];
+    const lastByDay = new Map();
+    for (const row of rows) {
+        if (row.t == null || !Number.isFinite(row.t)) continue;
+        lastByDay.set(localDayKey(row.t), row);
     }
-    const out = [0];
-    const step = last / (maxTicks - 1);
-    for (let k = 1; k < maxTicks - 1; k += 1) {
-        out.push(Math.round(k * step));
+    return [...lastByDay.values()].sort((a, b) => a.t - b.t);
+}
+
+function getTimeBounds(rows) {
+    if (!rows?.length) return { minT: 0, maxT: 0 };
+    let minT = Infinity;
+    let maxT = -Infinity;
+    for (const d of rows) {
+        if (d.t == null || !Number.isFinite(d.t)) continue;
+        if (d.t < minT) minT = d.t;
+        if (d.t > maxT) maxT = d.t;
     }
-    out.push(last);
-    return [...new Set(out)].sort((a, b) => a - b);
+    if (!Number.isFinite(minT) || !Number.isFinite(maxT)) return { minT: 0, maxT: 0 };
+    return { minT, maxT };
+}
+
+/** Pad domain so a single point or endpoints are not flush against the chart edge. */
+function paddedTimeDomain(minT, maxT) {
+    if (!Number.isFinite(minT) || !Number.isFinite(maxT)) return [0, 1];
+    if (minT === maxT) {
+        const halfDay = 43200000;
+        return [minT - halfDay, maxT + halfDay];
+    }
+    const pad = (maxT - minT) * 0.04;
+    return [minT - pad, maxT + pad];
+}
+
+/** ~evenly spaced tick timestamps between domain ends (calendar-linear axis). */
+function evenTimeTicks(domainMin, domainMax, maxTicks = 7) {
+    if (!Number.isFinite(domainMin) || !Number.isFinite(domainMax)) return [];
+    let lo = domainMin;
+    let hi = domainMax;
+    if (hi < lo) [lo, hi] = [hi, lo];
+    if (hi === lo) return [lo];
+    const n = Math.max(2, Math.min(maxTicks, 8));
+    const out = [];
+    for (let k = 0; k < n; k += 1) {
+        out.push(lo + ((hi - lo) * k) / (n - 1));
+    }
+    return [...new Set(out.map((x) => Math.round(x)))].sort((a, b) => a - b);
+}
+
+function maxFiniteKey(rows, key) {
+    let best = -Infinity;
+    for (const row of rows) {
+        const v = row[key];
+        if (v != null && Number.isFinite(v)) best = Math.max(best, v);
+    }
+    return best === -Infinity ? null : Math.round(best);
 }
 
 function mergeRatingHistories(rowsA, rowsB) {
@@ -46,12 +103,10 @@ function mergeRatingHistories(rowsA, rowsB) {
     let lastA = null;
     let lastB = null;
     const out = [];
-    let idx = 0;
     for (const e of events) {
         if (e.user === 'a') lastA = e.value;
         else lastB = e.value;
         out.push({
-            idx: idx++,
             t: e.t,
             profileRating: lastA,
             viewerRating: lastB,
@@ -60,7 +115,16 @@ function mergeRatingHistories(rowsA, rowsB) {
     return out;
 }
 
-export default function RatingGraph({ userId, format, compareUserId, profileName }) {
+/** Smoothed curve through points; monotoneX avoids step-like segments while staying sane for ratings. */
+const AREA_CURVE = 'monotoneX';
+
+export default function RatingGraph({
+    userId,
+    format,
+    compareUserId,
+    profileName,
+    onChartMeta = null,
+}) {
     const [data, setData] = useState([]);
     const [compareMode, setCompareMode] = useState(false);
     const fillProfileId = useId().replace(/:/g, '');
@@ -68,6 +132,9 @@ export default function RatingGraph({ userId, format, compareUserId, profileName
 
     const profileLabel = profileName?.trim() || 'Player';
     const compareLabel = 'You';
+    const onChartMetaRef = useRef(onChartMeta);
+    onChartMetaRef.current = onChartMeta;
+    const fetchGenRef = useRef(0);
 
     useEffect(() => {
         if (userId && format) {
@@ -76,6 +143,20 @@ export default function RatingGraph({ userId, format, compareUserId, profileName
     }, [userId, format, compareUserId]);
 
     async function fetchRatingData() {
+        const gen = ++fetchGenRef.current;
+        const isStale = () => gen !== fetchGenRef.current;
+
+        const meta = (payload) => {
+            if (!isStale()) onChartMetaRef.current?.(payload);
+        };
+
+        const reportEmpty = () => {
+            if (isStale()) return;
+            meta({ profilePeak: null, viewerPeak: null });
+            setData([]);
+            setCompareMode(false);
+        };
+
         const { data: ratings, error } = await supabase
             .from('Rating')
             .select('value, createdAt')
@@ -83,19 +164,20 @@ export default function RatingGraph({ userId, format, compareUserId, profileName
             .eq('type', format)
             .order('createdAt', { ascending: true });
 
-        if (error || !ratings) {
-            setData([]);
-            setCompareMode(false);
+        if (error || !ratings?.length) {
+            reportEmpty();
             return;
         }
 
         if (!compareUserId || compareUserId === userId) {
-            const chartData = ratings.map((r, i) => ({
-                idx: i,
+            const full = ratings.map((r) => ({
                 t: new Date(r.createdAt).getTime(),
                 rating: r.value,
             }));
-            setData(chartData);
+            const profilePeak = maxFiniteKey(full, 'rating');
+            if (isStale()) return;
+            meta({ profilePeak, viewerPeak: null });
+            setData(downsampleDailyLast(full));
             setCompareMode(false);
             return;
         }
@@ -108,34 +190,53 @@ export default function RatingGraph({ userId, format, compareUserId, profileName
             .order('createdAt', { ascending: true });
 
         if (compareErr) {
-            const chartData = ratings.map((r, i) => ({
-                idx: i,
+            const full = ratings.map((r) => ({
                 t: new Date(r.createdAt).getTime(),
                 rating: r.value,
             }));
-            setData(chartData);
+            const profilePeak = maxFiniteKey(full, 'rating');
+            if (isStale()) return;
+            meta({ profilePeak, viewerPeak: null });
+            setData(downsampleDailyLast(full));
             setCompareMode(false);
             return;
         }
 
         const merged = mergeRatingHistories(ratings, compareRatings || []);
-        setData(merged);
+        const profilePeak = maxFiniteKey(merged, 'profileRating');
+        const viewerPeak = maxFiniteKey(merged, 'viewerRating');
+        if (isStale()) return;
+        meta({ profilePeak, viewerPeak });
+        setData(downsampleDailyLast(merged));
         setCompareMode(true);
     }
 
     const hasCompareData = compareMode && data.some((d) => d.viewerRating != null);
     const hasProfileData = compareMode && data.some((d) => d.profileRating != null);
-    const xMax = Math.max(0, data.length - 1);
-    const xTicks = evenTickIndices(data.length);
 
-    const xTickFormatter = (i) => {
-        const row = data[Math.round(i)];
-        return row?.t != null ? axisTickTime(row.t) : '';
-    };
+    const { minT, maxT } = getTimeBounds(data);
+    const [xDomainMin, xDomainMax] = paddedTimeDomain(minT, maxT);
+    const xTicks = data.length ? evenTimeTicks(xDomainMin, xDomainMax) : [];
 
     const tooltipLabelFormatter = (_, payload) => {
         const row = payload?.[0]?.payload;
-        return row?.t != null ? tooltipTime(row.t) : '';
+        return row?.t != null ? formatDateOnly(row.t) : '';
+    };
+
+    const chartMargins = { top: 8, right: 8, left: -12, bottom: 6 };
+    const xAxisCommon = {
+        dataKey: 't',
+        type: 'number',
+        domain: [xDomainMin, xDomainMax],
+        ticks: xTicks,
+        tickFormatter: formatDateOnly,
+        tick: { fill: '#93a3bf', fontSize: 10 },
+        axisLine: { stroke: '#334155' },
+        tickLine: { stroke: '#334155' },
+        angle: -32,
+        textAnchor: 'end',
+        height: 56,
+        interval: 0,
     };
 
     return (
@@ -147,9 +248,9 @@ export default function RatingGraph({ userId, format, compareUserId, profileName
                 </p>
             ) : null}
             {data.length > 0 ? (
-                <ResponsiveContainer width="100%" height={230}>
+                <ResponsiveContainer width="100%" height={268}>
                     {compareMode ? (
-                        <AreaChart data={data} margin={{ top: 8, right: 8, left: -12, bottom: 4 }}>
+                        <AreaChart data={data} margin={chartMargins}>
                             <defs>
                                 <linearGradient id={fillProfileId} x1="0" y1="0" x2="0" y2="1">
                                     <stop offset="0%" stopColor="#60a5fa" stopOpacity={0.45} />
@@ -161,18 +262,7 @@ export default function RatingGraph({ userId, format, compareUserId, profileName
                                 </linearGradient>
                             </defs>
                             <CartesianGrid strokeDasharray="4 6" stroke="#1f2937" />
-                            <XAxis
-                                dataKey="idx"
-                                type="number"
-                                domain={[0, xMax]}
-                                ticks={xTicks}
-                                allowDecimals={false}
-                                hide={data.length > 16}
-                                tick={{ fill: '#93a3bf', fontSize: 11 }}
-                                axisLine={{ stroke: '#334155' }}
-                                tickLine={{ stroke: '#334155' }}
-                                tickFormatter={xTickFormatter}
-                            />
+                            <XAxis {...xAxisCommon} />
                             <YAxis
                                 domain={['dataMin - 60', 'dataMax + 60']}
                                 tick={{ fill: '#93a3bf', fontSize: 11 }}
@@ -184,7 +274,7 @@ export default function RatingGraph({ userId, format, compareUserId, profileName
                             <Legend wrapperStyle={{ fontSize: 12 }} />
                             {hasProfileData ? (
                                 <Area
-                                    type="monotone"
+                                    type={AREA_CURVE}
                                     dataKey="profileRating"
                                     name={profileLabel}
                                     stroke="#60a5fa"
@@ -197,7 +287,7 @@ export default function RatingGraph({ userId, format, compareUserId, profileName
                             ) : null}
                             {hasCompareData ? (
                                 <Area
-                                    type="monotone"
+                                    type={AREA_CURVE}
                                     dataKey="viewerRating"
                                     name={compareLabel}
                                     stroke="#f59e0b"
@@ -210,7 +300,7 @@ export default function RatingGraph({ userId, format, compareUserId, profileName
                             ) : null}
                         </AreaChart>
                     ) : (
-                        <AreaChart data={data} margin={{ top: 8, right: 8, left: -12, bottom: 4 }}>
+                        <AreaChart data={data} margin={chartMargins}>
                             <defs>
                                 <linearGradient id="ratingFill" x1="0" y1="0" x2="0" y2="1">
                                     <stop offset="0%" stopColor="#60a5fa" stopOpacity={0.45} />
@@ -218,18 +308,7 @@ export default function RatingGraph({ userId, format, compareUserId, profileName
                                 </linearGradient>
                             </defs>
                             <CartesianGrid strokeDasharray="4 6" stroke="#1f2937" />
-                            <XAxis
-                                dataKey="idx"
-                                type="number"
-                                domain={[0, xMax]}
-                                ticks={xTicks}
-                                allowDecimals={false}
-                                hide={data.length > 16}
-                                tick={{ fill: '#93a3bf', fontSize: 11 }}
-                                axisLine={{ stroke: '#334155' }}
-                                tickLine={{ stroke: '#334155' }}
-                                tickFormatter={xTickFormatter}
-                            />
+                            <XAxis {...xAxisCommon} />
                             <YAxis
                                 domain={['dataMin - 60', 'dataMax + 60']}
                                 tick={{ fill: '#93a3bf', fontSize: 11 }}
@@ -239,7 +318,7 @@ export default function RatingGraph({ userId, format, compareUserId, profileName
                             />
                             <Tooltip labelFormatter={tooltipLabelFormatter} />
                             <Area
-                                type="monotone"
+                                type={AREA_CURVE}
                                 dataKey="rating"
                                 stroke="#60a5fa"
                                 strokeWidth={2.2}

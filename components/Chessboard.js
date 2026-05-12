@@ -91,7 +91,9 @@ function resyncGroundToFen(cg, fenStr, ctx) {
         set: (o, d, meta) => {
           queuedPremoveRef.current = { orig: o, dest: d, metadata: meta };
         },
-        unset: () => {},
+        unset: () => {
+          queuedPremoveRef.current = null;
+        },
       },
     },
     movable: {
@@ -356,7 +358,9 @@ export default function ChessBoard({
           set: (orig, dest, metadata) => {
             queuedPremoveRef.current = { orig, dest, metadata };
           },
-          unset: () => {},
+          unset: () => {
+            queuedPremoveRef.current = null;
+          },
         },
       },
       drawable: {
@@ -515,7 +519,9 @@ export default function ChessBoard({
                   set: (orig, dest, metadata) => {
                     queuedPremoveRef.current = { orig, dest, metadata };
                   },
-                  unset: () => {},
+                  unset: () => {
+                    queuedPremoveRef.current = null;
+                  },
                 },
               },
               movable: {
@@ -597,7 +603,9 @@ export default function ChessBoard({
           set: (orig, dest, metadata) => {
             queuedPremoveRef.current = { orig, dest, metadata };
           },
-          unset: () => {},
+          unset: () => {
+            queuedPremoveRef.current = null;
+          },
         },
       },
       movable: {
@@ -739,6 +747,7 @@ export default function ChessBoard({
   useEffect(() => {
     if (!ground) return;
     if (!cancelQueuedPremove) return;
+    queuedPremoveRef.current = null;
     try {
       ground.cancelPremove();
     } catch {}
