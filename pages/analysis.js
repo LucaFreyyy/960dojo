@@ -8,6 +8,7 @@ import PositionDisplay from '../components/PositionDisplay';
 import SectionTitle from '../components/SectionTitle';
 import BackrankInput from '../components/BackrankInput';
 import AnalysisCommentBox from '../components/AnalysisCommentBox';
+import AnalysisEvalGraph from '../components/AnalysisEvalGraph';
 import RatingDisplay from '../components/RatingDisplay';
 import { positionNrToStartFen } from '../lib/chess960';
 import STARTING_POSITIONS from '../lib/chess960Positions.json';
@@ -1763,7 +1764,7 @@ export default function AnalysisPage() {
       <Head>
         <title>Analysis - 960 Dojo</title>
       </Head>
-      <main className="page-shell openings-page">
+      <main className="page-shell openings-page openings-page--analysis">
         <SectionTitle title="Analysis" />
         {infoMessage ? <div className="alert alert--info mb-sm">{infoMessage}</div> : null}
 
@@ -1835,45 +1836,6 @@ export default function AnalysisPage() {
               >
                 Reset analysis
               </button>
-            </div>
-            <div className="analysis-study-row analysis-study-row--under-board">
-              <div className="analysis-study-row__left">
-                <label className="analysis-study-row__label" htmlFor="study-title">Study</label>
-                <input
-                  id="study-title"
-                  className="analysis-study-row__input"
-                  type="text"
-                  placeholder={studyId ? 'Untitled study' : 'Title (optional)'}
-                  value={studyTitle}
-                  disabled={Boolean(studyId) && !studyIsOwner}
-                  onChange={(e) => setStudyTitle(e.target.value)}
-                />
-              </div>
-              <div className="analysis-study-row__right">
-                <label className="analysis-study-row__toggle">
-                  <input
-                    type="checkbox"
-                    checked={studyIsPublic}
-                    disabled={Boolean(studyId) && !studyIsOwner}
-                    onChange={(e) => setStudyIsPublic(e.target.checked)}
-                  />
-                  <span>Public</span>
-                </label>
-                <button
-                  type="button"
-                  className="btn btn--sm btn--secondary"
-                  disabled={!session?.access_token || studySaving || (Boolean(studyId) && !studyIsOwner)}
-                  onClick={() => {
-                    if (studyId) deleteStudy();
-                    else saveStudy();
-                  }}
-                  title={!session?.access_token ? 'Sign in to manage studies' : undefined}
-                >
-                  {studySaving ? 'Working…' : studyId ? 'Delete study' : 'Create study'}
-                </button>
-                <Link className="btn btn--sm btn--secondary" href="/studies">Studies</Link>
-                {studyLoading ? <span className="analysis-study-row__status">Loading…</span> : null}
-              </div>
             </div>
           </div>
 
@@ -1966,33 +1928,86 @@ export default function AnalysisPage() {
               }}
             />
           </div>
-        </div>
 
-        <section className="analysis-import-export">
-          <h3 className="analysis-subtitle">Import / Export</h3>
-          <label className="analysis-label" htmlFor="analysis-fen">FEN</label>
-          <textarea
-            id="analysis-fen"
-            className="analysis-textarea"
-            rows={2}
-            value={fenInput}
-            onChange={(e) => setFenInput(e.target.value)}
-          />
-          <div className="analysis-actions">
-            <button type="button" className="btn btn--sm btn--secondary" onClick={importFen}>Import FEN</button>
+          <div className="openings-layout-full">
+            <div className="openings-layout-full__inner">
+            <hr className="analysis-section-rule" aria-hidden="true" />
+            <AnalysisEvalGraph
+              mainline={mainline}
+              evalByKey={evalByKey}
+              selectedPosition={selection}
+              onBrowsePositionChanged={handleBrowsePositionChanged}
+            />
+            <hr className="analysis-section-rule" aria-hidden="true" />
+            <div className="analysis-tools-stack">
+              <div className="analysis-study-row">
+                <div className="analysis-study-row__left">
+                  <label className="analysis-study-row__label" htmlFor="study-title">Study</label>
+                  <input
+                    id="study-title"
+                    className="analysis-study-row__input"
+                    type="text"
+                    placeholder={studyId ? 'Untitled study' : 'Title (optional)'}
+                    value={studyTitle}
+                    disabled={Boolean(studyId) && !studyIsOwner}
+                    onChange={(e) => setStudyTitle(e.target.value)}
+                  />
+                </div>
+                <div className="analysis-study-row__right">
+                  <label className="analysis-study-row__toggle">
+                    <input
+                      type="checkbox"
+                      checked={studyIsPublic}
+                      disabled={Boolean(studyId) && !studyIsOwner}
+                      onChange={(e) => setStudyIsPublic(e.target.checked)}
+                    />
+                    <span>Public</span>
+                  </label>
+                  <button
+                    type="button"
+                    className="btn btn--sm btn--secondary"
+                    disabled={!session?.access_token || studySaving || (Boolean(studyId) && !studyIsOwner)}
+                    onClick={() => {
+                      if (studyId) deleteStudy();
+                      else saveStudy();
+                    }}
+                    title={!session?.access_token ? 'Sign in to manage studies' : undefined}
+                  >
+                    {studySaving ? 'Working…' : studyId ? 'Delete study' : 'Create study'}
+                  </button>
+                  <Link className="btn btn--sm btn--secondary" href="/studies">Studies</Link>
+                  {studyLoading ? <span className="analysis-study-row__status">Loading…</span> : null}
+                </div>
+              </div>
+              <section className="analysis-import-export">
+                <h3 className="analysis-subtitle">Import / Export</h3>
+                <label className="analysis-label" htmlFor="analysis-fen">FEN</label>
+                <textarea
+                  id="analysis-fen"
+                  className="analysis-textarea"
+                  rows={2}
+                  value={fenInput}
+                  onChange={(e) => setFenInput(e.target.value)}
+                />
+                <div className="analysis-actions">
+                  <button type="button" className="btn btn--sm btn--secondary" onClick={importFen}>Import FEN</button>
+                </div>
+                <label className="analysis-label" htmlFor="analysis-pgn">PGN</label>
+                <textarea
+                  id="analysis-pgn"
+                  className="analysis-textarea"
+                  rows={8}
+                  value={pgnInput}
+                  onChange={(e) => setPgnInput(e.target.value)}
+                />
+                <div className="analysis-actions">
+                  <button type="button" className="btn btn--sm btn--secondary" onClick={importPgn}>Import PGN</button>
+                </div>
+              </section>
+            </div>
+            </div>
           </div>
-          <label className="analysis-label" htmlFor="analysis-pgn">PGN</label>
-          <textarea
-            id="analysis-pgn"
-            className="analysis-textarea"
-            rows={8}
-            value={pgnInput}
-            onChange={(e) => setPgnInput(e.target.value)}
-          />
-          <div className="analysis-actions">
-            <button type="button" className="btn btn--sm btn--secondary" onClick={importPgn}>Import PGN</button>
-          </div>
-        </section>
+        </div>
       </main>
     </>
   );

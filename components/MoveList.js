@@ -128,10 +128,18 @@ const MoveList = forwardRef(function MoveList(
     }, [allowSparseEvalData, evalData, template]);
 
     const [selection, setSelection] = useState({ index: -1, variationPath: [] });
+    const selectionRef = useRef(selection);
+    selectionRef.current = selection;
     const [contextMenu, setContextMenu] = useState(null);
     const [variationPreselect, setVariationPreselect] = useState(null);
-    const suppressNextBrowseCallbackRef = useRef(false);
     const bodyRef = useRef(null);
+
+    const browseTo = useCallback((next) => {
+        setSelection(next);
+        if (typeof onBrowsePositionChanged === 'function') {
+            onBrowsePositionChanged(next.index, clonePath(next.variationPath));
+        }
+    }, [onBrowsePositionChanged]);
 
     const moveListKeyForSelection = useCallback((index, variationPath) => {
         const path = Array.isArray(variationPath) ? variationPath : [];
@@ -170,30 +178,21 @@ const MoveList = forwardRef(function MoveList(
 
     useEffect(() => {
         if (!resetSelectionOnPgnChange) return;
-        setSelection({ index: -1, variationPath: [] });
-    }, [pgn, resetSelectionOnPgnChange]);
+        browseTo({ index: -1, variationPath: [] });
+    }, [pgn, resetSelectionOnPgnChange, browseTo]);
 
-    useEffect(() => {
+    // Sync internal selection when parent drives `selectedPosition` (e.g. eval graph, external tools).
+    useLayoutEffect(() => {
         if (!selectedPosition) return;
         const nextIndex = Number.isInteger(selectedPosition.index) ? selectedPosition.index : -1;
         const nextPath = Array.isArray(selectedPosition.variationPath) ? selectedPosition.variationPath : [];
-        setSelection((prev) => {
-            const sameIndex = prev.index === nextIndex;
-            const samePath = prev.variationPath.length === nextPath.length
-                && prev.variationPath.every((x, i) => x === nextPath[i]);
-            if (sameIndex && samePath) return prev;
-            suppressNextBrowseCallbackRef.current = true;
-            return { index: nextIndex, variationPath: [...nextPath] };
-        });
+        const prev = selectionRef.current;
+        const sameIndex = prev.index === nextIndex;
+        const samePath = prev.variationPath.length === nextPath.length
+            && prev.variationPath.every((x, i) => x === nextPath[i]);
+        if (sameIndex && samePath) return;
+        setSelection({ index: nextIndex, variationPath: [...nextPath] });
     }, [selectedPosition]);
-
-    useEffect(() => {
-        if (suppressNextBrowseCallbackRef.current) {
-            suppressNextBrowseCallbackRef.current = false;
-            return;
-        }
-        onBrowsePositionChanged(selection.index, clonePath(selection.variationPath));
-    }, [onBrowsePositionChanged, selection]);
 
     const pathToEval = useMemo(() => {
         const map = new Map();
@@ -286,37 +285,43 @@ const MoveList = forwardRef(function MoveList(
     const selectionPathKey = useMemo(() => selection.variationPath.join('|'), [selection.variationPath]);
 
     const goToInitial = useCallback(() => {
-        setSelection({ index: -1, variationPath: [] });
-    }, []);
+        browseTo({ index: -1, variationPath: [] });
+    }, [browseTo]);
 
     const goToMainlineEnd = useCallback(() => {
-        setSelection({ index: Math.max(-1, tree.length - 1), variationPath: [] });
-    }, [tree.length]);
+        browseTo({ index: Math.max(-1, tree.length - 1), variationPath: [] });
+    }, [browseTo, tree.length]);
 
     const goNext = useCallback(() => {
-        setSelection((prev) => {
-            const line = getLineByPath(tree, prev.variationPath);
-            if (prev.index < line.length - 1) return { ...prev, index: prev.index + 1 };
-            if (prev.variationPath.length > 0) return prev;
-            return prev;
-        });
-    }, [tree]);
+        const prev = selectionRef.current;
+        const line = getLineByPath(tree, prev.variationPath);
+        if (prev.index < line.length - 1) {
+            browseTo({ ...prev, index: prev.index + 1 });
+            return;
+        }
+        if (prev.variationPath.length > 0) return;
+    }, [browseTo, tree]);
 
     const goPrev = useCallback(() => {
-        setSelection((prev) => {
-            if (prev.index > 0) return { ...prev, index: prev.index - 1 };
-            if (prev.index === 0 && prev.variationPath.length > 0) {
-                const parentSelection = getParentSelectionFromVariationPath(prev.variationPath);
-                return parentSelection || { index: -1, variationPath: [] };
-            }
-            if (prev.index === -1 && prev.variationPath.length > 0) {
-                const parentSelection = getParentSelectionFromVariationPath(prev.variationPath);
-                return parentSelection || { index: -1, variationPath: [] };
-            }
-            if (prev.index === 0) return { ...prev, index: -1 };
-            return prev;
-        });
-    }, []);
+        const prev = selectionRef.current;
+        if (prev.index > 0) {
+            browseTo({ ...prev, index: prev.index - 1 });
+            return;
+        }
+        if (prev.index === 0 && prev.variationPath.length > 0) {
+            const parentSelection = getParentSelectionFromVariationPath(prev.variationPath);
+            browseTo(parentSelection || { index: -1, variationPath: [] });
+            return;
+        }
+        if (prev.index === -1 && prev.variationPath.length > 0) {
+            const parentSelection = getParentSelectionFromVariationPath(prev.variationPath);
+            browseTo(parentSelection || { index: -1, variationPath: [] });
+            return;
+        }
+        if (prev.index === 0) {
+            browseTo({ ...prev, index: -1 });
+        }
+    }, [browseTo]);
 
     const forkChoices = useMemo(() => {
         if (!selection) return null;
@@ -423,10 +428,10 @@ const MoveList = forwardRef(function MoveList(
         const idx = Number.isInteger(cursor) ? cursor : -1;
         if (idx < 0 || idx >= forkChoices.choices.length) return false;
         const target = forkChoices.choices[idx];
-        setSelection({ index: target.index, variationPath: clonePath(target.variationPath) });
+        browseTo({ index: target.index, variationPath: clonePath(target.variationPath) });
         setVariationPreselect(null);
         return true;
-    }, [forkChoices]);
+    }, [forkChoices, browseTo]);
 
     useImperativeHandle(
         ref,
@@ -544,7 +549,7 @@ const MoveList = forwardRef(function MoveList(
             <button
                 type="button"
                 data-move-list-key={key}
-                onClick={() => setSelection({ index, variationPath: clonePath(path) })}
+                onClick={() => browseTo({ index, variationPath: clonePath(path) })}
                 onContextMenu={(event) => {
                     if (!canPromote && !canDemote && !canMainline && !canDelete) return;
                     event.preventDefault();
@@ -646,7 +651,7 @@ const MoveList = forwardRef(function MoveList(
                                         key={`${segmentPath.join('|')}:${i}:var-${vIdx}`}
                                         type="button"
                                         className="move-list__var-collapsed"
-                                        onClick={() => setSelection({ index: 0, variationPath: clonePath(varPath) })}
+                                        onClick={() => browseTo({ index: 0, variationPath: clonePath(varPath) })}
                                         title="Jump to variation"
                                     >
                                         ({prefix}{firstSan}{remaining ? ` [+${remaining}]` : ''})
@@ -687,7 +692,7 @@ const MoveList = forwardRef(function MoveList(
                     <button
                         type="button"
                         className="move-list__var-collapsed"
-                        onClick={() => setSelection({ index: 0, variationPath: clonePath(varPath) })}
+                        onClick={() => browseTo({ index: 0, variationPath: clonePath(varPath) })}
                         title="Jump to variation"
                     >
                         ({prefix}{firstSan} [+{remaining}])
