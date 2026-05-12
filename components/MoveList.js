@@ -44,6 +44,12 @@ function getLineByPath(mainline, variationPath) {
     let line = mainline;
     for (const segment of variationPath) {
         const [moveIndexRaw, varIndexRaw] = String(segment).split(':');
+        if (moveIndexRaw === 'root') {
+            const rootLine = mainline?.rootVariations?.[Number(varIndexRaw)];
+            if (!rootLine) return [];
+            line = rootLine;
+            continue;
+        }
         const moveIndex = Number(moveIndexRaw);
         const varIndex = Number(varIndexRaw);
         const node = line[moveIndex];
@@ -57,6 +63,7 @@ function getParentSelectionFromVariationPath(variationPath) {
     if (!variationPath.length) return null;
     const parentPath = variationPath.slice(0, -1);
     const [anchorMoveRaw] = String(variationPath[variationPath.length - 1]).split(':');
+    if (anchorMoveRaw === 'root') return { index: -1, variationPath: [] };
     const anchorIndex = Number(anchorMoveRaw);
     if (Number.isNaN(anchorIndex)) return { index: -1, variationPath: [] };
     return { index: anchorIndex, variationPath: parentPath };
@@ -191,8 +198,8 @@ const MoveList = forwardRef(function MoveList(
     const pathToEval = useMemo(() => {
         const map = new Map();
 
-        function walk(line, evalLine, path) {
-            let evalCursor = path.length === 0 ? 1 : 0;
+        function walk(line, evalLine, path, startCursor = null) {
+            let evalCursor = Number.isInteger(startCursor) ? startCursor : (path.length === 0 ? 1 : 0);
             for (let i = 0; i < line.length; i += 1) {
                 const node = line[i];
                 const key = `${path.join('|') || 'main'}:${i}`;
@@ -208,7 +215,13 @@ const MoveList = forwardRef(function MoveList(
 
         if (hasValidEvalData) {
             map.set('main:initial', evalData[0]);
-            walk(tree, evalData, []);
+            let evalCursor = 1;
+            for (let v = 0; v < (tree?.rootVariations || []).length; v += 1) {
+                const nextEvalLine = Array.isArray(evalData) ? evalData[evalCursor] : undefined;
+                walk(tree.rootVariations[v], nextEvalLine, [`root:${v}`]);
+                evalCursor += 1;
+            }
+            walk(tree, evalData, [], evalCursor);
         }
         return map;
     }, [evalData, hasValidEvalData, tree]);
@@ -225,6 +238,9 @@ const MoveList = forwardRef(function MoveList(
                 }
             }
         }
+        for (let v = 0; v < (tree?.rootVariations || []).length; v += 1) {
+            walk(tree.rootVariations[v], [`root:${v}`], 0);
+        }
         walk(tree, [], 0);
         return map;
     }, [tree]);
@@ -237,6 +253,11 @@ const MoveList = forwardRef(function MoveList(
             return isFiniteNumber(value) ? value : null;
         }
         if (path.length === 0) {
+            const initial = pathToEval.get('main:initial');
+            return isFiniteNumber(initial) ? initial : null;
+        }
+        const [headRaw] = String(path[0]).split(':');
+        if (headRaw === 'root') {
             const initial = pathToEval.get('main:initial');
             return isFiniteNumber(initial) ? initial : null;
         }
@@ -262,6 +283,7 @@ const MoveList = forwardRef(function MoveList(
         const value = pathToEval.get(key);
         return isFiniteNumber(value) ? value : null;
     }, [hasValidEvalData, pathToEval, selection]);
+    const selectionPathKey = useMemo(() => selection.variationPath.join('|'), [selection.variationPath]);
 
     const goToInitial = useCallback(() => {
         setSelection({ index: -1, variationPath: [] });
@@ -297,7 +319,37 @@ const MoveList = forwardRef(function MoveList(
     }, []);
 
     const forkChoices = useMemo(() => {
-        if (!selection || selection.index < 0) return null;
+        if (!selection) return null;
+        if (selection.index < 0) {
+            if ((selection.variationPath || []).length > 0) return null;
+            const choices = [];
+            if (tree[0]) {
+                choices.push({
+                    kind: 'main',
+                    index: 0,
+                    variationPath: [],
+                    key: 'main:0',
+                    san: String(tree[0]?.san || ''),
+                });
+            }
+            (tree?.rootVariations || []).forEach((vline, vIdx) => {
+                if (!vline || !vline[0]) return;
+                const vp = [`root:${vIdx}`];
+                choices.push({
+                    kind: 'var',
+                    index: 0,
+                    variationPath: vp,
+                    key: `${vp.join('|')}:${0}`,
+                    san: String(vline?.[0]?.san || ''),
+                });
+            });
+            if (choices.length < 2) return null;
+            return {
+                anchorIndex: -1,
+                anchorPath: [],
+                choices,
+            };
+        }
         const line = getLineByPath(tree, selection.variationPath);
         const anchor = line?.[selection.index];
         if (!anchor) return null;
@@ -352,7 +404,7 @@ const MoveList = forwardRef(function MoveList(
     useEffect(() => {
         // Changing selection should clear any pending preselect.
         setVariationPreselect(null);
-    }, [selection.index, selection.variationPath.join('|')]);
+    }, [selection.index, selectionPathKey]);
 
     useEffect(() => {
         if (typeof onVariationPreselectSan !== 'function') return;
@@ -609,9 +661,66 @@ const MoveList = forwardRef(function MoveList(
         );
     }
 
+    function renderVariationBlocks(combined, rowKeyPrefix, selectedPath) {
+        const blocks = [];
+        for (let v = 0; v < combined.length; v += 1) {
+            const variation = combined[v];
+            const varPath = variation.path;
+            const isActive = pathStartsWith(selectedPath, varPath);
+            const isPreselected =
+                preselectedVariationPath
+                && preselectedVariationPath.length === varPath.length
+                && preselectedVariationPath.every((x, j) => x === varPath[j]);
+            const firstSan = String(variation?.line?.[0]?.san || '').trim();
+            const remaining = Math.max(0, (variation?.line?.length || 0) - 1);
+            const canCollapse = collapseVariations && !isActive && !isPreselected && remaining > 0 && Boolean(firstSan);
+
+            const collapsedToken = (() => {
+                if (!canCollapse) return null;
+                const firstKey = `${varPath.join('|')}:0`;
+                const firstPlyBefore = pathToPlyBefore.get(firstKey);
+                const firstPly = Number.isInteger(firstPlyBefore) ? firstPlyBefore : null;
+                const firstMoveNo = firstPly != null ? Math.floor(firstPly / 2) + 1 : variation.moveNo;
+                const firstIsWhite = firstPly != null ? (firstPly % 2) === 0 : true;
+                const prefix = firstIsWhite ? `${firstMoveNo}. ` : `${firstMoveNo}... `;
+                return (
+                    <button
+                        type="button"
+                        className="move-list__var-collapsed"
+                        onClick={() => setSelection({ index: 0, variationPath: clonePath(varPath) })}
+                        title="Jump to variation"
+                    >
+                        ({prefix}{firstSan} [+{remaining}])
+                    </button>
+                );
+            })();
+
+            blocks.push(
+                <div key={`${rowKeyPrefix}-var-${v}`} className="move-list__variation">
+                    {collapsedToken ? collapsedToken : (
+                        <>
+                            <span className="move-list__var-paren">(</span>{' '}
+                            {renderVariationLine(variation.line, variation.path, variation.moveNo)}{' '}
+                            <span className="move-list__var-paren">)</span>
+                        </>
+                    )}
+                </div>
+            );
+        }
+        return blocks;
+    }
+
     function renderMainlineRows() {
         const rows = [];
         const selectedPath = Array.isArray(selection?.variationPath) ? selection.variationPath : [];
+        const rootVariations = tree?.rootVariations || [];
+
+        if (tree.length === 0 && rootVariations.length > 0) {
+            const combined = rootVariations.map((line, vIdx) => ({ line, path: [`root:${vIdx}`], moveNo: 1 }));
+            rows.push(...renderVariationBlocks(combined, 'root-only', selectedPath));
+            return rows;
+        }
+
         for (let i = 0; i < tree.length; i += 2) {
             const whiteNode = tree[i];
             const blackNode = tree[i + 1];
@@ -627,55 +736,16 @@ const MoveList = forwardRef(function MoveList(
 
             const whiteVariations = whiteNode?.variations || [];
             const blackVariations = blackNode?.variations || [];
+            const rootEntries = i === 0
+                ? rootVariations.map((line, vIdx) => ({ line, path: [`root:${vIdx}`], moveNo: 1 }))
+                : [];
             const combined = [
+                ...rootEntries,
                 ...whiteVariations.map((line, vIdx) => ({ line, path: [`${i}:${vIdx}`], moveNo: moveNumber })),
                 ...blackVariations.map((line, vIdx) => ({ line, path: [`${i + 1}:${vIdx}`], moveNo: moveNumber + 1 })),
             ];
 
-            for (let v = 0; v < combined.length; v += 1) {
-                const variation = combined[v];
-                const varPath = variation.path;
-                const isActive = pathStartsWith(selectedPath, varPath);
-                const isPreselected =
-                    preselectedVariationPath
-                    && preselectedVariationPath.length === varPath.length
-                    && preselectedVariationPath.every((x, j) => x === varPath[j]);
-                const firstSan = String(variation?.line?.[0]?.san || '').trim();
-                const remaining = Math.max(0, (variation?.line?.length || 0) - 1);
-                const canCollapse = collapseVariations && !isActive && !isPreselected && remaining > 0 && Boolean(firstSan);
-
-                const collapsedToken = (() => {
-                    if (!canCollapse) return null;
-                    const firstKey = `${varPath.join('|')}:0`;
-                    const firstPlyBefore = pathToPlyBefore.get(firstKey);
-                    const firstPly = Number.isInteger(firstPlyBefore) ? firstPlyBefore : null;
-                    const firstMoveNo = firstPly != null ? Math.floor(firstPly / 2) + 1 : variation.moveNo;
-                    const firstIsWhite = firstPly != null ? (firstPly % 2) === 0 : true;
-                    const prefix = firstIsWhite ? `${firstMoveNo}. ` : `${firstMoveNo}... `;
-                    return (
-                        <button
-                            type="button"
-                            className="move-list__var-collapsed"
-                            onClick={() => setSelection({ index: 0, variationPath: clonePath(varPath) })}
-                            title="Jump to variation"
-                        >
-                            ({prefix}{firstSan} [+{remaining}])
-                        </button>
-                    );
-                })();
-
-                rows.push(
-                    <div key={`main-row-${i}-var-${v}`} className="move-list__variation">
-                        {collapsedToken ? collapsedToken : (
-                            <>
-                                <span className="move-list__var-paren">(</span>{' '}
-                                {renderVariationLine(variation.line, variation.path, variation.moveNo)}{' '}
-                                <span className="move-list__var-paren">)</span>
-                            </>
-                        )}
-                    </div>
-                );
-            }
+            rows.push(...renderVariationBlocks(combined, `main-row-${i}`, selectedPath));
         }
         return rows;
     }
@@ -715,7 +785,7 @@ const MoveList = forwardRef(function MoveList(
             ) : null}
 
             <div ref={bodyRef} className="move-list__body">
-                {tree.length > 0 ? (
+                {tree.length > 0 || (tree?.rootVariations || []).length > 0 ? (
                     renderMainlineRows()
                 ) : (
                     <div className="move-list__empty">

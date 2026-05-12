@@ -149,6 +149,7 @@ function buildBackrankToNumberMap(numberToBackrank) {
 
 function createLine() {
   const line = [];
+  line.rootVariations = [];
   line.rootComment = '';
   return line;
 }
@@ -156,6 +157,7 @@ function createLine() {
 function cloneLine(line) {
   const out = createLine();
   out.rootComment = String(line?.rootComment || '');
+  out.rootVariations = (line?.rootVariations || []).map(cloneLine);
   for (const n of (line || [])) {
     out.push({
       san: n.san,
@@ -170,6 +172,12 @@ function getLineByPath(mainline, variationPath) {
   let line = mainline;
   for (const segment of variationPath) {
     const [moveIndexRaw, varIndexRaw] = String(segment).split(':');
+    if (moveIndexRaw === 'root') {
+      const rootLine = mainline?.rootVariations?.[Number(varIndexRaw)];
+      if (!rootLine) return [];
+      line = rootLine;
+      continue;
+    }
     const moveIndex = Number(moveIndexRaw);
     const varIndex = Number(varIndexRaw);
     const node = line[moveIndex];
@@ -191,6 +199,9 @@ function buildValidSelectionKeySet(mainline) {
       }
     }
   };
+  for (let v = 0; v < (mainline?.rootVariations || []).length; v += 1) {
+    walk(mainline.rootVariations[v], [`root:${v}`]);
+  }
   walk(mainline, []);
   return keys;
 }
@@ -223,7 +234,13 @@ function buildPgnFromTree(startFen, mainline) {
   }
   const rootComment = String(mainline?.rootComment || '').trim();
   const prefix = rootComment ? `{${rootComment.replace(/\}/g, '').trim()}} ` : '';
-  const movetext = `${prefix}${renderLine(mainline, 0, [])}`.trim();
+  const rootVariationText = (mainline?.rootVariations || [])
+    .map((line, idx) => renderLine(line, 0, [`root:${idx}`]))
+    .filter(Boolean)
+    .map((text) => `(${text})`)
+    .join(' ');
+  const mainlineText = renderLine(mainline, 0, []);
+  const movetext = `${prefix}${[rootVariationText, mainlineText].filter(Boolean).join(' ')}`.trim();
   return [
     '[Event "960 Dojo Analysis"]',
     '[Variant "Chess960"]',
@@ -238,6 +255,11 @@ function buildEvalDataFromMap(tree, evalByKey) {
   if (!Array.isArray(tree)) return [null];
   function buildFromLine(line, path, includeInitial) {
     const arr = includeInitial ? [evalByKey.get('main:initial') ?? null] : [];
+    if (includeInitial) {
+      for (let v = 0; v < (line?.rootVariations || []).length; v += 1) {
+        arr.push(buildFromLine(line.rootVariations[v], [`root:${v}`], false));
+      }
+    }
     for (let i = 0; i < line.length; i += 1) {
       const key = `${path.join('|') || 'main'}:${i}`;
       arr.push(evalByKey.get(key) ?? null);
@@ -301,33 +323,26 @@ function getPositionAtSelection(startFen, mainline, selection) {
   };
   let last = null;
   const path = Array.isArray(selection?.variationPath) ? selection.variationPath : [];
+  let line = mainline;
   for (let p = 0; p < path.length; p += 1) {
     const seg = path[p];
     const [miRaw, viRaw] = String(seg).split(':');
+    if (miRaw === 'root') {
+      line = mainline?.rootVariations?.[Number(viRaw)] || [];
+      continue;
+    }
     const mi = Number(miRaw);
     const vi = Number(viRaw);
-    const parent = getLineByPath(mainline, path.slice(0, p));
     for (let i = 0; i <= mi; i += 1) {
-      const n = parent[i];
+      const n = line[i];
       if (!n) break;
       const mv = playSanSafe(n.san);
       if (!mv) break;
       last = mv;
     }
-    const anchor = parent[mi];
-    const varLine = anchor?.variations?.[vi] || [];
-    if (p < path.length - 1) {
-      const nextSeg = path[p + 1];
-      const [nextMiRaw] = String(nextSeg).split(':');
-      const nextMi = Number(nextMiRaw);
-      for (let i = 0; i <= nextMi && i < varLine.length; i += 1) {
-        const mv = playSanSafe(varLine[i].san);
-        if (!mv) break;
-        last = mv;
-      }
-    }
+    const anchor = line[mi];
+    line = anchor?.variations?.[vi] || [];
   }
-  const line = getLineByPath(mainline, path);
   const index = Number.isInteger(selection?.index) ? selection.index : -1;
   for (let i = 0; i <= index && i < line.length; i += 1) {
     const mv = playSanSafe(line[i].san);
@@ -938,6 +953,16 @@ export default function AnalysisPage() {
           // at the parent anchor position (not a nested variation under this line's first move).
           const parentPath = path.slice(0, -1);
           const [anchorRaw] = String(path[path.length - 1]).split(':');
+          if (anchorRaw === 'root') {
+            const existingRootIdx = (next.rootVariations || []).findIndex((vline) => vline?.[0]?.san === moveSan);
+            if (existingRootIdx >= 0) {
+              setSelection({ index: 0, variationPath: [`root:${existingRootIdx}`] });
+            } else {
+              next.rootVariations.push([{ san: moveSan, comment: '', variations: [] }]);
+              setSelection({ index: 0, variationPath: [`root:${next.rootVariations.length - 1}`] });
+            }
+            return next;
+          }
           const anchorIndex = Number(anchorRaw);
           const parentLine = getLineByPath(next, parentPath);
           const anchor = parentLine[anchorIndex];
@@ -955,8 +980,13 @@ export default function AnalysisPage() {
         } else if (line[0]?.san === moveSan) {
           setSelection({ index: 0, variationPath: path });
         } else {
-          line[0].variations.push([{ san: moveSan, comment: '', variations: [] }]);
-          setSelection({ index: 0, variationPath: [`0:${line[0].variations.length - 1}`] });
+          const existingRootIdx = (next.rootVariations || []).findIndex((vline) => vline?.[0]?.san === moveSan);
+          if (existingRootIdx >= 0) {
+            setSelection({ index: 0, variationPath: [`root:${existingRootIdx}`] });
+          } else {
+            next.rootVariations.push([{ san: moveSan, comment: '', variations: [] }]);
+            setSelection({ index: 0, variationPath: [`root:${next.rootVariations.length - 1}`] });
+          }
         }
       }
 
@@ -990,6 +1020,30 @@ export default function AnalysisPage() {
         index,
         siblings,
         selectedPos: 0,
+      };
+    }
+
+    if (!variationPath.length) {
+      if (!(tree?.rootVariations || []).length) return null;
+      const siblings = [tree.slice(0), ...(tree.rootVariations || [])];
+      return {
+        mode: 'at-root',
+        siblings,
+        selectedPos: 0,
+      };
+    }
+
+    const [headRaw, headVarRaw] = String(variationPath[0]).split(':');
+    if (headRaw === 'root' && variationPath.length === 1) {
+      const rootVarIndex = Number(headVarRaw);
+      if (!Number.isInteger(rootVarIndex) || rootVarIndex < 0 || rootVarIndex >= (tree?.rootVariations || []).length) {
+        return null;
+      }
+      const siblings = [tree.slice(0), ...(tree.rootVariations || [])];
+      return {
+        mode: 'at-root',
+        siblings,
+        selectedPos: rootVarIndex + 1,
       };
     }
 
@@ -1050,6 +1104,16 @@ export default function AnalysisPage() {
           });
         }
       } else {
+        if (meta.mode === 'at-root') {
+          next.splice(0, next.length, ...reordered[0]);
+          next.rootVariations = reordered.slice(1);
+          if (targetPos === 0) {
+            setSelection({ index: 0, variationPath: [] });
+          } else {
+            setSelection({ index: 0, variationPath: [`root:${targetPos - 1}`] });
+          }
+          return next;
+        }
         const parentLine = getLineByPath(next, meta.parentPath);
         const anchorNode = parentLine[meta.anchorIndex];
         parentLine.splice(meta.anchorIndex + 1, parentLine.length - (meta.anchorIndex + 1), ...reordered[0]);
@@ -1073,6 +1137,17 @@ export default function AnalysisPage() {
       const next = cloneLine(prev);
       const parentPath = variationPath.slice(0, -1);
       const [anchorRaw, varRaw] = String(variationPath[variationPath.length - 1]).split(':');
+      if (anchorRaw === 'root') {
+        const rootVarIndex = Number(varRaw);
+        if (!Number.isInteger(rootVarIndex) || rootVarIndex < 0 || rootVarIndex >= (next.rootVariations || []).length) return prev;
+        const chosenLine = next.rootVariations[rootVarIndex];
+        const oldMainline = next.slice(0);
+        next.rootVariations.splice(rootVarIndex, 1);
+        if (oldMainline.length) next.rootVariations.unshift(oldMainline);
+        next.splice(0, next.length, ...chosenLine);
+        setSelection({ index: Number.isInteger(index) ? index : 0, variationPath: [] });
+        return next;
+      }
       const anchorIndex = Number(anchorRaw);
       const varIndex = Number(varRaw);
       const parentLine = getLineByPath(next, parentPath);
@@ -1113,15 +1188,25 @@ export default function AnalysisPage() {
       } else if (variationPath.length > 0) {
         const parentPath = variationPath.slice(0, -1);
         const [anchorRaw, varRaw] = String(variationPath[variationPath.length - 1]).split(':');
-        const anchorIndex = Number(anchorRaw);
-        const varIndex = Number(varRaw);
-        const parentLine = getLineByPath(next, parentPath);
-        const anchor = parentLine[anchorIndex];
-        if (anchor && Number.isInteger(varIndex) && varIndex >= 0 && varIndex < (anchor.variations || []).length) {
-          anchor.variations.splice(varIndex, 1);
-          nextSelection = { index: anchorIndex, variationPath: parentPath };
+        if (anchorRaw === 'root') {
+          const rootVarIndex = Number(varRaw);
+          if (Number.isInteger(rootVarIndex) && rootVarIndex >= 0 && rootVarIndex < (next.rootVariations || []).length) {
+            next.rootVariations.splice(rootVarIndex, 1);
+            nextSelection = { index: -1, variationPath: [] };
+          } else {
+            line.splice(index);
+          }
         } else {
-          line.splice(index);
+          const anchorIndex = Number(anchorRaw);
+          const varIndex = Number(varRaw);
+          const parentLine = getLineByPath(next, parentPath);
+          const anchor = parentLine[anchorIndex];
+          if (anchor && Number.isInteger(varIndex) && varIndex >= 0 && varIndex < (anchor.variations || []).length) {
+            anchor.variations.splice(varIndex, 1);
+            nextSelection = { index: anchorIndex, variationPath: parentPath };
+          } else {
+            line.splice(index);
+          }
         }
       } else {
         line.splice(index);
