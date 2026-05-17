@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import Chessboard from './Chessboard';
 import { stashPgnAndOpenAnalysis } from '../lib/analysisSessionImport';
+import { orientationForTacticPuzzle } from '../lib/tacticPgnUtils';
 import { evalCpWhiteToMoveListPawns, evalSummaryClass, formatEval } from '../lib/evalDisplay';
 
 function formatPlayedAt(iso) {
@@ -235,13 +236,22 @@ export default function ProfileActivityFeed({ userId, variant, format = null }) 
           {variant === 'tactics'
             ? items.map((row) => {
                 const canAnalyze = Boolean(row.analysisPgn);
+                const tacticOrientation = orientationForTacticPuzzle({
+                  startFen: row.startFen,
+                  pgn: row.analysisPgn,
+                });
                 return (
                   <li key={`tactic-${row.id}`} className="profile-activity-feed__item">
                     <button
                       type="button"
                       className="profile-activity-feed__item-btn"
                       disabled={!canAnalyze}
-                      onClick={() => openHistoryInAnalysis(row.analysisPgn, { browseAtStart: true })}
+                      onClick={() =>
+                        openHistoryInAnalysis(row.analysisPgn, {
+                          browseAtStart: true,
+                          orientation: tacticOrientation,
+                        })
+                      }
                       aria-label={
                         canAnalyze
                           ? `Open puzzle ${row.tacticId} in analysis`
@@ -266,7 +276,12 @@ export default function ProfileActivityFeed({ userId, variant, format = null }) 
                       </div>
                       {row.startFen ? (
                         <div className="training-chessboard profile-activity-feed__chess" aria-hidden>
-                          <Chessboard fen={row.startFen} orientation="white" disabled showCoordinates={false} />
+                          <Chessboard
+                            fen={row.startFen}
+                            orientation={tacticOrientation}
+                            disabled
+                            showCoordinates={false}
+                          />
                         </div>
                       ) : (
                         <p className="profile-activity-feed__no-fen">Position unavailable</p>
@@ -290,7 +305,11 @@ export default function ProfileActivityFeed({ userId, variant, format = null }) 
                       type="button"
                       className="profile-activity-feed__item-btn"
                       disabled={!canAnalyze}
-                      onClick={() => openHistoryInAnalysis(row.analysisPgn)}
+                      onClick={() =>
+                        openHistoryInAnalysis(row.analysisPgn, {
+                          orientation: orientationForOpening(row.color),
+                        })
+                      }
                       aria-label={
                         canAnalyze
                           ? `Open opening session position ${row.openingNr} in analysis`
@@ -460,7 +479,7 @@ export default function ProfileActivityFeed({ userId, variant, format = null }) 
                             <div className="training-chessboard profile-activity-feed__chess" aria-hidden>
                               <Chessboard
                                 fen={row.lastFen}
-                                orientation="white"
+                                orientation={viewerColor}
                                 disabled
                                 showCoordinates={false}
                               />

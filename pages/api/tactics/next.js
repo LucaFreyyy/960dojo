@@ -1,38 +1,15 @@
 import { createClient } from '@supabase/supabase-js';
 import { getBearerAuthUser } from '../../../lib/apiAuth';
-import { extractPgnTag, trimTrailingOpponentMoveFromPuzzleLine } from '../../../lib/tacticPgnUtils';
+import {
+  extractPgnTag,
+  parseSanMovesFromPgn,
+  trimTrailingOpponentMoveFromPuzzleLine,
+} from '../../../lib/tacticPgnUtils';
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
-
-function parseSanMovesFromPgn(pgn) {
-  if (typeof pgn !== 'string') return [];
-  const body = pgn
-    .split('\n')
-    .filter((line) => !line.startsWith('['))
-    .join(' ')
-    .replace(/\{[^}]*\}/g, ' ')
-    .replace(/\([^)]*\)/g, ' ')
-    .replace(/\$\d+/g, ' ')
-    .replace(/\b1-0\b|\b0-1\b|\b1\/2-1\/2\b|\*\b/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-
-  const out = [];
-  for (const token of body.split(' ')) {
-    if (!token) continue;
-    if (/^\d+\.(\.\.)?$/.test(token) || /^\d+\.\.\.$/.test(token)) continue;
-    const cleaned = token
-      .replace(/^\d+\.(\.\.)?/, '')
-      .replace(/^\d+\.\.\./, '')
-      .replace(/[?!]+/g, '')
-      .trim();
-    if (cleaned) out.push(cleaned);
-  }
-  return out;
-}
 
 function extractPuzzleStartPlyFromPgn(pgn) {
   if (typeof pgn !== 'string') return null;
@@ -85,6 +62,11 @@ function tacticScore(row) {
   return computeTacticScoreFromRow(row);
 }
 
+function pickRandom(items) {
+  if (!items?.length) return null;
+  return items[Math.floor(Math.random() * items.length)];
+}
+
 async function chooseNewTactic({
   userRating,
   difficulty,
@@ -106,17 +88,17 @@ async function chooseNewTactic({
   const freshInBand = (inBand || []).filter((t) => !finishedIds.has(t.id) && !unfinishedIds.has(t.id));
   if (freshInBand.length) {
     if (!preferTopScore) {
-      return { tactic: freshInBand[Math.floor(Math.random() * freshInBand.length)], usedFallback: false };
+      return { tactic: pickRandom(freshInBand), usedFallback: false };
     }
     const maxScore = freshInBand.reduce(
       (best, t) => Math.max(best, tacticScore(t)),
       Number.NEGATIVE_INFINITY
     );
     const topScored = freshInBand.filter((t) => tacticScore(t) === maxScore);
-    return { tactic: topScored[Math.floor(Math.random() * topScored.length)], usedFallback: false };
+    return { tactic: pickRandom(topScored), usedFallback: false };
   }
 
-  // Fallback: closest non-finished, non-unfinished puzzle.
+  // Fallback: no puzzles in band — pick a random eligible puzzle (not sequential by id).
   const { data: allTactics, error: allErr } = await supabaseAdmin
     .from('Tactic')
     .select('id, rating, score, pgn, numTimesPlayed, winLike, winDislike, lossLike, lossDislike');
@@ -124,10 +106,7 @@ async function chooseNewTactic({
 
   const candidates = (allTactics || []).filter((t) => !finishedIds.has(t.id) && !unfinishedIds.has(t.id));
   if (!candidates.length) return { tactic: null, usedFallback: false };
-  const closest = candidates
-    .map((t) => ({ t, diff: Math.abs((t.rating ?? 1500) - userRating) }))
-    .sort((a, b) => a.diff - b.diff)[0].t;
-  return { tactic: closest, usedFallback: true };
+  return { tactic: pickRandom(candidates), usedFallback: true };
 }
 
 export default async function handler(req, res) {
@@ -180,7 +159,7 @@ export default async function handler(req, res) {
         userFinishedCount: 0,
         tacticTimesPlayed: Number.isFinite(chosen?.numTimesPlayed) ? chosen.numTimesPlayed : 0,
         infoMessage: next.usedFallback
-          ? `No more puzzles available in ${difficulty} range. Loaded closest puzzle instead.`
+          ? `No more puzzles available in ${difficulty} range. Loaded a random puzzle instead.`
           : null,
       });
     }
@@ -327,7 +306,7 @@ export default async function handler(req, res) {
       });
       if (!next?.tactic) return res.status(404).json({ error: 'No available tactics' });
       if (next.usedFallback) {
-        infoMessage = `No more puzzles available in ${difficulty} range. Loaded closest puzzle instead.`;
+        infoMessage = `No more puzzles available in ${difficulty} range. Loaded a random puzzle instead.`;
       }
 
       // Keep unfinished rows bounded.

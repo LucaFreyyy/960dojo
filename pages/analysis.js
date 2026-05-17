@@ -18,7 +18,7 @@ import { analyzeFenMultipvStream, uciPvToSanString, warmStockfish } from '../lib
 import { parsePgnTree } from '../lib/moveListEval';
 import { takeAnalysisImportForNonce } from '../lib/analysisSessionImport';
 import { useMoveListWheelNavigation } from '../lib/useMoveListWheelNavigation';
-import { extractPgnTag } from '../lib/tacticPgnUtils';
+import { extractPgnTag, orientationForTacticPuzzle } from '../lib/tacticPgnUtils';
 import { useSupabaseSession } from '../lib/SessionContext';
 
 const EXAMPLE_BACKRANK = 'bbnnrkqr';
@@ -1418,8 +1418,12 @@ export default function AnalysisPage() {
       engineStateRef.current = { key: null, depth: 0, cpWhite: null };
       setInfoMessage(msg);
       setAnalysisPlayers(parsePgnPlayerPanels(raw));
-      if (orientation === 'black' || orientation === 'white') {
-        setBoardOrientation(orientation);
+      let boardOrientation = orientation === 'black' || orientation === 'white' ? orientation : null;
+      if (!boardOrientation && browseAtStart && importedStartFen) {
+        boardOrientation = orientationForTacticPuzzle({ startFen: importedStartFen, pgn: raw });
+      }
+      if (boardOrientation === 'black' || boardOrientation === 'white') {
+        setBoardOrientation(boardOrientation);
       }
       return true;
     },
